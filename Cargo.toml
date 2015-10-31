@@ -1,0 +1,16 @@
+[package]
+name = "jwt"
+version = "0.1.0"
+authors = ["Vincent Prouillet <vincent@wearewizards.io>"]
+license = "MIT"
+readme = "README.md"
+description = "Create and parse JWT."
+keywords = ["jwt", "web", "api", "token"]
+
+[dependencies]
+rustc-serialize = "0.3"
+clippy = {version = "0.0.22", optional = true}
+
+[features]
+default = []
+dev = ["clippy"]
