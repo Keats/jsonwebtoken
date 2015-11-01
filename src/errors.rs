@@ -7,6 +7,8 @@ pub enum Error {
     DecodeBase64(base64::FromBase64Error),
     DecodeJSON(json::DecoderError),
     Utf8(string::FromUtf8Error),
+    InvalidToken,
+    InvalidSignature
 }
 
 macro_rules! impl_from_error {

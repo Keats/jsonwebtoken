@@ -51,7 +51,7 @@ pub trait Part {
 impl<T> Part for T where T: Encodable + Decodable {
     fn to_base64(&self) -> Result<String, Error> {
         let encoded = try!(json::encode(&self));
-        Ok(encoded.as_bytes().to_base64(base64::STANDARD))
+        Ok(encoded.as_bytes().to_base64(base64::URL_SAFE))
     }
 
     fn from_base64(encoded: String) -> Result<T, Error> {
@@ -82,25 +82,56 @@ fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
     };
     let mut hmac = Hmac::new(digest, secret);
     hmac.input(data.as_bytes());
-    hmac.result().code().to_base64(base64::STANDARD)
+    hmac.result().code().to_base64(base64::URL_SAFE)
+}
+
+fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> bool {
+    let result = sign(data, secret, algorithm);
+    signature == result
 }
 
 pub fn encode<T: Part>(claims: T, secret: String, algorithm: Algorithm) -> Result<String, Error> {
     let encoded_header = try!(Header::new(algorithm.to_string()).to_base64());
     let encoded_claims = try!(claims.to_base64());
     // seems to be a tiny bit faster than format!("{}.{}", x, y)
-    let first_part = [encoded_header, encoded_claims].join(".");
-    Ok("hey".to_owned())
+    let payload = [encoded_header, encoded_claims].join(".");
+    let signature = sign(&*payload, secret.as_bytes(), algorithm);
+
+    Ok([payload, signature].join("."))
 }
 
-// pub fn decode(token: String, secret: String, algorithm: Algorithm) -> Result<int> {
+pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> Result<T, Error> {
+    let parts: Vec<&str> = token.split(".").collect();
+    if parts.len() != 3 {
+        return Err(Error::InvalidToken);
+    }
 
-// }
+    let is_valid = verify(
+        parts[2],
+        &[parts[0], parts[1]].join("."),
+        secret.as_bytes(),
+        algorithm
+    );
+
+    if !is_valid {
+        return Err(Error::InvalidSignature);
+    }
+
+    // let header = try!(Header::from_base64(parts[0].to_owned()));
+    let claims: T = try!(T::from_base64(parts[1].to_owned()));
+    Ok(claims)
+}
 
 #[cfg(test)]
 mod tests {
-    use super::{encode, Algorithm, Header, Part, sign};
+    use super::{encode, decode, Algorithm, Header, Part, sign, verify};
     use test::Bencher;
+
+    #[derive(Debug, PartialEq, Clone, RustcEncodable, RustcDecodable)]
+    struct Claims {
+        sub: String,
+        company: String
+    }
 
     #[test]
     fn to_base64() {
@@ -120,7 +151,7 @@ mod tests {
     }
 
     #[test]
-    fn round_trip() {
+    fn round_trip_base64() {
         let header = Header::new("HS256".to_owned());
         assert_eq!(Header::from_base64(header.to_base64().unwrap()).unwrap(), header);
     }
@@ -128,23 +159,61 @@ mod tests {
     #[test]
     fn sign_hs256() {
         let result = sign("hello world", "secret".as_bytes(), Algorithm::HS256);
-        let expected = "NzM0Y2M2MmYzMjg0MTU2OGY0NTcxNWFlYjlmNGQ3ODkxMzI0ZTZkOTQ4ZTRjNmM2MGMwNjIxY2RhYzQ4NjIzYQ==";
+        let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
         assert_eq!(result, expected);
     }
 
-    // #[test]
-    // fn encode_token() {
-    //     #[derive(Debug, RustcEncodable, RustcDecodable)]
-    //     struct Claims {
-    //         sub: String,
-    //         company: String
-    //     }
-    //     let my_claims = Claims {
-    //         sub: "b@b.com".to_owned(),
-    //         company: "ACME".to_owned()
-    //     };
-    //     let token = encode::<Claims>(my_claims, "secret".to_owned(), Algorithm::HS256);
+    #[test]
+    fn verify_hs256() {
+        let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
+        let result = verify(sig.into(), "hello world", "secret".as_bytes(), Algorithm::HS256);
+        assert!(result == true);
+    }
 
-    //     assert_eq!(token.unwrap(), "HS256");
-    // }
+    #[test]
+    fn round_trip_claim() {
+        let my_claims = Claims {
+            sub: "b@b.com".to_owned(),
+            company: "ACME".to_owned()
+        };
+        let token = encode::<Claims>(my_claims.clone(), "secret".to_owned(), Algorithm::HS256).unwrap();
+        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256).unwrap();
+        assert_eq!(my_claims, claims);
+    }
+
+    #[test]
+    fn decode_token_missing_parts() {
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
+        assert_eq!(claims.is_ok(), false);
+    }
+
+    #[test]
+    fn decode_token_invalid_signature() {
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
+        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
+        assert_eq!(claims.is_ok(), false);
+    }
+
+    #[bench]
+    fn bench_encode(b: &mut Bencher) {
+        b.iter(|| encode::<Claims>(
+            Claims {
+                sub: "b@b.com".to_owned(),
+                company: "ACME".to_owned()
+            },
+            "secret".to_owned(),
+            Algorithm::HS256
+        ));
+    }
+
+    #[bench]
+    fn bench_decode(b: &mut Bencher) {
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ".to_owned();
+        b.iter(|| decode::<Claims>(
+            token.clone(),
+            "secret".to_owned(),
+            Algorithm::HS256
+        ));
+    }
 }
