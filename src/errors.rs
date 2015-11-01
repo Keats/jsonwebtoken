@@ -2,11 +2,15 @@ use std::string;
 use rustc_serialize::{json, base64};
 
 #[derive(Debug)]
+/// All the errors we can encounter while signing/verifying tokens
+/// and a couple of custom one for when the token we are trying
+/// to verify is invalid
 pub enum Error {
     EncodeJSON(json::EncoderError),
     DecodeBase64(base64::FromBase64Error),
     DecodeJSON(json::DecoderError),
     Utf8(string::FromUtf8Error),
+
     InvalidToken,
     InvalidSignature
 }

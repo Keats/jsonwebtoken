@@ -1,15 +1,6 @@
 //! Create and parses JWT (JSON Web Tokens)
 //!
 
-// #![deny(
-//     missing_docs,
-//     missing_debug_implementations, missing_copy_implementations,
-//     trivial_casts, trivial_numeric_casts,
-//     unsafe_code,
-//     unstable_features,
-//     unused_import_braces, unused_qualifications
-// )]
-
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
@@ -29,9 +20,10 @@ use crypto::digest::Digest;
 pub mod errors;
 use errors::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
+/// The algorithms supported for signing, so far only Hmac Sha256
 pub enum Algorithm {
-    HS256
+    HS256,
 }
 
 impl ToString for Algorithm {
@@ -42,7 +34,8 @@ impl ToString for Algorithm {
     }
 }
 
-// A part of the JWT: header, claims and signature
+/// A part of the JWT: header and claims specifically
+/// Allows converting from/to struct with base64
 pub trait Part {
     fn from_base64(encoded: String) -> Result<Self, Error> where Self: Sized;
     fn to_base64(&self) -> Result<String, Error>;
@@ -62,6 +55,8 @@ impl<T> Part for T where T: Encodable + Decodable {
 }
 
 #[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
+/// A basic JWT header part, the alg is automatically filled for use
+/// It's missing things like the kid but that's for later
 pub struct Header {
     typ: String,
     alg: String,
@@ -76,6 +71,8 @@ impl Header {
     }
 }
 
+/// Take the payload of a JWT and sign it using the algorithm given.
+/// Returns the base64 url safe encoded of the hmac result
 fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
     let digest = match algorithm {
         Algorithm::HS256 => Sha256::new(),
@@ -85,11 +82,12 @@ fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
     hmac.result().code().to_base64(base64::URL_SAFE)
 }
 
+/// Compares the signature given with a re-computed signature
 fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> bool {
-    let result = sign(data, secret, algorithm);
-    signature == result
+    signature == sign(data, secret, algorithm)
 }
 
+/// Encode the claims passed and sign the payload using the algorithm and the secret
 pub fn encode<T: Part>(claims: T, secret: String, algorithm: Algorithm) -> Result<String, Error> {
     let encoded_header = try!(Header::new(algorithm.to_string()).to_base64());
     let encoded_claims = try!(claims.to_base64());
@@ -100,6 +98,8 @@ pub fn encode<T: Part>(claims: T, secret: String, algorithm: Algorithm) -> Resul
     Ok([payload, signature].join("."))
 }
 
+/// Decode a token into a Claims struct
+/// If the token or its signature is invalid, it will return an error
 pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> Result<T, Error> {
     let parts: Vec<&str> = token.split(".").collect();
     if parts.len() != 3 {
@@ -118,6 +118,10 @@ pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> R
     }
 
     // let header = try!(Header::from_base64(parts[0].to_owned()));
+    // if header.alg != algorithm.to_string() {
+    //     return Err(Error::InvalidToken);
+    // }
+
     let claims: T = try!(T::from_base64(parts[1].to_owned()));
     Ok(claims)
 }
