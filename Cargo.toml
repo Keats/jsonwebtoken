@@ -10,6 +10,7 @@ keywords = ["jwt", "web", "api", "token"]
 [dependencies]
 rustc-serialize = "0.3"
 clippy = {version = "0.0.22", optional = true}
+rust-crypto = "0.2.34"
 
 [features]
 default = []
