@@ -5,10 +5,8 @@
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
 
-#![feature(test)]
 extern crate rustc_serialize;
 extern crate crypto;
-extern crate test;
 
 use rustc_serialize::{json, Encodable, Decodable};
 use rustc_serialize::base64::{self, ToBase64, FromBase64};
@@ -129,7 +127,6 @@ pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> R
 #[cfg(test)]
 mod tests {
     use super::{encode, decode, Algorithm, Header, Part, sign, verify};
-    use test::Bencher;
 
     #[derive(Debug, PartialEq, Clone, RustcEncodable, RustcDecodable)]
     struct Claims {
@@ -197,27 +194,5 @@ mod tests {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
         let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
         assert_eq!(claims.is_ok(), false);
-    }
-
-    #[bench]
-    fn bench_encode(b: &mut Bencher) {
-        b.iter(|| encode::<Claims>(
-            Claims {
-                sub: "b@b.com".to_owned(),
-                company: "ACME".to_owned()
-            },
-            "secret".to_owned(),
-            Algorithm::HS256
-        ));
-    }
-
-    #[bench]
-    fn bench_decode(b: &mut Bencher) {
-        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ".to_owned();
-        b.iter(|| decode::<Claims>(
-            token.clone(),
-            "secret".to_owned(),
-            Algorithm::HS256
-        ));
     }
 }

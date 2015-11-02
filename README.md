@@ -33,7 +33,7 @@ Right now, only SHA256 is supported.
 The header is currently not customisable and therefore does not support things like kid right now.
 
 ## Performance
-On my thinkpad 440s:
+On my thinkpad 440s for a 2 claims struct:
 
 ```
 test tests::bench_decode ... bench:       5,578 ns/iter (+/- 307)

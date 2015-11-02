@@ -15,3 +15,8 @@ rust-crypto = "0.2.34"
 [features]
 default = []
 dev = ["clippy"]
+
+[profile.bench]
+lto = true
+codegen-units = 1
+opt-level = 3
