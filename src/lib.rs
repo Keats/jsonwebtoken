@@ -18,22 +18,12 @@ use crypto::digest::Digest;
 pub mod errors;
 use errors::Error;
 
-#[derive(Debug, Copy, Clone, RustcDecodable, RustcEncodable)]
-/// The algorithms supported for signing, so far only Hmac Sha256
+#[derive(Debug, PartialEq, Copy, Clone, RustcDecodable, RustcEncodable)]
+/// The algorithms supported for signing/verifying
 pub enum Algorithm {
     HS256,
     HS384,
     HS512
-}
-
-impl ToString for Algorithm {
-    fn to_string(&self) -> String {
-        match *self {
-            Algorithm::HS256 => "HS256".to_owned(),
-            Algorithm::HS384 => "HS384".to_owned(),
-            Algorithm::HS512 => "HS512".to_owned(),
-        }
-    }
 }
 
 /// A part of the JWT: header and claims specifically
@@ -61,11 +51,11 @@ impl<T> Part for T where T: Encodable + Decodable {
 /// It's missing things like the kid but that's for later
 pub struct Header {
     typ: String,
-    alg: String,
+    alg: Algorithm,
 }
 
 impl Header {
-    pub fn new(algorithm: String) -> Header {
+    pub fn new(algorithm: Algorithm) -> Header {
         Header {
             typ: "JWT".to_owned(),
             alg: algorithm,
@@ -96,7 +86,7 @@ fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> b
 
 /// Encode the claims passed and sign the payload using the algorithm and the secret
 pub fn encode<T: Part>(claims: T, secret: String, algorithm: Algorithm) -> Result<String, Error> {
-    let encoded_header = try!(Header::new(algorithm.to_string()).to_base64());
+    let encoded_header = try!(Header::new(algorithm).to_base64());
     let encoded_claims = try!(claims.to_base64());
     // seems to be a tiny bit faster than format!("{}.{}", x, y)
     let payload = [encoded_header, encoded_claims].join(".");
@@ -126,7 +116,7 @@ pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> R
 
     // not reachable right now
     let header = try!(Header::from_base64(parts[0].to_owned()));
-    if header.alg != algorithm.to_string() {
+    if header.alg != algorithm {
         return Err(Error::WrongAlgorithmHeader);
     }
 
@@ -147,7 +137,7 @@ mod tests {
     #[test]
     fn to_base64() {
         let expected = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9".to_owned();
-        let result = Header::new("HS256".to_owned()).to_base64();
+        let result = Header::new(Algorithm::HS256).to_base64();
 
         assert_eq!(expected, result.unwrap());
     }
@@ -158,12 +148,12 @@ mod tests {
         let header = Header::from_base64(encoded).unwrap();
 
         assert_eq!(header.typ, "JWT");
-        assert_eq!(header.alg, "HS256");
+        assert_eq!(header.alg, Algorithm::HS256);
     }
 
     #[test]
     fn round_trip_base64() {
-        let header = Header::new("HS256".to_owned());
+        let header = Header::new(Algorithm::HS256);
         assert_eq!(Header::from_base64(header.to_base64().unwrap()).unwrap(), header);
     }
 
