@@ -19,6 +19,7 @@ fn main() {
         sub: "b@b.com".to_owned(),
         company: "ACME".to_owned()
     };
-    let token = encode::<Claims>(my_claims, "secret".to_owned(), Algorithm::HS256).unwrap();
-    let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
+    let key = "secret";
+    let token = encode::<Claims>(my_claims, key.to_owned(), Algorithm::HS256).unwrap();
+    let claims = decode::<Claims>(token.to_owned(), key.to_owned(), Algorithm::HS256).unwrap();
 }
