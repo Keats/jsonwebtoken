@@ -1,9 +1,14 @@
-# JWT
+# jsonwebtoken
 
 [![Build Status](https://travis-ci.org/Keats/rust-jwt.svg)](https://travis-ci.org/Keats/rust-jwt)
 
-## Dependencies
-You will need to add `rustc-serialize` to your Cargo.toml in order to use this crate.
+## Installation
+Add the following to Cargo.toml:
+
+```toml
+jsonwebtoken = "0.1"
+rustc-serialize = "0.3"
+```
 
 ## How to use
 There is a complete example in examples/claims.rs but here's a quick one.

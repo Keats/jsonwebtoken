@@ -1,11 +1,13 @@
 [package]
-name = "jwt"
+name = "jsonwebtoken"
 version = "0.1.0"
 authors = ["Vincent Prouillet <vincent@wearewizards.io>"]
 license = "MIT"
 readme = "README.md"
 description = "Create and parse JWT."
-keywords = ["jwt", "web", "api", "token"]
+homepage = "https://github.com/Keats/rust-jwt"
+repository = "https://github.com/Keats/rust-jwt"
+keywords = ["jwt", "web", "api", "token", "json"]
 
 [dependencies]
 rustc-serialize = "0.3"
