@@ -28,13 +28,13 @@ In addition to the normal base64/json decoding errors, `decode` can return two c
 - **WrongAlgorithmHeader**: if the alg in the header doesn't match the one given to decode
 
 ## Algorithms
-Right now, only SHA256 is supported.
+Right now, only SHA family is supported: SHA256, SHA384 and SHA512.
 
 ## Missing
 The header is currently not customisable and therefore does not support things like kid right now.
 
 ## Performance
-On my thinkpad 440s for a 2 claims struct:
+On my thinkpad 440s for a 2 claims struct using SHA256:
 
 ```
 test bench_decode ... bench:       7,106 ns/iter (+/- 5,354)

@@ -10,7 +10,7 @@ extern crate crypto;
 
 use rustc_serialize::{json, Encodable, Decodable};
 use rustc_serialize::base64::{self, ToBase64, FromBase64};
-use crypto::sha2::Sha256;
+use crypto::sha2::{Sha256, Sha384, Sha512};
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::digest::Digest;
@@ -18,16 +18,20 @@ use crypto::digest::Digest;
 pub mod errors;
 use errors::Error;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, RustcDecodable, RustcEncodable)]
 /// The algorithms supported for signing, so far only Hmac Sha256
 pub enum Algorithm {
     HS256,
+    HS384,
+    HS512
 }
 
 impl ToString for Algorithm {
     fn to_string(&self) -> String {
         match *self {
             Algorithm::HS256 => "HS256".to_owned(),
+            Algorithm::HS384 => "HS384".to_owned(),
+            Algorithm::HS512 => "HS512".to_owned(),
         }
     }
 }
@@ -72,12 +76,17 @@ impl Header {
 /// Take the payload of a JWT and sign it using the algorithm given.
 /// Returns the base64 url safe encoded of the hmac result
 fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
-    let digest = match algorithm {
-        Algorithm::HS256 => Sha256::new(),
-    };
-    let mut hmac = Hmac::new(digest, secret);
-    hmac.input(data.as_bytes());
-    hmac.result().code().to_base64(base64::URL_SAFE)
+    fn crypt<D: Digest>(digest: D, data: &str, secret: &[u8]) -> String {
+        let mut hmac = Hmac::new(digest, secret);
+        hmac.input(data.as_bytes());
+        hmac.result().code().to_base64(base64::URL_SAFE)
+    }
+
+    match algorithm {
+        Algorithm::HS256 => crypt(Sha256::new(), data, secret),
+        Algorithm::HS384 => crypt(Sha384::new(), data, secret),
+        Algorithm::HS512 => crypt(Sha512::new(), data, secret),
+    }
 }
 
 /// Compares the signature given with a re-computed signature
