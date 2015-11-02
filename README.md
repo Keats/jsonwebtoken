@@ -25,6 +25,7 @@ In addition to the normal base64/json decoding errors, `decode` can return two c
 
 - **InvalidToken**: if the token is not a valid JWT
 - **InvalidSignature**: if the signature doesn't match
+- **WrongAlgorithmHeader**: if the alg in the header doesn't match the one given to decode
 
 ## Algorithms
 Right now, only SHA256 is supported.
@@ -36,6 +37,6 @@ The header is currently not customisable and therefore does not support things l
 On my thinkpad 440s for a 2 claims struct:
 
 ```
-test tests::bench_decode ... bench:       5,578 ns/iter (+/- 307)
-test tests::bench_encode ... bench:       3,542 ns/iter (+/- 416)
+test bench_decode ... bench:       7,106 ns/iter (+/- 5,354)
+test bench_encode ... bench:       3,453 ns/iter (+/- 140)
 ```

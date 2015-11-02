@@ -115,10 +115,11 @@ pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> R
         return Err(Error::InvalidSignature);
     }
 
-    // let header = try!(Header::from_base64(parts[0].to_owned()));
-    // if header.alg != algorithm.to_string() {
-    //     return Err(Error::InvalidToken);
-    // }
+    // not reachable right now
+    let header = try!(Header::from_base64(parts[0].to_owned()));
+    if header.alg != algorithm.to_string() {
+        return Err(Error::WrongAlgorithmHeader);
+    }
 
     let claims: T = try!(T::from_base64(parts[1].to_owned()));
     Ok(claims)

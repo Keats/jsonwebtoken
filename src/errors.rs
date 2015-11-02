@@ -12,7 +12,8 @@ pub enum Error {
     Utf8(string::FromUtf8Error),
 
     InvalidToken,
-    InvalidSignature
+    InvalidSignature,
+    WrongAlgorithmHeader
 }
 
 macro_rules! impl_from_error {
