@@ -13,6 +13,14 @@ rustc-serialize = "0.3"
 ## How to use
 There is a complete example in examples/claims.rs but here's a quick one.
 
+In terms of imports:
+```rust
+extern crate jsonwebtoken as jwt;
+extern crate rustc_serialize;
+
+use jwt::{encode, decode, Algorithm};
+```
+
 ### Encoding
 ```rust
 // encode<T: Part>(claims: T, secret: String, algorithm: Algorithm) -> Result<String, Error>

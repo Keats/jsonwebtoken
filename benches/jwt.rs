@@ -3,7 +3,6 @@ extern crate test;
 extern crate jsonwebtoken as jwt;
 extern crate rustc_serialize;
 
-use rustc_serialize::{Encodable};
 use jwt::{encode, decode, Algorithm};
 
 #[derive(Debug, PartialEq, Clone, RustcEncodable, RustcDecodable)]
