@@ -40,6 +40,10 @@ In addition to the normal base64/json decoding errors, `decode` can return two c
 - **InvalidSignature**: if the signature doesn't match
 - **WrongAlgorithmHeader**: if the alg in the header doesn't match the one given to decode
 
+### Validation
+Right now, the library only validates the algorithm type used but does not verify claims such as expiration.
+Feel free to add a `validate` method to your claims struct to handle that.
+
 ## Algorithms
 Right now, only SHA family is supported: SHA256, SHA384 and SHA512.
 
