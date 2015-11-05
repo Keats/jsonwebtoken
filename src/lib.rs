@@ -85,12 +85,12 @@ fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> b
 }
 
 /// Encode the claims passed and sign the payload using the algorithm and the secret
-pub fn encode<T: Part>(claims: T, secret: String, algorithm: Algorithm) -> Result<String, Error> {
+pub fn encode<T: Part, B: AsRef<[u8]>>(claims: &T, secret: B, algorithm: Algorithm) -> Result<String, Error> {
     let encoded_header = try!(Header::new(algorithm).to_base64());
     let encoded_claims = try!(claims.to_base64());
     // seems to be a tiny bit faster than format!("{}.{}", x, y)
     let payload = [encoded_header, encoded_claims].join(".");
-    let signature = sign(&*payload, secret.as_bytes(), algorithm);
+    let signature = sign(&*payload, secret.as_ref(), algorithm);
 
     Ok([payload, signature].join("."))
 }
@@ -177,7 +177,7 @@ mod tests {
             sub: "b@b.com".to_owned(),
             company: "ACME".to_owned()
         };
-        let token = encode::<Claims>(my_claims.clone(), "secret".to_owned(), Algorithm::HS256).unwrap();
+        let token = encode(&my_claims, "secret", Algorithm::HS256).unwrap();
         let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256).unwrap();
         assert_eq!(my_claims, claims);
     }

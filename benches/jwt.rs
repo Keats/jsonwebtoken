@@ -13,14 +13,12 @@ struct Claims {
 
 #[bench]
 fn bench_encode(b: &mut test::Bencher) {
-    b.iter(|| encode::<Claims>(
-        Claims {
-            sub: "b@b.com".to_owned(),
-            company: "ACME".to_owned()
-        },
-        "secret".to_owned(),
-        Algorithm::HS256
-    ));
+    let claim = Claims {
+        sub: "b@b.com".to_owned(),
+        company: "ACME".to_owned()
+    };
+
+    b.iter(|| encode(&claim, "secret", Algorithm::HS256));
 }
 
 #[bench]

@@ -16,7 +16,7 @@ fn main() {
         company: "ACME".to_owned()
     };
     let key = "secret";
-    let token = match encode::<Claims>(my_claims, key.to_owned(), Algorithm::HS256) {
+    let token = match encode(&my_claims, key, Algorithm::HS256) {
         Ok(t) => t,
         Err(_) => panic!() // in practice you would return the error
     };
