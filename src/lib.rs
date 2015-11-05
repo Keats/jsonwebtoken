@@ -30,12 +30,16 @@ pub enum Algorithm {
 /// A part of the JWT: header and claims specifically
 /// Allows converting from/to struct with base64
 pub trait Part {
+    type Encoded: AsRef<str>;
+
     fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<Self, Error> where Self: Sized;
-    fn to_base64(&self) -> Result<String, Error>;
+    fn to_base64(&self) -> Result<Self::Encoded, Error>;
 }
 
 impl<T> Part for T where T: Encodable + Decodable {
-    fn to_base64(&self) -> Result<String, Error> {
+    type Encoded = String;
+
+    fn to_base64(&self) -> Result<Self::Encoded, Error> {
         let encoded = try!(json::encode(&self));
         Ok(encoded.as_bytes().to_base64(base64::URL_SAFE))
     }
@@ -65,6 +69,8 @@ impl Header {
 }
 
 impl Part for Header {
+    type Encoded = &'static str;
+
     fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<Self, Error> where Self: Sized {
         let algoritm = match encoded.as_ref() {
             b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9" => { Algorithm::HS256 },
@@ -76,14 +82,14 @@ impl Part for Header {
         Ok(Header::new(algoritm))
     }
 
-    fn to_base64(&self) -> Result<String, Error> {
+    fn to_base64(&self) -> Result<Self::Encoded, Error> {
         let encoded = match self.alg {
             Algorithm::HS256 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9" },
             Algorithm::HS384 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzM4NCJ9" },
             Algorithm::HS512 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9" },
         };
 
-        Ok(encoded.into())
+        Ok(encoded)
     }
 }
 
@@ -113,7 +119,7 @@ pub fn encode<T: Part, B: AsRef<[u8]>>(claims: &T, secret: B, algorithm: Algorit
     let encoded_header = try!(Header::new(algorithm).to_base64());
     let encoded_claims = try!(claims.to_base64());
     // seems to be a tiny bit faster than format!("{}.{}", x, y)
-    let payload = [encoded_header, encoded_claims].join(".");
+    let payload = [encoded_header, encoded_claims.as_ref()].join(".");
     let signature = sign(&*payload, secret.as_ref(), algorithm);
 
     Ok([payload, signature].join("."))
