@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn sign_hs256() {
-        let result = sign("hello world", "secret".as_bytes(), Algorithm::HS256);
+        let result = sign("hello world", b"secret", Algorithm::HS256);
         let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
         assert_eq!(result, expected);
     }
@@ -167,8 +167,8 @@ mod tests {
     #[test]
     fn verify_hs256() {
         let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
-        let result = verify(sig.into(), "hello world", "secret".as_bytes(), Algorithm::HS256);
-        assert!(result == true);
+        let valid = verify(sig, "hello world", b"secret", Algorithm::HS256);
+        assert!(valid);
     }
 
     #[test]
@@ -183,16 +183,18 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "InvalidToken")]
     fn decode_token_missing_parts() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
         let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
-        assert_eq!(claims.is_ok(), false);
+        claims.unwrap();
     }
 
     #[test]
+    #[should_panic(expected = "InvalidSignature")]
     fn decode_token_invalid_signature() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
         let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
-        assert_eq!(claims.is_ok(), false);
+        claims.unwrap();
     }
 }
