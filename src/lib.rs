@@ -29,7 +29,7 @@ pub enum Algorithm {
 /// A part of the JWT: header and claims specifically
 /// Allows converting from/to struct with base64
 pub trait Part {
-    fn from_base64(encoded: String) -> Result<Self, Error> where Self: Sized;
+    fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<Self, Error> where Self: Sized;
     fn to_base64(&self) -> Result<String, Error>;
 }
 
@@ -39,8 +39,8 @@ impl<T> Part for T where T: Encodable + Decodable {
         Ok(encoded.as_bytes().to_base64(base64::URL_SAFE))
     }
 
-    fn from_base64(encoded: String) -> Result<T, Error> {
-        let decoded = try!(encoded.as_bytes().from_base64());
+    fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<T, Error> {
+        let decoded = try!(encoded.as_ref().from_base64());
         let s = try!(String::from_utf8(decoded));
         Ok(try!(json::decode(&s)))
     }
@@ -115,12 +115,12 @@ pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> R
     }
 
     // not reachable right now
-    let header = try!(Header::from_base64(parts[0].to_owned()));
+    let header = try!(Header::from_base64(parts[0]));
     if header.alg != algorithm {
         return Err(Error::WrongAlgorithmHeader);
     }
 
-    let claims: T = try!(T::from_base64(parts[1].to_owned()));
+    let claims: T = try!(T::from_base64(parts[1]));
     Ok(claims)
 }
 
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn from_base64() {
-        let encoded = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9".to_owned();
+        let encoded = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9";
         let header = Header::from_base64(encoded).unwrap();
 
         assert_eq!(header.typ, "JWT");
