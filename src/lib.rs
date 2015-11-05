@@ -98,15 +98,22 @@ pub fn encode<T: Part, B: AsRef<[u8]>>(claims: &T, secret: B, algorithm: Algorit
 
 /// Decode a token into a Claims struct
 /// If the token or its signature is invalid, it will return an error
-pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> Result<T, Error> {
-    let parts: Vec<&str> = token.split(".").collect();
-    if parts.len() != 3 {
-        return Err(Error::InvalidToken);
+pub fn decode<T: Part>(token: &str, secret: &str, algorithm: Algorithm) -> Result<T, Error> {
+    macro_rules! expect_two {
+        ($iter:expr) => {{
+            let mut i = $iter; // evaluate the expr
+            match (i.next(), i.next(), i.next()) {
+                (Some(first), Some(second), None) => (first, second),
+                _ => return Err(Error::InvalidToken)
+            }
+        }}
     }
 
+    let (signature, payload) = expect_two!(token.rsplitn(2, '.'));
+
     let is_valid = verify(
-        parts[2],
-        &[parts[0], parts[1]].join("."),
+        signature,
+        payload,
         secret.as_bytes(),
         algorithm
     );
@@ -115,14 +122,14 @@ pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> R
         return Err(Error::InvalidSignature);
     }
 
-    // not reachable right now
-    let header = try!(Header::from_base64(parts[0]));
+    let (claims, header) = expect_two!(payload.rsplitn(2, '.'));
+
+    let header = try!(Header::from_base64(header));
     if header.alg != algorithm {
         return Err(Error::WrongAlgorithmHeader);
     }
 
-    let claims: T = try!(T::from_base64(parts[1]));
-    Ok(claims)
+    T::from_base64(claims)
 }
 
 #[cfg(test)]
@@ -179,7 +186,7 @@ mod tests {
             company: "ACME".to_owned()
         };
         let token = encode(&my_claims, "secret", Algorithm::HS256).unwrap();
-        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256).unwrap();
+        let claims = decode::<Claims>(&token, "secret", Algorithm::HS256).unwrap();
         assert_eq!(my_claims, claims);
     }
 
@@ -187,7 +194,7 @@ mod tests {
     #[should_panic(expected = "InvalidToken")]
     fn decode_token_missing_parts() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
+        let claims = decode::<Claims>(token, "secret", Algorithm::HS256);
         claims.unwrap();
     }
 
@@ -195,7 +202,7 @@ mod tests {
     #[should_panic(expected = "InvalidSignature")]
     fn decode_token_invalid_signature() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
-        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
+        let claims = decode::<Claims>(token, "secret", Algorithm::HS256);
         claims.unwrap();
     }
 }
