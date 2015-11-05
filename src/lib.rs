@@ -14,6 +14,7 @@ use crypto::sha2::{Sha256, Sha384, Sha512};
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::digest::Digest;
+use crypto::util::fixed_time_eq;
 
 pub mod errors;
 use errors::Error;
@@ -81,7 +82,7 @@ fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
 
 /// Compares the signature given with a re-computed signature
 fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> bool {
-    signature == sign(data, secret, algorithm)
+    fixed_time_eq(signature.as_ref(), sign(data, secret, algorithm).as_ref())
 }
 
 /// Encode the claims passed and sign the payload using the algorithm and the secret
