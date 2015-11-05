@@ -19,7 +19,7 @@ use crypto::util::fixed_time_eq;
 pub mod errors;
 use errors::Error;
 
-#[derive(Debug, PartialEq, Copy, Clone, RustcDecodable, RustcEncodable)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 /// The algorithms supported for signing/verifying
 pub enum Algorithm {
     HS256,
@@ -47,20 +47,43 @@ impl<T> Part for T where T: Encodable + Decodable {
     }
 }
 
-#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq)]
 /// A basic JWT header part, the alg is automatically filled for use
 /// It's missing things like the kid but that's for later
 pub struct Header {
-    typ: String,
+    typ: &'static str,
     alg: Algorithm,
 }
 
 impl Header {
     pub fn new(algorithm: Algorithm) -> Header {
         Header {
-            typ: "JWT".to_owned(),
+            typ: "JWT",
             alg: algorithm,
         }
+    }
+}
+
+impl Part for Header {
+    fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<Self, Error> where Self: Sized {
+        let algoritm = match encoded.as_ref() {
+            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9" => { Algorithm::HS256 },
+            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzM4NCJ9" => { Algorithm::HS384 },
+            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9" => { Algorithm::HS512 },
+            _ => return Err(Error::InvalidToken)
+        };
+
+        Ok(Header::new(algoritm))
+    }
+
+    fn to_base64(&self) -> Result<String, Error> {
+        let encoded = match self.alg {
+            Algorithm::HS256 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9" },
+            Algorithm::HS384 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzM4NCJ9" },
+            Algorithm::HS512 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9" },
+        };
+
+        Ok(encoded.into())
     }
 }
 
