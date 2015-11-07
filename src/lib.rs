@@ -14,11 +14,12 @@ use crypto::sha2::{Sha256, Sha384, Sha512};
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::digest::Digest;
+use crypto::util::fixed_time_eq;
 
 pub mod errors;
 use errors::Error;
 
-#[derive(Debug, PartialEq, Copy, Clone, RustcDecodable, RustcEncodable)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 /// The algorithms supported for signing/verifying
 pub enum Algorithm {
     HS256,
@@ -29,37 +30,66 @@ pub enum Algorithm {
 /// A part of the JWT: header and claims specifically
 /// Allows converting from/to struct with base64
 pub trait Part {
-    fn from_base64(encoded: String) -> Result<Self, Error> where Self: Sized;
-    fn to_base64(&self) -> Result<String, Error>;
+    type Encoded: AsRef<str>;
+
+    fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<Self, Error> where Self: Sized;
+    fn to_base64(&self) -> Result<Self::Encoded, Error>;
 }
 
 impl<T> Part for T where T: Encodable + Decodable {
-    fn to_base64(&self) -> Result<String, Error> {
+    type Encoded = String;
+
+    fn to_base64(&self) -> Result<Self::Encoded, Error> {
         let encoded = try!(json::encode(&self));
         Ok(encoded.as_bytes().to_base64(base64::URL_SAFE))
     }
 
-    fn from_base64(encoded: String) -> Result<T, Error> {
-        let decoded = try!(encoded.as_bytes().from_base64());
+    fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<T, Error> {
+        let decoded = try!(encoded.as_ref().from_base64());
         let s = try!(String::from_utf8(decoded));
         Ok(try!(json::decode(&s)))
     }
 }
 
-#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq)]
 /// A basic JWT header part, the alg is automatically filled for use
 /// It's missing things like the kid but that's for later
 pub struct Header {
-    typ: String,
+    typ: &'static str,
     alg: Algorithm,
 }
 
 impl Header {
     pub fn new(algorithm: Algorithm) -> Header {
         Header {
-            typ: "JWT".to_owned(),
+            typ: "JWT",
             alg: algorithm,
         }
+    }
+}
+
+impl Part for Header {
+    type Encoded = &'static str;
+
+    fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<Self, Error> where Self: Sized {
+        let algoritm = match encoded.as_ref() {
+            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9" => { Algorithm::HS256 },
+            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzM4NCJ9" => { Algorithm::HS384 },
+            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9" => { Algorithm::HS512 },
+            _ => return Err(Error::InvalidToken)
+        };
+
+        Ok(Header::new(algoritm))
+    }
+
+    fn to_base64(&self) -> Result<Self::Encoded, Error> {
+        let encoded = match self.alg {
+            Algorithm::HS256 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9" },
+            Algorithm::HS384 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzM4NCJ9" },
+            Algorithm::HS512 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9" },
+        };
+
+        Ok(encoded)
     }
 }
 
@@ -81,31 +111,38 @@ fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
 
 /// Compares the signature given with a re-computed signature
 fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> bool {
-    signature == sign(data, secret, algorithm)
+    fixed_time_eq(signature.as_ref(), sign(data, secret, algorithm).as_ref())
 }
 
 /// Encode the claims passed and sign the payload using the algorithm and the secret
-pub fn encode<T: Part>(claims: T, secret: String, algorithm: Algorithm) -> Result<String, Error> {
+pub fn encode<T: Part, B: AsRef<[u8]>>(claims: &T, secret: B, algorithm: Algorithm) -> Result<String, Error> {
     let encoded_header = try!(Header::new(algorithm).to_base64());
     let encoded_claims = try!(claims.to_base64());
     // seems to be a tiny bit faster than format!("{}.{}", x, y)
-    let payload = [encoded_header, encoded_claims].join(".");
-    let signature = sign(&*payload, secret.as_bytes(), algorithm);
+    let payload = [encoded_header, encoded_claims.as_ref()].join(".");
+    let signature = sign(&*payload, secret.as_ref(), algorithm);
 
     Ok([payload, signature].join("."))
 }
 
 /// Decode a token into a Claims struct
 /// If the token or its signature is invalid, it will return an error
-pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> Result<T, Error> {
-    let parts: Vec<&str> = token.split(".").collect();
-    if parts.len() != 3 {
-        return Err(Error::InvalidToken);
+pub fn decode<T: Part>(token: &str, secret: &str, algorithm: Algorithm) -> Result<T, Error> {
+    macro_rules! expect_two {
+        ($iter:expr) => {{
+            let mut i = $iter; // evaluate the expr
+            match (i.next(), i.next(), i.next()) {
+                (Some(first), Some(second), None) => (first, second),
+                _ => return Err(Error::InvalidToken)
+            }
+        }}
     }
 
+    let (signature, payload) = expect_two!(token.rsplitn(2, '.'));
+
     let is_valid = verify(
-        parts[2],
-        &[parts[0], parts[1]].join("."),
+        signature,
+        payload,
         secret.as_bytes(),
         algorithm
     );
@@ -114,14 +151,14 @@ pub fn decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> R
         return Err(Error::InvalidSignature);
     }
 
-    // not reachable right now
-    let header = try!(Header::from_base64(parts[0].to_owned()));
+    let (claims, header) = expect_two!(payload.rsplitn(2, '.'));
+
+    let header = try!(Header::from_base64(header));
     if header.alg != algorithm {
         return Err(Error::WrongAlgorithmHeader);
     }
 
-    let claims: T = try!(T::from_base64(parts[1].to_owned()));
-    Ok(claims)
+    T::from_base64(claims)
 }
 
 #[cfg(test)]
@@ -144,7 +181,7 @@ mod tests {
 
     #[test]
     fn from_base64() {
-        let encoded = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9".to_owned();
+        let encoded = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9";
         let header = Header::from_base64(encoded).unwrap();
 
         assert_eq!(header.typ, "JWT");
@@ -159,7 +196,7 @@ mod tests {
 
     #[test]
     fn sign_hs256() {
-        let result = sign("hello world", "secret".as_bytes(), Algorithm::HS256);
+        let result = sign("hello world", b"secret", Algorithm::HS256);
         let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
         assert_eq!(result, expected);
     }
@@ -167,8 +204,8 @@ mod tests {
     #[test]
     fn verify_hs256() {
         let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
-        let result = verify(sig.into(), "hello world", "secret".as_bytes(), Algorithm::HS256);
-        assert!(result == true);
+        let valid = verify(sig, "hello world", b"secret", Algorithm::HS256);
+        assert!(valid);
     }
 
     #[test]
@@ -177,22 +214,24 @@ mod tests {
             sub: "b@b.com".to_owned(),
             company: "ACME".to_owned()
         };
-        let token = encode::<Claims>(my_claims.clone(), "secret".to_owned(), Algorithm::HS256).unwrap();
-        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256).unwrap();
+        let token = encode(&my_claims, "secret", Algorithm::HS256).unwrap();
+        let claims = decode::<Claims>(&token, "secret", Algorithm::HS256).unwrap();
         assert_eq!(my_claims, claims);
     }
 
     #[test]
+    #[should_panic(expected = "InvalidToken")]
     fn decode_token_missing_parts() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
-        assert_eq!(claims.is_ok(), false);
+        let claims = decode::<Claims>(token, "secret", Algorithm::HS256);
+        claims.unwrap();
     }
 
     #[test]
+    #[should_panic(expected = "InvalidSignature")]
     fn decode_token_invalid_signature() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
-        let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
-        assert_eq!(claims.is_ok(), false);
+        let claims = decode::<Claims>(token, "secret", Algorithm::HS256);
+        claims.unwrap();
     }
 }
