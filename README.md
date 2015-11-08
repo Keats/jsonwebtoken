@@ -23,16 +23,14 @@ use jwt::{encode, decode, Algorithm};
 
 ### Encoding
 ```rust
-// encode<T: Part>(claims: T, secret: String, algorithm: Algorithm) -> Result<String, Error>
-let token = encode::<Claims>(my_claims, "secret".to_owned(), Algorithm::HS256);
+let token = encode(&my_claims, "secret", Algorithm::HS256);
 ```
 In that example, `my_claims` is an instance of the Claims struct.  
 The struct you are using for your claims should derive `RustcEncodable` and `RustcDecodable`.
 
 ### Decoding
 ```rust
-// decode<T: Part>(token: String, secret: String, algorithm: Algorithm) -> Result<T, Error>
-let claims = decode::<Claims>(token.to_owned(), "secret".to_owned(), Algorithm::HS256);
+let claims = decode::<Claims>(&token, "secret", Algorithm::HS256);
 ```
 In addition to the normal base64/json decoding errors, `decode` can return two custom errors:
 
@@ -54,6 +52,6 @@ The header is currently not customisable and therefore does not support things l
 On my thinkpad 440s for a 2 claims struct using SHA256:
 
 ```
-test bench_decode ... bench:       7,106 ns/iter (+/- 5,354)
-test bench_encode ... bench:       3,453 ns/iter (+/- 140)
+test bench_decode ... bench:       2,537 ns/iter (+/- 813)
+test bench_encode ... bench:       2,847 ns/iter (+/- 131)
 ```
