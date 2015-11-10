@@ -6,7 +6,7 @@
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "0.1"
+jsonwebtoken = "0.2"
 rustc-serialize = "0.3"
 ```
 
