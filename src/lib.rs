@@ -127,7 +127,15 @@ pub fn encode<T: Part, B: AsRef<[u8]>>(claims: &T, secret: B, algorithm: Algorit
 
 /// Decode a token into a Claims struct
 /// If the token or its signature is invalid, it will return an error
-pub fn decode<T: Part>(token: &str, secret: &str, algorithm: Algorithm) -> Result<T, Error> {
+pub fn decode<T: Part>(token: &str, secret: &[u8], algorithm: Algorithm) -> Result<T, Error> {
+    // We don't use AsRef<[u8]> for `secret` because it would require changing this:
+    //
+    //     decode::<MyStruct>(...)
+    //
+    // to:
+    //
+    //     decode::<MyStruct, _>(...)
+
     macro_rules! expect_two {
         ($iter:expr) => {{
             let mut i = $iter; // evaluate the expr
@@ -143,7 +151,7 @@ pub fn decode<T: Part>(token: &str, secret: &str, algorithm: Algorithm) -> Resul
     let is_valid = verify(
         signature,
         payload,
-        secret.as_bytes(),
+        secret,
         algorithm
     );
 
@@ -215,7 +223,7 @@ mod tests {
             company: "ACME".to_owned()
         };
         let token = encode(&my_claims, "secret", Algorithm::HS256).unwrap();
-        let claims = decode::<Claims>(&token, "secret", Algorithm::HS256).unwrap();
+        let claims = decode::<Claims>(&token, "secret".as_ref(), Algorithm::HS256).unwrap();
         assert_eq!(my_claims, claims);
     }
 
@@ -223,7 +231,7 @@ mod tests {
     #[should_panic(expected = "InvalidToken")]
     fn decode_token_missing_parts() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-        let claims = decode::<Claims>(token, "secret", Algorithm::HS256);
+        let claims = decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256);
         claims.unwrap();
     }
 
@@ -231,7 +239,15 @@ mod tests {
     #[should_panic(expected = "InvalidSignature")]
     fn decode_token_invalid_signature() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
-        let claims = decode::<Claims>(token, "secret", Algorithm::HS256);
+        let claims = decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256);
+        claims.unwrap();
+    }
+
+
+    #[test]
+    fn decode_token_with_bytes_secret() {
+        let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiY29tcGFueSI6Ikdvb2dvbCJ9.27QxgG96vpX4akKNpD1YdRGHE3_u2X35wR3EHA2eCrs";
+        let claims = decode::<Claims>(token, b"\x01\x02\x03", Algorithm::HS256);
         claims.unwrap();
     }
 }
