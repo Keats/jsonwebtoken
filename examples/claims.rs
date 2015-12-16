@@ -21,7 +21,7 @@ fn main() {
         Err(_) => panic!() // in practice you would return the error
     };
 
-    let claims = match decode::<Claims>(&token, key, Algorithm::HS256) {
+    let claims = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256) {
         Ok(c) => c,
         Err(err) => match err {
             Error::InvalidToken => panic!(), // Example on how to handle a specific error
