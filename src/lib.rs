@@ -8,7 +8,7 @@
 extern crate rustc_serialize;
 extern crate crypto;
 
-use rustc_serialize::{json, Encodable, Decodable};
+use rustc_serialize::{json, Encoder, Decoder, Encodable, Decodable};
 use rustc_serialize::base64::{self, ToBase64, FromBase64};
 use crypto::sha2::{Sha256, Sha384, Sha512};
 use crypto::hmac::Hmac;
@@ -26,6 +26,28 @@ pub enum Algorithm {
     HS384,
     HS512
 }
+
+impl Encodable for Algorithm {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        s.emit_str(match *self {
+            Algorithm::HS256 => "HS256",
+            Algorithm::HS384 => "HS384",
+            Algorithm::HS512 => "HS512"
+        })
+    }
+}
+
+impl Decodable for Algorithm {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        Ok(match &try!(d.read_str())[..] {
+            "HS256" => Algorithm::HS256,
+            "HS384" => Algorithm::HS384,
+            "HS512" => Algorithm::HS512,
+            _ => return Err(d.error("Unsupported algorithm"))
+        })
+    }
+}
+
 
 /// A part of the JWT: header and claims specifically
 /// Allows converting from/to struct with base64
@@ -51,45 +73,20 @@ impl<T> Part for T where T: Encodable + Decodable {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, RustcEncodable, RustcDecodable)]
 /// A basic JWT header part, the alg is automatically filled for use
 /// It's missing things like the kid but that's for later
 pub struct Header {
-    typ: &'static str,
+    typ: String,
     alg: Algorithm,
 }
 
 impl Header {
     pub fn new(algorithm: Algorithm) -> Header {
         Header {
-            typ: "JWT",
+            typ: "JWT".to_owned(),
             alg: algorithm,
         }
-    }
-}
-
-impl Part for Header {
-    type Encoded = &'static str;
-
-    fn from_base64<B: AsRef<[u8]>>(encoded: B) -> Result<Self, Error> where Self: Sized {
-        let algoritm = match encoded.as_ref() {
-            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9" => { Algorithm::HS256 },
-            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzM4NCJ9" => { Algorithm::HS384 },
-            b"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9" => { Algorithm::HS512 },
-            _ => return Err(Error::InvalidToken)
-        };
-
-        Ok(Header::new(algoritm))
-    }
-
-    fn to_base64(&self) -> Result<Self::Encoded, Error> {
-        let encoded = match self.alg {
-            Algorithm::HS256 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9" },
-            Algorithm::HS384 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzM4NCJ9" },
-            Algorithm::HS512 => { "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9" },
-        };
-
-        Ok(encoded)
     }
 }
 
@@ -119,7 +116,7 @@ pub fn encode<T: Part, B: AsRef<[u8]>>(claims: &T, secret: B, algorithm: Algorit
     let encoded_header = try!(Header::new(algorithm).to_base64());
     let encoded_claims = try!(claims.to_base64());
     // seems to be a tiny bit faster than format!("{}.{}", x, y)
-    let payload = [encoded_header, encoded_claims.as_ref()].join(".");
+    let payload = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
     let signature = sign(&*payload, secret.as_ref(), algorithm);
 
     Ok([payload, signature].join("."))
@@ -248,6 +245,20 @@ mod tests {
     fn decode_token_with_bytes_secret() {
         let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiY29tcGFueSI6Ikdvb2dvbCJ9.27QxgG96vpX4akKNpD1YdRGHE3_u2X35wR3EHA2eCrs";
         let claims = decode::<Claims>(token, b"\x01\x02\x03", Algorithm::HS256);
+        claims.unwrap();
+    }
+
+    #[test]
+    fn decode_token_with_custom_header_fields() {
+        let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImFzZGYiOiJ5ZXMifQ.eyJjb21wYW55IjoiMTIzNDU2Nzg5MCIsInN1YiI6IkpvaG4gRG9lIn0.qJFGci0R34MFQjQs__ykis5j1qbJ7XhedWD6qcwNi2A";
+        let claims = decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256);
+        claims.unwrap();
+    }
+
+    #[test]
+    fn decode_token_with_shuffled_header_fields() {
+        let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjb21wYW55IjoiMTIzNDU2Nzg5MCIsInN1YiI6IkpvaG4gRG9lIn0.SEIZ4Jg46VGhquuwPYDLY5qHF8AkQczF14aXM3a2c28";
+        let claims = decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256);
         claims.unwrap();
     }
 }
