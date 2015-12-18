@@ -1,7 +1,7 @@
 extern crate jsonwebtoken as jwt;
 extern crate rustc_serialize;
 
-use jwt::{encode, decode, Algorithm};
+use jwt::{encode, decode, Header, Algorithm};
 use jwt::errors::{Error};
 
 #[derive(Debug, RustcEncodable, RustcDecodable)]
@@ -16,7 +16,7 @@ fn main() {
         company: "ACME".to_owned()
     };
     let key = "secret";
-    let token = match encode(&my_claims, key, Algorithm::HS256) {
+    let token = match encode(&my_claims, key, Header::default()) {
         Ok(t) => t,
         Err(_) => panic!() // in practice you would return the error
     };
@@ -28,4 +28,5 @@ fn main() {
             _ => panic!()
         }
     };
+    println!("{:?}", claims);
 }
