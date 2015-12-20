@@ -11,25 +11,17 @@ struct Claims {
     company: String
 }
 
-// Example validation implementation
-impl Claims {
-    fn is_valid(self) -> bool {
-        if self.company != "ACME".to_owned() {
-            return false;
-        }
-        // expiration etc
-
-        true
-    }
-}
-
 fn main() {
     let my_claims = Claims {
         sub: "b@b.com".to_owned(),
         company: "ACME".to_owned()
     };
     let key = "secret";
-    let token = match encode(&my_claims, key.as_ref(), Header::default()) {
+
+    let mut header = Header::default();
+    header.kid = Some("signing_key".to_owned());
+
+    let token = match encode(&my_claims, key.as_ref(), header) {
         Ok(t) => t,
         Err(_) => panic!() // in practice you would return the error
     };
@@ -43,5 +35,4 @@ fn main() {
     };
     println!("{:?}", token_data.claims);
     println!("{:?}", token_data.header);
-    println!("{:?}", token_data.claims.is_valid());
 }

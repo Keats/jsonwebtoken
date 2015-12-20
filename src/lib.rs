@@ -57,10 +57,10 @@ impl<T> Part for T where T: Encodable + Decodable {
 pub struct Header {
     typ: String,
     alg: Algorithm,
-    jku: Option<String>,
-    kid: Option<String>,
-    x5u: Option<String>,
-    x5t: Option<String>
+    pub jku: Option<String>,
+    pub kid: Option<String>,
+    pub x5u: Option<String>,
+    pub x5t: Option<String>
 }
 
 impl Header {
@@ -85,8 +85,8 @@ impl Default for Header {
 #[derive(Debug)]
 /// The return type of a successful call to decode(...)
 pub struct TokenData<T: Part> {
-    header: Header,
-    claims: T
+    pub header: Header,
+    pub claims: T
 }
 
 /// Take the payload of a JWT and sign it using the algorithm given.
