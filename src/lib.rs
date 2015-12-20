@@ -52,8 +52,8 @@ impl<T> Part for T where T: Encodable + Decodable {
 }
 
 #[derive(Debug, PartialEq, RustcDecodable, RustcEncodable)]
-/// A basic JWT header part, the alg is automatically filled for use
-/// and the algorithm defaults to HS256
+/// A basic JWT header part, the alg defaults to HS256 and typ is automatically
+/// set to `JWT`. All the other fields are optional
 pub struct Header {
     typ: String,
     alg: Algorithm,
@@ -83,6 +83,7 @@ impl Default for Header {
 }
 
 #[derive(Debug)]
+/// The return type of a successful call to decode(...)
 pub struct TokenData<T: Part> {
     header: Header,
     claims: T
@@ -109,7 +110,7 @@ fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> b
     fixed_time_eq(signature.as_ref(), sign(data, secret, algorithm).as_ref())
 }
 
-/// Encode the claims passed and sign the payload using the algorithm and the secret
+/// Encode the claims passed and sign the payload using the algorithm from the header and the secret
 pub fn encode<T: Part>(claims: &T, secret: &[u8], header: Header) -> Result<String, Error> {
     let encoded_header = try!(header.to_base64());
     let encoded_claims = try!(claims.to_base64());
@@ -120,24 +121,21 @@ pub fn encode<T: Part>(claims: &T, secret: &[u8], header: Header) -> Result<Stri
     Ok([payload, signature].join("."))
 }
 
+/// Used in decode: takes the result of a rsplit and ensure we only get 2 parts
+/// Errors if we don't
+macro_rules! expect_two {
+    ($iter:expr) => {{
+        let mut i = $iter; // evaluate the expr
+        match (i.next(), i.next(), i.next()) {
+            (Some(first), Some(second), None) => (first, second),
+            _ => return Err(Error::InvalidToken)
+        }
+    }}
+}
+
 /// Decode a token into a Claims struct
 /// If the token or its signature is invalid, it will return an error
 pub fn decode<T: Part>(token: &str, secret: &[u8], algorithm: Algorithm) -> Result<TokenData<T>, Error> {
-    // We don't use AsRef<[u8]> for `secret` because it would require changing this:
-    //     decode::<MyStruct>(...)
-    // to:
-    //     decode::<MyStruct, _>(...)
-
-    macro_rules! expect_two {
-        ($iter:expr) => {{
-            let mut i = $iter; // evaluate the expr
-            match (i.next(), i.next(), i.next()) {
-                (Some(first), Some(second), None) => (first, second),
-                _ => return Err(Error::InvalidToken)
-            }
-        }}
-    }
-
     let (signature, payload) = expect_two!(token.rsplitn(2, '.'));
 
     let is_valid = verify(
