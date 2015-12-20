@@ -18,7 +18,7 @@ fn bench_encode(b: &mut test::Bencher) {
         company: "ACME".to_owned()
     };
 
-    b.iter(|| encode(&claim, "secret", Header::default()));
+    b.iter(|| encode(&claim, "secret".as_ref(), Header::default()));
 }
 
 #[bench]
