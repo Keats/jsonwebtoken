@@ -56,7 +56,7 @@ impl<T> Part for T where T: Encodable + Decodable {
 /// set to `JWT`. All the other fields are optional
 pub struct Header {
     typ: String,
-    alg: Algorithm,
+    pub alg: Algorithm,
     pub jku: Option<String>,
     pub kid: Option<String>,
     pub x5u: Option<String>,
@@ -111,7 +111,7 @@ fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> b
 }
 
 /// Encode the claims passed and sign the payload using the algorithm from the header and the secret
-pub fn encode<T: Part>(claims: &T, secret: &[u8], header: Header) -> Result<String, Error> {
+pub fn encode<T: Part>(header: Header, claims: &T, secret: &[u8]) -> Result<String, Error> {
     let encoded_header = try!(header.to_base64());
     let encoded_claims = try!(claims.to_base64());
     // seems to be a tiny bit faster than format!("{}.{}", x, y)
@@ -193,7 +193,7 @@ mod tests {
         };
         let mut header = Header::default();
         header.kid = Some("kid".to_owned());
-        let token = encode(&my_claims, "secret".as_ref(), header).unwrap();
+        let token = encode(header, &my_claims, "secret".as_ref()).unwrap();
         let token_data = decode::<Claims>(&token, "secret".as_ref(), Algorithm::HS256).unwrap();
         assert_eq!(my_claims, token_data.claims);
         assert_eq!("kid", token_data.header.kid.unwrap());
@@ -205,7 +205,7 @@ mod tests {
             sub: "b@b.com".to_owned(),
             company: "ACME".to_owned()
         };
-        let token = encode(&my_claims, "secret".as_ref(), Header::default()).unwrap();
+        let token = encode(Header::default(), &my_claims, "secret".as_ref()).unwrap();
         let token_data = decode::<Claims>(&token, "secret".as_ref(), Algorithm::HS256).unwrap();
         assert_eq!(my_claims, token_data.claims);
         assert!(token_data.header.kid.is_none());

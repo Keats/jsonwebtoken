@@ -23,10 +23,11 @@ use jwt::{encode, decode, Header, Algorithm};
 
 ### Encoding
 ```rust
-let token = encode(&my_claims, "secret".as_ref(), Header::default()).unwrap();
+let token = encode(Header::default(), &my_claims, "secret".as_ref()).unwrap();
 ```
 In that example, `my_claims` is an instance of the Claims struct.  
 The struct you are using for your claims should derive `RustcEncodable` and `RustcDecodable`.
+The default algorithm is HS256. Look at custom headers section to see how to change that.
 
 ### Decoding
 ```rust
@@ -50,7 +51,8 @@ If you want to set the `kid` parameter for example:
 ```rust
 let mut header = Header::default();
 header.kid = Some("blabla".to_owned());
-let token = encode(&my_claims, "secret".as_ref(), header).unwrap();
+header.alg = Algorithm::HS512;
+let token = encode(header, &my_claims, "secret".as_ref()).unwrap();
 ```
 
 ## Algorithms

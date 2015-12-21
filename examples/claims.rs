@@ -29,7 +29,7 @@ fn main() {
         company: "ACME".to_owned()
     };
     let key = "secret";
-    let token = match encode(&my_claims, key.as_ref(), Header::default()) {
+    let token = match encode(Header::default(), &my_claims, key.as_ref()) {
         Ok(t) => t,
         Err(_) => panic!() // in practice you would return the error
     };
