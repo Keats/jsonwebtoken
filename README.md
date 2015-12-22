@@ -62,6 +62,6 @@ Right now, only SHA family is supported: SHA256, SHA384 and SHA512.
 On my thinkpad 440s for a 2 claims struct using SHA256:
 
 ```
-test bench_decode ... bench:       2,537 ns/iter (+/- 813)
-test bench_encode ... bench:       2,847 ns/iter (+/- 131)
+test bench_decode ... bench:       7,259 ns/iter (+/- 1,506)
+test bench_encode ... bench:       4,261 ns/iter (+/- 722)
 ```
