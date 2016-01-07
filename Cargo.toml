@@ -4,14 +4,14 @@ version = "1.0.0"
 authors = ["Vincent Prouillet <vincent@wearewizards.io>"]
 license = "MIT"
 readme = "README.md"
-description = "Create and parse JWT."
+description = "Create and parse JWT in a strongly typed way."
 homepage = "https://github.com/Keats/rust-jwt"
 repository = "https://github.com/Keats/rust-jwt"
 keywords = ["jwt", "web", "api", "token", "json"]
 
 [dependencies]
 rustc-serialize = "0.3"
-clippy = {version = "0.0.32", optional = true}
+clippy = {version = "0.0.35", optional = true}
 rust-crypto = "0.2.34"
 
 [features]
