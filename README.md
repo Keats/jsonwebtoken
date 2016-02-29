@@ -69,3 +69,8 @@ On my thinkpad 440s for a 2 claims struct using SHA256:
 test bench_decode ... bench:       7,259 ns/iter (+/- 1,506)
 test bench_encode ... bench:       4,261 ns/iter (+/- 722)
 ```
+
+## Changelog
+
+1.1.0: Impl Error for jsonwebtoken errors
+1.0: Initial release
