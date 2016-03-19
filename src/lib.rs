@@ -10,6 +10,7 @@ extern crate crypto;
 
 use rustc_serialize::{json, Encodable, Decodable};
 use rustc_serialize::base64::{self, ToBase64, FromBase64};
+use rustc_serialize::json::{ToJson, Json};
 use crypto::sha2::{Sha256, Sha384, Sha512};
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
@@ -18,6 +19,7 @@ use crypto::util::fixed_time_eq;
 
 pub mod errors;
 use errors::Error;
+use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Copy, Clone, RustcDecodable, RustcEncodable)]
 /// The algorithms supported for signing/verifying
@@ -25,6 +27,16 @@ pub enum Algorithm {
     HS256,
     HS384,
     HS512
+}
+
+impl ToJson for Algorithm {
+    fn to_json(&self) -> Json {
+        match self {
+            &Algorithm::HS256 => Json::String("HS256".to_owned()),
+            &Algorithm::HS384 => Json::String("HS384".to_owned()),
+            &Algorithm::HS512 => Json::String("HS512".to_owned()),
+        }
+    }
 }
 
 /// A part of the JWT: header and claims specifically
@@ -51,7 +63,7 @@ impl<T> Part for T where T: Encodable + Decodable {
     }
 }
 
-#[derive(Debug, PartialEq, RustcDecodable, RustcEncodable)]
+#[derive(Debug, PartialEq, RustcDecodable)]
 /// A basic JWT header part, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional
 pub struct Header {
@@ -79,6 +91,35 @@ impl Header {
 impl Default for Header {
     fn default() -> Header {
         Header::new(Algorithm::HS256)
+    }
+}
+
+impl Encodable for Header {
+    fn encode<S: rustc_serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        self.to_json().encode(s)
+    }
+}
+
+impl ToJson for Header {
+    fn to_json(&self) -> Json {
+        let mut d = BTreeMap::new();
+        d.insert("typ".to_string(), self.typ.to_json());
+        d.insert("alg".to_string(), self.alg.to_json());
+
+        // Define a macro to reduce boilerplate.
+        macro_rules! optional {
+            ($field_name:ident) => (
+                match self.$field_name {
+                    Some(ref value) => { d.insert(stringify!($field_name).to_string(), value.to_json()); },
+                    None => {},
+                }
+            )
+        }
+        optional!(jku);
+        optional!(kid);
+        optional!(x5u);
+        optional!(x5t);
+        Json::Object(d)
     }
 }
 
