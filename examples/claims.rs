@@ -34,6 +34,8 @@ fn main() {
         Err(_) => panic!() // in practice you would return the error
     };
 
+    println!("{:?}", token);
+
     let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256) {
         Ok(c) => c,
         Err(err) => match err {
