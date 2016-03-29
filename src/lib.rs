@@ -31,10 +31,10 @@ pub enum Algorithm {
 
 impl ToJson for Algorithm {
     fn to_json(&self) -> Json {
-        match self {
-            &Algorithm::HS256 => Json::String("HS256".to_owned()),
-            &Algorithm::HS384 => Json::String("HS384".to_owned()),
-            &Algorithm::HS512 => Json::String("HS512".to_owned()),
+        match *self {
+            Algorithm::HS256 => Json::String("HS256".to_owned()),
+            Algorithm::HS384 => Json::String("HS384".to_owned()),
+            Algorithm::HS512 => Json::String("HS512".to_owned()),
         }
     }
 }
@@ -109,9 +109,8 @@ impl ToJson for Header {
         // Define a macro to reduce boilerplate.
         macro_rules! optional {
             ($field_name:ident) => (
-                match self.$field_name {
-                    Some(ref value) => { d.insert(stringify!($field_name).to_string(), value.to_json()); },
-                    None => {},
+                if let Some(ref value) = self.$field_name {
+                    d.insert(stringify!($field_name).to_string(), value.to_json());
                 }
             )
         }

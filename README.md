@@ -6,7 +6,7 @@
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "1.0"
+jsonwebtoken = "1"
 rustc-serialize = "0.3"
 ```
 
@@ -72,5 +72,6 @@ test bench_encode ... bench:       4,261 ns/iter (+/- 722)
 
 ## Changelog
 
+1.1.1: Don't serialize empty fields in header
 1.1.0: Impl Error for jsonwebtoken errors
 1.0: Initial release
