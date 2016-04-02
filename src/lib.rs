@@ -252,6 +252,13 @@ mod tests {
     }
 
     #[test]
+    fn decode_token() {
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+        let claims = decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256);
+        claims.unwrap();
+    }
+
+    #[test]
     #[should_panic(expected = "InvalidToken")]
     fn decode_token_missing_parts() {
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
