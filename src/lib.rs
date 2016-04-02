@@ -275,6 +275,14 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "WrongAlgorithmHeader")]
+    fn decode_token_wrong_algorithm() {
+        let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.pKscJVk7-aHxfmQKlaZxh5uhuKhGMAa-1F5IX5mfUwI";
+        let claims = decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256);
+        claims.unwrap();
+    }
+
+    #[test]
     fn decode_token_with_bytes_secret() {
         let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiY29tcGFueSI6Ikdvb2dvbCJ9.27QxgG96vpX4akKNpD1YdRGHE3_u2X35wR3EHA2eCrs";
         let claims = decode::<Claims>(token, b"\x01\x02\x03", Algorithm::HS256);
