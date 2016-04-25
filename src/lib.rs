@@ -131,7 +131,7 @@ pub struct TokenData<T: Part> {
 
 /// Take the payload of a JWT and sign it using the algorithm given.
 /// Returns the base64 url safe encoded of the hmac result
-fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
+pub fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
     fn crypt<D: Digest>(digest: D, data: &str, secret: &[u8]) -> String {
         let mut hmac = Hmac::new(digest, secret);
         hmac.input(data.as_bytes());
@@ -146,7 +146,7 @@ fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
 }
 
 /// Compares the signature given with a re-computed signature
-fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> bool {
+pub fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> bool {
     fixed_time_eq(signature.as_ref(), sign(data, secret, algorithm).as_ref())
 }
 
