@@ -72,6 +72,7 @@ test bench_encode ... bench:       4,261 ns/iter (+/- 722)
 
 ## Changelog
 
+- 1.1.3: Make sign and verify public
 - 1.1.2: Update rust-crypto to 0.2.35
 - 1.1.1: Don't serialize empty fields in header
 - 1.1.0: Impl Error for jsonwebtoken errors
