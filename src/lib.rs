@@ -108,16 +108,15 @@ impl ToJson for Header {
 
         // Define a macro to reduce boilerplate.
         macro_rules! optional {
-            ($field_name:ident) => (
+            ($($field_name:ident),+) => (
+                $(
                 if let Some(ref value) = self.$field_name {
                     d.insert(stringify!($field_name).to_string(), value.to_json());
                 }
+                )+
             )
         }
-        optional!(jku);
-        optional!(kid);
-        optional!(x5u);
-        optional!(x5t);
+        optional!(jku, kid, x5u, x5wt);
         Json::Object(d)
     }
 }
