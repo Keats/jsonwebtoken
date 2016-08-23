@@ -63,7 +63,7 @@ Look at `examples/custom_header.rs` for a full working example.
 Right now, only HMAC SHA family is supported: HMAC SHA256, HMAC SHA384 and HMAC SHA512.
 
 ## Performance
-On my thinkpad 440s for a 2 claims struct using SHA256:
+On my thinkpad 440s for a 2 claims struct using HMAC SHA256:
 
 ```
 test bench_decode ... bench:       4,947 ns/iter (+/- 611)
