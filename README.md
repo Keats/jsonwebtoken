@@ -60,7 +60,7 @@ let token = encode(header, &my_claims, "secret".as_ref()).unwrap();
 Look at `examples/custom_header.rs` for a full working example.
 
 ## Algorithms
-Right now, only SHA family is supported: SHA256, SHA384 and SHA512.
+Right now, only HMAC SHA family is supported: HMAC SHA256, HMAC SHA384 and HMAC SHA512.
 
 ## Performance
 On my thinkpad 440s for a 2 claims struct using SHA256:
