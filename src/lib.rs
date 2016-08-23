@@ -6,16 +6,14 @@
 #![cfg_attr(feature = "dev", plugin(clippy))]
 
 extern crate rustc_serialize;
-extern crate crypto;
+extern crate ring;
+
+use ring::{digest, hmac};
+use ring::constant_time::verify_slices_are_equal;
 
 use rustc_serialize::{json, Encodable, Decodable};
 use rustc_serialize::base64::{self, ToBase64, FromBase64};
 use rustc_serialize::json::{ToJson, Json};
-use crypto::sha2::{Sha256, Sha384, Sha512};
-use crypto::hmac::Hmac;
-use crypto::mac::Mac;
-use crypto::digest::Digest;
-use crypto::util::fixed_time_eq;
 
 pub mod errors;
 use errors::Error;
@@ -132,22 +130,21 @@ pub struct TokenData<T: Part> {
 /// Take the payload of a JWT and sign it using the algorithm given.
 /// Returns the base64 url safe encoded of the hmac result
 pub fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
-    fn crypt<D: Digest>(digest: D, data: &str, secret: &[u8]) -> String {
-        let mut hmac = Hmac::new(digest, secret);
-        hmac.input(data.as_bytes());
-        hmac.result().code().to_base64(base64::URL_SAFE)
-    }
-
-    match algorithm {
-        Algorithm::HS256 => crypt(Sha256::new(), data, secret),
-        Algorithm::HS384 => crypt(Sha384::new(), data, secret),
-        Algorithm::HS512 => crypt(Sha512::new(), data, secret),
-    }
+    let digest = match algorithm {
+        Algorithm::HS256 => &digest::SHA256,
+        Algorithm::HS384 => &digest::SHA384,
+        Algorithm::HS512 => &digest::SHA512,
+    };
+    let key = hmac::SigningKey::new(digest, secret);
+    hmac::sign(&key, data.as_bytes()).as_ref().to_base64(base64::URL_SAFE)
 }
 
 /// Compares the signature given with a re-computed signature
 pub fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> bool {
-    fixed_time_eq(signature.as_ref(), sign(data, secret, algorithm).as_ref())
+    match verify_slices_are_equal(signature.as_ref(), sign(data, secret, algorithm).as_ref()) {
+        Ok(()) => true,
+        Err(_) => false,
+    }
 }
 
 /// Encode the claims passed and sign the payload using the algorithm from the header and the secret
