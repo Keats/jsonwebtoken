@@ -66,12 +66,13 @@ Right now, only SHA family is supported: SHA256, SHA384 and SHA512.
 On my thinkpad 440s for a 2 claims struct using SHA256:
 
 ```
-test bench_decode ... bench:       7,259 ns/iter (+/- 1,506)
-test bench_encode ... bench:       4,261 ns/iter (+/- 722)
+test bench_decode ... bench:       4,947 ns/iter (+/- 611)
+test bench_encode ... bench:       3,301 ns/iter (+/- 465)
 ```
 
 ## Changelog
 
+- 1.1.4: use ring instead of rust-crypto
 - 1.1.3: Make sign and verify public
 - 1.1.2: Update rust-crypto to 0.2.35
 - 1.1.1: Don't serialize empty fields in header
