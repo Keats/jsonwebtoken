@@ -141,10 +141,7 @@ pub fn sign(data: &str, secret: &[u8], algorithm: Algorithm) -> String {
 
 /// Compares the signature given with a re-computed signature
 pub fn verify(signature: &str, data: &str, secret: &[u8], algorithm: Algorithm) -> bool {
-    match verify_slices_are_equal(signature.as_ref(), sign(data, secret, algorithm).as_ref()) {
-        Ok(()) => true,
-        Err(_) => false,
-    }
+    verify_slices_are_equal(signature.as_ref(), sign(data, secret, algorithm).as_ref()).is_ok()
 }
 
 /// Encode the claims passed and sign the payload using the algorithm from the header and the secret
