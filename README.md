@@ -72,6 +72,7 @@ test bench_encode ... bench:       3,301 ns/iter (+/- 465)
 
 ## Changelog
 
+- 1.1.5: update ring version
 - 1.1.4: use ring instead of rust-crypto
 - 1.1.3: Make sign and verify public
 - 1.1.2: Update rust-crypto to 0.2.35
