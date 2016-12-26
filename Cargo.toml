@@ -11,14 +11,4 @@ keywords = ["jwt", "web", "api", "token", "json"]
 
 [dependencies]
 rustc-serialize = "0.3"
-clippy = {version = "~0.0.95", optional = true}
-ring = "0.4"
-
-[features]
-default = []
-dev = ["clippy"]
-
-[profile.bench]
-lto = true
-codegen-units = 1
-opt-level = 3
+ring = "0.6"
