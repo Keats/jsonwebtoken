@@ -30,9 +30,9 @@ pub enum Algorithm {
 impl ToJson for Algorithm {
     fn to_json(&self) -> Json {
         match *self {
-            Algorithm::HS256 => Json::String("HS256".to_owned()),
-            Algorithm::HS384 => Json::String("HS384".to_owned()),
-            Algorithm::HS512 => Json::String("HS512".to_owned()),
+            Algorithm::HS256 => Json::String("HS256".to_string()),
+            Algorithm::HS384 => Json::String("HS384".to_string()),
+            Algorithm::HS512 => Json::String("HS512".to_string()),
         }
     }
 }
@@ -76,7 +76,7 @@ pub struct Header {
 impl Header {
     pub fn new(algorithm: Algorithm) -> Header {
         Header {
-            typ: "JWT".to_owned(),
+            typ: "JWT".to_string(),
             alg: algorithm,
             jku: None,
             kid: None,
@@ -222,11 +222,11 @@ mod tests {
     fn encode_with_custom_header() {
         // TODO: test decode value
         let my_claims = Claims {
-            sub: "b@b.com".to_owned(),
-            company: "ACME".to_owned()
+            sub: "b@b.com".to_string(),
+            company: "ACME".to_string()
         };
         let mut header = Header::default();
-        header.kid = Some("kid".to_owned());
+        header.kid = Some("kid".to_string());
         let token = encode(header, &my_claims, "secret".as_ref()).unwrap();
         let token_data = decode::<Claims>(&token, "secret".as_ref(), Algorithm::HS256).unwrap();
         assert_eq!(my_claims, token_data.claims);
@@ -236,8 +236,8 @@ mod tests {
     #[test]
     fn round_trip_claim() {
         let my_claims = Claims {
-            sub: "b@b.com".to_owned(),
-            company: "ACME".to_owned()
+            sub: "b@b.com".to_string(),
+            company: "ACME".to_string()
         };
         let token = encode(Header::default(), &my_claims, "secret".as_ref()).unwrap();
         let token_data = decode::<Claims>(&token, "secret".as_ref(), Algorithm::HS256).unwrap();
