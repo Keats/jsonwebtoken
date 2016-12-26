@@ -13,8 +13,8 @@ struct Claims {
 
 // Example validation implementation
 impl Claims {
-    fn is_valid(self) -> bool {
-        if self.company != "ACME".to_owned() {
+    fn is_valid(&self) -> bool {
+        if self.company != "ACME" {
             return false;
         }
         // expiration etc
