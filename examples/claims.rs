@@ -1,11 +1,11 @@
 extern crate jsonwebtoken as jwt;
-extern crate rustc_serialize;
+#[macro_use] extern crate serde_derive;
 
 use jwt::{encode, decode, Header, Algorithm};
-use jwt::errors::{Error};
+use jwt::errors::{ErrorKind};
 
 
-#[derive(Debug, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     sub: String,
     company: String
@@ -38,8 +38,8 @@ fn main() {
 
     let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256) {
         Ok(c) => c,
-        Err(err) => match err {
-            Error::InvalidToken => panic!(), // Example on how to handle a specific error
+        Err(err) => match *err.kind() {
+            ErrorKind::InvalidToken => panic!(), // Example on how to handle a specific error
             _ => panic!()
         }
     };

@@ -1,11 +1,12 @@
 #![feature(test)]
 extern crate test;
 extern crate jsonwebtoken as jwt;
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 
 use jwt::{encode, decode, Algorithm, Header};
 
-#[derive(Debug, PartialEq, Clone, RustcEncodable, RustcDecodable)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
     sub: String,
     company: String
