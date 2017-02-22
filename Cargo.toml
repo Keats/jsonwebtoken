@@ -11,9 +11,10 @@ keywords = ["jwt", "web", "api", "token", "json"]
 
 [dependencies]
 rustc-serialize = "^0.3"
-ring = "^0.7"
 error-chain = "0.9"
 serde_json = "0.9"
 serde_derive = "0.9"
 serde = "0.9"
+ring = { version = "0.7", features = ["rsa_signing", "dev_urandom_fallback"] }
 base64 = "0.4"
+untrusted = "0.3"
