@@ -10,5 +10,5 @@ repository = "https://github.com/Keats/rust-jwt"
 keywords = ["jwt", "web", "api", "token", "json"]
 
 [dependencies]
-rustc-serialize = "0.3"
-ring = "0.6"
+rustc-serialize = "^0.3"
+ring = "^0.7"
