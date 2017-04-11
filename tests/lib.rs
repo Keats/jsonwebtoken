@@ -33,7 +33,7 @@ fn encode_with_custom_header() {
     };
     let mut header = Header::default();
     header.kid = Some("kid".to_string());
-    let token = encode(header, &my_claims, "secret".as_ref()).unwrap();
+    let token = encode(&header, &my_claims, "secret".as_ref()).unwrap();
     let token_data = decode::<Claims>(&token, "secret".as_ref(), Algorithm::HS256).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
@@ -45,7 +45,7 @@ fn round_trip_claim() {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string()
     };
-    let token = encode(Header::default(), &my_claims, "secret".as_ref()).unwrap();
+    let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
     let token_data = decode::<Claims>(&token, "secret".as_ref(), Algorithm::HS256).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());

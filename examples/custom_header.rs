@@ -23,7 +23,7 @@ fn main() {
     header.kid = Some("signing_key".to_owned());
     header.alg = Algorithm::HS512;
 
-    let token = match encode(header, &my_claims, key.as_ref()) {
+    let token = match encode(&header, &my_claims, key.as_ref()) {
         Ok(t) => t,
         Err(_) => panic!() // in practice you would return the error
     };

@@ -72,7 +72,7 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
 }
 
 /// Encode the claims passed and sign the payload using the algorithm from the header and the key
-pub fn encode<T: Serialize>(header: Header, claims: &T, key: &[u8]) -> Result<String> {
+pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &[u8]) -> Result<String> {
     let encoded_header = to_jwt_part(&header)?;
     let encoded_claims = to_jwt_part(&claims)?;
     let signing_input = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
