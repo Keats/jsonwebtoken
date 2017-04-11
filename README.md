@@ -26,7 +26,7 @@ header.
 
 ### Encoding
 ```rust
-let token = encode(Header::default(), &my_claims, "secret".as_ref()).unwrap();
+let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
 ```
 In that example, `my_claims` is an instance of a Claims struct that derives `RustcEncodable` and `RustcDecodable`.
 The default algorithm is HS256.
@@ -55,17 +55,10 @@ If you want to set the `kid` parameter for example:
 let mut header = Header::default();
 header.kid = Some("blabla".to_owned());
 header.alg = Algorithm::HS512;
-let token = encode(header, &my_claims, "secret".as_ref()).unwrap();
+let token = encode(&header, &my_claims, "secret".as_ref()).unwrap();
 ```
 Look at `examples/custom_header.rs` for a full working example.
 
 ## Algorithms
-Right now, only HMAC SHA family is supported: HMAC SHA256, HMAC SHA384 and HMAC SHA512.
-
-## Performance
-On my thinkpad 440s for a 2 claims struct using HMAC SHA256:
-
-```
-test bench_decode ... bench:       4,947 ns/iter (+/- 611)
-test bench_encode ... bench:       3,301 ns/iter (+/- 465)
-```
+The HMAC SHA family is supported: HMAC SHA256, HMAC SHA384 and HMAC SHA512 as well as the RSA PKCS1: RSA_PKCS1_SHA256,
+RSA_PKCS1_SHA384 and RSA_PKCS1_SHA512.
