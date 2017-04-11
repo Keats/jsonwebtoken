@@ -10,7 +10,8 @@ use untrusted;
 
 use errors::{Result, ErrorKind};
 use header::Header;
-use serialization::{from_jwt_part, to_jwt_part, TokenData};
+use serialization::{from_jwt_part, to_jwt_part, from_jwt_part_claims, TokenData};
+use validation::{Validation, validate};
 
 
 /// The algorithms supported for signing/verifying
@@ -112,7 +113,6 @@ pub fn verify(signature: &str, signing_input: &str, key: &[u8], algorithm: Algor
                 message,
                 expected_signature,
             );
-            println!("{:?}", res);
 
             Ok(res.is_ok())
         },
@@ -131,14 +131,14 @@ macro_rules! expect_two {
     }}
 }
 
-/// Decode fn used internally by `decode` and `decode_without_verifying`
-fn internal_decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm, do_verification: bool) -> Result<TokenData<T>> {
+/// Decode a token into a struct containing Claims and Header
+///
+/// If the token or its signature is invalid, it will return an error
+pub fn decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm, validation: Validation) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
 
-    if do_verification {
-        if !verify(signature, signing_input, key, algorithm)? {
-            return Err(ErrorKind::InvalidSignature.into());
-        }
+    if validation.validate_signature && !verify(signature, signing_input, key, algorithm)? {
+        return Err(ErrorKind::InvalidSignature.into());
     }
 
     let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
@@ -147,22 +147,9 @@ fn internal_decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm
     if header.alg != algorithm {
         return Err(ErrorKind::WrongAlgorithmHeader.into());
     }
-    let decoded_claims: T = from_jwt_part(claims)?;
+    let (decoded_claims, claims_map): (T, _)  = from_jwt_part_claims(claims)?;
+
+    validate(&claims_map, &validation)?;
 
     Ok(TokenData { header: header, claims: decoded_claims })
-}
-
-/// Decode a token into a struct containing Claims and Header
-///
-/// If the token or its signature is invalid, it will return an error
-pub fn decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm) -> Result<TokenData<T>> {
-    internal_decode(token, key, algorithm, true)
-}
-
-/// Decode a token into a struct containing Claims and Header
-/// WARNING: this will not do any verification so only use that at your own risk
-///
-/// If the token is invalid, it will return an error
-pub fn decode_without_verification<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm) -> Result<TokenData<T>> {
-    internal_decode(token, key, algorithm, false)
 }

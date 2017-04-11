@@ -12,11 +12,13 @@ extern crate serde;
 extern crate base64;
 extern crate ring;
 extern crate untrusted;
+extern crate chrono;
 
 pub mod errors;
 mod header;
 mod crypto;
 mod serialization;
+mod validation;
 
 pub use header::{Header};
 pub use crypto::{
@@ -25,6 +27,5 @@ pub use crypto::{
     verify,
     encode,
     decode,
-    decode_without_verification,
 };
-
+pub use validation::Validation;

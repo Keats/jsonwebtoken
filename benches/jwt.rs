@@ -4,7 +4,7 @@ extern crate jsonwebtoken as jwt;
 #[macro_use]
 extern crate serde_derive;
 
-use jwt::{encode, decode, Algorithm, Header};
+use jwt::{encode, decode, Algorithm, Header, Validation};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
@@ -25,5 +25,5 @@ fn bench_encode(b: &mut test::Bencher) {
 #[bench]
 fn bench_decode(b: &mut test::Bencher) {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ";
-    b.iter(|| decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256));
+    b.iter(|| decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256, Validation::default()));
 }

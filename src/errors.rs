@@ -25,6 +25,8 @@ error_chain! {
             display("Invalid Key")
         }
 
+        // Validation error
+
         /// When a token’s `exp` claim indicates that it has expired
         ExpiredSignature {
             description("expired signature")
@@ -39,6 +41,11 @@ error_chain! {
         InvalidAudience {
             description("invalid audience")
             display("Invalid Audience")
+        }
+        /// When a token’s `aud` claim does not match one of the expected audience values
+        InvalidSubject {
+            description("invalid subject")
+            display("Invalid Subject")
         }
         /// When a token’s `iat` claim is in the future
         InvalidIssuedAt {

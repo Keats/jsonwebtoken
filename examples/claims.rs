@@ -1,7 +1,7 @@
 extern crate jsonwebtoken as jwt;
 #[macro_use] extern crate serde_derive;
 
-use jwt::{encode, decode, Header, Algorithm};
+use jwt::{encode, decode, Header, Algorithm, Validation};
 use jwt::errors::{ErrorKind};
 
 
@@ -36,7 +36,7 @@ fn main() {
 
     println!("{:?}", token);
 
-    let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256) {
+    let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256, Validation::default()) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
             ErrorKind::InvalidToken => panic!(), // Example on how to handle a specific error
