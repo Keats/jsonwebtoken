@@ -11,12 +11,12 @@ struct Claims {
     company: String
 }
 
-//#[test]
-//fn round_trip_sign_verification() {
-//    let encrypted = sign("hello world", include_bytes!("private_rsa_key.der"), Algorithm::RS256).unwrap();
-//    let is_valid = verify(&encrypted, "hello world", include_bytes!("public_rsa_key.der"), Algorithm::RS256).unwrap();
-//    assert!(is_valid);
-//}
+#[test]
+fn round_trip_sign_verification() {
+    let encrypted = sign("hello world", include_bytes!("private_rsa_key.der"), Algorithm::RS256).unwrap();
+    let is_valid = verify(&encrypted, "hello world", include_bytes!("public_rsa_key.der"), Algorithm::RS256).unwrap();
+    assert!(is_valid);
+}
 
 
 #[test]

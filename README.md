@@ -69,15 +69,3 @@ On my thinkpad 440s for a 2 claims struct using HMAC SHA256:
 test bench_decode ... bench:       4,947 ns/iter (+/- 611)
 test bench_encode ... bench:       3,301 ns/iter (+/- 465)
 ```
-
-## Changelog
-
-- 1.1.7: update ring
-- 1.1.6: update ring
-- 1.1.5: update ring version
-- 1.1.4: use ring instead of rust-crypto
-- 1.1.3: Make sign and verify public
-- 1.1.2: Update rust-crypto to 0.2.35
-- 1.1.1: Don't serialize empty fields in header
-- 1.1.0: Impl Error for jsonwebtoken errors
-- 1.0: Initial release

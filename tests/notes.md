@@ -17,3 +17,6 @@ Same as PEM but replace `PEM` by `DER`.
 
 ## Converting private DER to PEM
 `openssl rsa -in private_rsa_key.der -inform DER -outform PEM -out private_rsa_key.pem`
+
+## Generating public key
+`openssl rsa -in private_rsa_key.der -inform DER -RSAPublicKey_out -outform DER -out public_key.der`

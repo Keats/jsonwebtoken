@@ -102,12 +102,17 @@ pub fn verify(signature: &str, signing_input: &str, key: &[u8], algorithm: Algor
                 _ => unreachable!(),
             };
             let signature_bytes = base64::decode_config(signature, base64::URL_SAFE_NO_PAD)?;
+            let public_key_der = untrusted::Input::from(key);
+            let message = untrusted::Input::from(signing_input.as_bytes());
+            let expected_signature = untrusted::Input::from(signature_bytes.as_slice());
+
             let res = signature::verify(
                 verification_alg,
-                untrusted::Input::from(key),
-                untrusted::Input::from(signing_input.as_bytes()),
-                untrusted::Input::from(signature_bytes.as_slice()),
+                public_key_der,
+                message,
+                expected_signature,
             );
+            println!("{:?}", res);
 
             Ok(res.is_ok())
         },

@@ -3,14 +3,18 @@ use crypto::Algorithm;
 
 /// A basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Header {
     typ: String,
     pub alg: Algorithm,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub jku: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub kid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub x5u: Option<String>,
-    pub x5t: Option<String>
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5t: Option<String>,
 }
 
 impl Header {
