@@ -95,3 +95,11 @@ fn decode_token_with_shuffled_header_fields() {
     let claims = decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256, Validation::default());
     assert!(claims.is_ok());
 }
+
+#[test]
+fn decode_without_validating_signature() {
+    let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjb21wYW55IjoiMTIzNDU2Nzg5MCIsInN1YiI6IkpvaG4gRG9lIn0.S";
+    let claims = decode::<Claims>(token, "secret".as_ref(), Algorithm::HS256, Validation {validate_signature: false, ..Validation::default()});
+    assert!(claims.is_ok());
+
+}

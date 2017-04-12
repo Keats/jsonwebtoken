@@ -2,7 +2,6 @@
 //!
 #![recursion_limit = "300"]
 
-
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
@@ -29,3 +28,10 @@ pub use crypto::{
     decode,
 };
 pub use validation::Validation;
+
+// To consider:
+//pub mod prelude {
+//    pub use crypto::{Algorithm, encode, decode};
+//    pub use validation::Validation;
+//    pub use header::Header;
+//}
