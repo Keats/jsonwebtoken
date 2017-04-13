@@ -8,7 +8,7 @@ use errors::{Result};
 use header::Header;
 
 
-/// The return type of a successful call to decode(...)
+/// The return type of a successful call to decode
 #[derive(Debug)]
 pub struct TokenData<T: Deserialize> {
     pub header: Header,

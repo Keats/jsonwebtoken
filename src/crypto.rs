@@ -17,12 +17,18 @@ use validation::{Validation, validate};
 /// The algorithms supported for signing/verifying
 #[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
+    /// HMAC using SHA-256
     HS256,
+    /// HMAC using SHA-384
     HS384,
+    /// HMAC using SHA-512
     HS512,
 
+    /// RSASSA-PKCS1-v1_5 using SHA-256
     RS256,
+    /// RSASSA-PKCS1-v1_5 using SHA-384
     RS384,
+    /// RSASSA-PKCS1-v1_5 using SHA-512
     RS512,
 }
 
@@ -72,7 +78,7 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
     }
 }
 
-/// Encode the claims passed and sign the payload using the algorithm from the header and the key
+/// Encode the header and claims given and sign the payload using the algorithm from the header and the key
 pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &[u8]) -> Result<String> {
     let encoded_header = to_jwt_part(&header)?;
     let encoded_claims = to_jwt_part(&claims)?;
@@ -82,10 +88,11 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &[u8]) -> Result<S
     Ok([signing_input, signature].join("."))
 }
 
-/// Compares the signature given with a re-computed signature for HMAC or using the public key (`key`)
+/// Compares the signature given with a re-computed signature for HMAC or using the public key
 /// for RSA
 ///
 /// `signature` is the signature part of a jwt (text after the second '.')
+///
 /// `signing_input` is base64(header) + "." + base64(claims)
 pub fn verify(signature: &str, signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<bool> {
     match algorithm {
@@ -131,9 +138,9 @@ macro_rules! expect_two {
     }}
 }
 
-/// Decode a token into a struct containing Claims and Header
+/// Decode a token into a struct containing 2 fields: `claims` and `header`.
 ///
-/// If the token or its signature is invalid, it will return an error
+/// If the token or its signature is invalid or the claims fail validation, it will return an error.
 pub fn decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm, validation: Validation) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
 

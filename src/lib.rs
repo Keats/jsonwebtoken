@@ -1,6 +1,7 @@
 //! Create and parses JWT (JSON Web Tokens)
 //!
 #![recursion_limit = "300"]
+#![deny(missing_docs)]
 
 #[macro_use]
 extern crate error_chain;
@@ -13,6 +14,7 @@ extern crate ring;
 extern crate untrusted;
 extern crate chrono;
 
+/// All the errors, generated using error-chain
 pub mod errors;
 mod header;
 mod crypto;

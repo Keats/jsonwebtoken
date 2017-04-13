@@ -6,20 +6,74 @@ use serde_json::map::Map;
 use errors::{Result, ErrorKind};
 
 
+/// Contains the various validations that are applied after decoding a token.
+///
+/// All time validation happen on UTC timestamps.
+/// ```rust
+/// use jsonwebtoken::Validation;
+///
+/// // Default value
+/// let validation = Validation::default();
+/// // Changing one parameter
+/// let mut validation = Validation {leeway: 1000 * 60, ..Default::default()};
+/// // Setting audience
+/// let mut validation = Validation::default();
+/// validation.set_audience(&"Me"); // string
+/// validation.set_audience(&["Me", "You"]); // array of strings
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Validation {
+    /// Add some leeway (in ms) to the `exp`, `iat` and `nbf` validation to
+    /// account for clock skew.
+    ///
+    /// Defaults to `0`.
     pub leeway: i64,
+    /// Whether to actually validate the signature of the token.
+    ///
+    /// WARNING: only set that to false if you know what you are doing.
+    ///
+    /// Defaults to `true`.
     pub validate_signature: bool,
+    /// Whether to validate the `exp` field.
+    ///
+    /// It will return an error if the time in the `exp` field is past.
+    ///
+    /// Defaults to `true`.
     pub validate_exp: bool,
+    /// Whether to validate the `iat` field.
+    ///
+    /// It will return an error if the time in the `iat` field is in the future.
+    ///
+    /// Defaults to `true`.
     pub validate_iat: bool,
+    /// Whether to validate the `nbf` field.
+    ///
+    /// It will return an error if the current timestamp is before the time in the `nbf` field.
+    ///
+    /// Defaults to `true`.
     pub validate_nbf: bool,
-
+    /// If it contains a value, the validation will check that the `aud` field is the same as the
+    /// one provided and will error otherwise.
+    /// Since `aud` can be either a String or a Vec<String> in the JWT spec, you will need to use
+    /// the [set_audience](struct.Validation.html#method.set_audience) method to set it.
+    ///
+    /// Default to `None`.
     pub aud: Option<Value>,
+    /// If it contains a value, the validation will check that the `iss` field is the same as the
+    /// one provided and will error otherwise.
+    ///
+    /// Default to None
     pub iss: Option<String>,
+    /// If it contains a value, the validation will check that the `sub` field is the same as the
+    /// one provided and will error otherwise.
+    ///
+    /// Default to `None`.
     pub sub: Option<String>,
 }
 
 impl Validation {
+    /// Since `aud` can be either a String or an array of String in the JWT spec, this method will take
+    /// care of serializing the value.
     pub fn set_audience<T: Serialize>(&mut self, audience: &T) {
         self.aud = Some(to_value(audience).unwrap());
     }
