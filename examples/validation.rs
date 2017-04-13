@@ -1,5 +1,6 @@
 extern crate jsonwebtoken as jwt;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
 use jwt::{encode, decode, Header, Algorithm, Validation};
 use jwt::errors::{ErrorKind};
@@ -9,18 +10,6 @@ use jwt::errors::{ErrorKind};
 struct Claims {
     sub: String,
     company: String
-}
-
-// Example validation implementation
-impl Claims {
-    fn is_valid(&self) -> bool {
-        if self.company != "ACME" {
-            return false;
-        }
-        // expiration etc
-
-        true
-    }
 }
 
 fn main() {
@@ -35,15 +24,16 @@ fn main() {
     };
 
     println!("{:?}", token);
+    let validation = Validation {sub: Some("b@b.com".to_string()), ..Validation::default()};
 
-    let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256, Validation::default()) {
+    let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256, validation) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
             ErrorKind::InvalidToken => panic!(), // Example on how to handle a specific error
+            ErrorKind::InvalidIssuer => panic!(), // Example on how to handle a specific error
             _ => panic!()
         }
     };
     println!("{:?}", token_data.claims);
     println!("{:?}", token_data.header);
-    println!("{:?}", token_data.claims.is_valid());
 }

@@ -6,8 +6,8 @@
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "1"
-rustc-serialize = "0.3"
+jsonwebtoken = "2"
+serde_derive = "0.9"
 ```
 
 ## How to use
@@ -16,9 +16,10 @@ There is a complete example in `examples/claims.rs` but here's a quick one.
 In terms of imports:
 ```rust
 extern crate jsonwebtoken as jwt;
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 
-use jwt::{encode, decode, Header, Algorithm};
+use jwt::{encode, decode, Header, Algorithm, Validation};
 ```
 
 Look at the examples directory for 2 examples: a basic one and one with a custom
@@ -28,24 +29,43 @@ header.
 ```rust
 let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
 ```
-In that example, `my_claims` is an instance of a Claims struct that derives `RustcEncodable` and `RustcDecodable`.
+In that example, `my_claims` is an instance of a Claims struct that derives `Serialize` and `Deserialize`.
 The default algorithm is HS256.
 Look at custom headers section to see how to change that.
 
 ### Decoding
 ```rust
-let token = decode::<Claims>(&token, "secret", Algorithm::HS256).unwrap();
+let token = decode::<Claims>(&token, "secret", Algorithm::HS256, &Validation::default()).unwrap();
 // token is a struct with 2 params: header and claims
 ```
-In addition to the normal base64/json decoding errors, `decode` can return two custom errors:
+`decode` can error for a variety of reasons:
 
-- **InvalidToken**: if the token is not a valid JWT
-- **InvalidSignature**: if the signature doesn't match
-- **WrongAlgorithmHeader**: if the alg in the header doesn't match the one given to decode
+- the token or its signature is invalid
+- error while decoding base64 or the result of decoding base64 is not valid UTF-8
+- validation failed
 
 ### Validation
-The library only validates the algorithm type used but does not verify claims such as expiration.
-Feel free to add a `validate` method to your claims struct to handle that: there is an example of that in `examples/claims.rs`.
+This library validates automatically the `iat`, `exp` and `nbf` claims if found. You can also validate the `sub`, `iss` and `aud` but
+those require setting the expected value.
+You can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` parameter as shown in the example below.
+
+```rust
+use jsonwebtoken::Validation;
+
+// Default valuation
+let validation = Validation::default();
+// Adding some leeway
+let mut validation = Validation {leeway: 1000 * 60, ..Default::default()};
+// Checking issuer
+let mut validation = Validation {iss: Some("issuer".to_string()), ..Default::default()};
+// Setting audience
+let mut validation = Validation::default();
+validation.set_audience(&"Me"); // string
+validation.set_audience(&["Me", "You"]); // array of strings
+```
+
+It's also possible to disable verifying the signature of a token by setting the `validate_signature` to `false`. This should
+only be done if you know what you are doing.
 
 ### Custom headers
 All the parameters from the RFC are supported but the default header only has `typ` and `alg` set: all the other fields are optional.
@@ -60,5 +80,11 @@ let token = encode(&header, &my_claims, "secret".as_ref()).unwrap();
 Look at `examples/custom_header.rs` for a full working example.
 
 ## Algorithms
-The HMAC SHA family is supported: HMAC SHA256, HMAC SHA384 and HMAC SHA512 as well as the RSA PKCS1: RSA_PKCS1_SHA256,
-RSA_PKCS1_SHA384 and RSA_PKCS1_SHA512.
+This library currently supports the following:
+
+- HS256
+- HS384
+- HS512
+- RS256
+- RS384
+- RS512
