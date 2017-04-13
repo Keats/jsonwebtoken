@@ -42,7 +42,7 @@ let token = decode::<Claims>(&token, "secret", Algorithm::HS256, &Validation::de
 
 - the token or its signature is invalid
 - error while decoding base64 or the result of decoding base64 is not valid UTF-8
-- validation failed
+- validation of at least one reserved claim failed
 
 ### Validation
 This library validates automatically the `iat`, `exp` and `nbf` claims if found. You can also validate the `sub`, `iss` and `aud` but
@@ -54,7 +54,7 @@ use jsonwebtoken::Validation;
 
 // Default valuation
 let validation = Validation::default();
-// Adding some leeway
+// Adding some leeway (in ms) for iat, exp and nbf checks
 let mut validation = Validation {leeway: 1000 * 60, ..Default::default()};
 // Checking issuer
 let mut validation = Validation {iss: Some("issuer".to_string()), ..Default::default()};

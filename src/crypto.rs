@@ -3,15 +3,9 @@ use std::sync::Arc;
 use base64;
 use ring::{rand, digest, hmac, signature};
 use ring::constant_time::verify_slices_are_equal;
-use serde::de::Deserialize;
-use serde::ser::Serialize;
 use untrusted;
 
-
 use errors::{Result, ErrorKind};
-use header::Header;
-use serialization::{from_jwt_part, to_jwt_part, from_jwt_part_claims, TokenData};
-use validation::{Validation, validate};
 
 
 /// The algorithms supported for signing/verifying
@@ -33,8 +27,10 @@ pub enum Algorithm {
 }
 
 
-/// Take the payload of a JWT and sign it using the algorithm given.
-/// Returns the base64 url safe encoded of the result
+/// Take the payload of a JWT, sign it using the algorithm given and return
+/// the base64 url safe encoded of the result.
+///
+/// Only use this function if you want to do something other than JWT.
 pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<String> {
     match algorithm {
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
@@ -78,18 +74,10 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
     }
 }
 
-/// Encode the header and claims given and sign the payload using the algorithm from the header and the key
-pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &[u8]) -> Result<String> {
-    let encoded_header = to_jwt_part(&header)?;
-    let encoded_claims = to_jwt_part(&claims)?;
-    let signing_input = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
-    let signature = sign(&*signing_input, key.as_ref(), header.alg)?;
-
-    Ok([signing_input, signature].join("."))
-}
-
 /// Compares the signature given with a re-computed signature for HMAC or using the public key
-/// for RSA
+/// for RSA.
+///
+/// Only use this function if you want to do something other than JWT.
 ///
 /// `signature` is the signature part of a jwt (text after the second '.')
 ///
@@ -124,39 +112,4 @@ pub fn verify(signature: &str, signing_input: &str, key: &[u8], algorithm: Algor
             Ok(res.is_ok())
         },
     }
-}
-
-/// Used in decode: takes the result of a rsplit and ensure we only get 2 parts
-/// Errors if we don't
-macro_rules! expect_two {
-    ($iter:expr) => {{
-        let mut i = $iter;
-        match (i.next(), i.next(), i.next()) {
-            (Some(first), Some(second), None) => (first, second),
-            _ => return Err(ErrorKind::InvalidToken.into())
-        }
-    }}
-}
-
-/// Decode a token into a struct containing 2 fields: `claims` and `header`.
-///
-/// If the token or its signature is invalid or the claims fail validation, it will return an error.
-pub fn decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm, validation: Validation) -> Result<TokenData<T>> {
-    let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
-
-    if validation.validate_signature && !verify(signature, signing_input, key, algorithm)? {
-        return Err(ErrorKind::InvalidSignature.into());
-    }
-
-    let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
-
-    let header: Header = from_jwt_part(header)?;
-    if header.alg != algorithm {
-        return Err(ErrorKind::WrongAlgorithmHeader.into());
-    }
-    let (decoded_claims, claims_map): (T, _)  = from_jwt_part_claims(claims)?;
-
-    validate(&claims_map, &validation)?;
-
-    Ok(TokenData { header: header, claims: decoded_claims })
 }

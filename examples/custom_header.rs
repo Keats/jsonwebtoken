@@ -27,6 +27,7 @@ fn main() {
         Ok(t) => t,
         Err(_) => panic!() // in practice you would return the error
     };
+    println!("{:?}", token);
 
     let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS512, Validation::default()) {
         Ok(c) => c,
