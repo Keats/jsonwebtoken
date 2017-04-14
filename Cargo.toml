@@ -10,8 +10,7 @@ repository = "https://github.com/Keats/rust-jwt"
 keywords = ["jwt", "web", "api", "token", "json"]
 
 [dependencies]
-rustc-serialize = "^0.3"
-error-chain = "0.10"
+error-chain = { version = "0.10", default-features = false }
 serde_json = "0.9"
 serde_derive = "0.9"
 serde = "0.9"
