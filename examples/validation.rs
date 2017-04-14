@@ -26,7 +26,7 @@ fn main() {
     println!("{:?}", token);
     let validation = Validation {sub: Some("b@b.com".to_string()), ..Validation::default()};
 
-    let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256, validation) {
+    let token_data = match decode::<Claims>(&token, key.as_ref(), Algorithm::HS256, &validation) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
             ErrorKind::InvalidToken => panic!(), // Example on how to handle a specific error

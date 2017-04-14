@@ -28,7 +28,7 @@ pub enum Algorithm {
 
 /// The actual HS signing + encoding
 fn sign_hmac(alg: &'static digest::Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
-    let signing_key = hmac::SigningKey::new(&alg, key);
+    let signing_key = hmac::SigningKey::new(alg, key);
     Ok(base64::encode_config(
         hmac::sign(&signing_key, signing_input.as_bytes()).as_ref(),
         base64::URL_SAFE_NO_PAD

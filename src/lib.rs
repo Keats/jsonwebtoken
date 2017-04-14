@@ -101,7 +101,7 @@ macro_rules! expect_two {
 /// // Claims is a struct that implements Deserialize
 /// let token_data = decode::<Claims>(&token, "secret", Algorithm::HS256, &Validation::default());
 /// ```
-pub fn decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm, validation: Validation) -> Result<TokenData<T>> {
+pub fn decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm, validation: &Validation) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
 
     if validation.validate_signature && !verify(signature, signing_input, key, algorithm)? {
@@ -116,7 +116,7 @@ pub fn decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm, val
     }
     let (decoded_claims, claims_map): (T, _)  = from_jwt_part_claims(claims)?;
 
-    validate(&claims_map, &validation)?;
+    validate(&claims_map, validation)?;
 
     Ok(TokenData { header: header, claims: decoded_claims })
 }
