@@ -88,3 +88,17 @@ This library currently supports the following:
 - RS256
 - RS384
 - RS512
+
+### RSA
+`jsonwebtoken` can only read DER encoded keys currently. If you have openssl installed,
+you can run the following commands to obtain the DER keys from .pem:
+
+```bash
+// private key
+$ openssl rsa -in private_rsa_key.pem -outform DER -out private_rsa_key.der
+// public key
+$ openssl rsa -in private_rsa_key.der -inform DER -RSAPublicKey_out -outform DER -out public_key.der
+```
+
+If you are getting an error with your public key, make sure you get it by using the command above to ensure
+it is in the right format.
