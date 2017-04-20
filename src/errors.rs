@@ -1,68 +1,68 @@
-use std::{string, fmt, error};
-use rustc_serialize::{json, base64};
+use base64;
+use serde_json;
+use ring;
 
-#[derive(Debug)]
-/// All the errors we can encounter while signing/verifying tokens
-/// and a couple of custom one for when the token we are trying
-/// to verify is invalid
-pub enum Error {
-    EncodeJSON(json::EncoderError),
-    DecodeBase64(base64::FromBase64Error),
-    DecodeJSON(json::DecoderError),
-    Utf8(string::FromUtf8Error),
+error_chain! {
+    errors {
+        /// When a token doesn't have a valid token shape
+        InvalidToken {
+            description("invalid token")
+            display("Invalid token")
+        }
+        /// When the signature doesn't match
+        InvalidSignature {
+            description("invalid signature")
+            display("Invalid signature")
+        }
+        /// When the algorithm in the header doesn't match the one passed to `decode`
+        WrongAlgorithmHeader {
+            description("wrong algorithm header")
+            display("Wrong Algorithm Header")
+        }
+        /// When the secret given is not a valid RSA key
+        InvalidKey {
+            description("invalid key")
+            display("Invalid Key")
+        }
 
-    InvalidToken,
-    InvalidSignature,
-    WrongAlgorithmHeader
-}
+        // Validation error
 
-macro_rules! impl_from_error {
-    ($f: ty, $e: expr) => {
-        impl From<$f> for Error {
-            fn from(f: $f) -> Error { $e(f) }
+        /// When a token’s `exp` claim indicates that it has expired
+        ExpiredSignature {
+            description("expired signature")
+            display("Expired Signature")
+        }
+        /// When a token’s `iss` claim does not match the expected issuer
+        InvalidIssuer {
+            description("invalid issuer")
+            display("Invalid Issuer")
+        }
+        /// When a token’s `aud` claim does not match one of the expected audience values
+        InvalidAudience {
+            description("invalid audience")
+            display("Invalid Audience")
+        }
+        /// When a token’s `aud` claim does not match one of the expected audience values
+        InvalidSubject {
+            description("invalid subject")
+            display("Invalid Subject")
+        }
+        /// When a token’s `iat` claim is in the future
+        InvalidIssuedAt {
+            description("invalid issued at")
+            display("Invalid Issued At")
+        }
+        /// When a token’s nbf claim represents a time in the future
+        ImmatureSignature {
+            description("immature signature")
+            display("Immature Signature")
         }
     }
-}
 
-impl_from_error!(json::EncoderError, Error::EncodeJSON);
-impl_from_error!(base64::FromBase64Error, Error::DecodeBase64);
-impl_from_error!(json::DecoderError, Error::DecodeJSON);
-impl_from_error!(string::FromUtf8Error, Error::Utf8);
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::EncodeJSON(ref err) => err.description(),
-            Error::DecodeBase64(ref err) => err.description(),
-            Error::DecodeJSON(ref err) => err.description(),
-            Error::Utf8(ref err) => err.description(),
-            Error::InvalidToken => "Invalid Token",
-            Error::InvalidSignature => "Invalid Signature",
-            Error::WrongAlgorithmHeader => "Wrong Algorithm Header",
-        }
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        Some(match *self {
-            Error::EncodeJSON(ref err) => err as &error::Error,
-            Error::DecodeBase64(ref err) => err as &error::Error,
-            Error::DecodeJSON(ref err) => err as &error::Error,
-            Error::Utf8(ref err) => err as &error::Error,
-            ref e => e as &error::Error,
-        })
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Error::EncodeJSON(ref err) => fmt::Display::fmt(err, f),
-            Error::DecodeBase64(ref err) => fmt::Display::fmt(err, f),
-            Error::DecodeJSON(ref err) => fmt::Display::fmt(err, f),
-            Error::Utf8(ref err) => fmt::Display::fmt(err, f),
-            Error::InvalidToken => write!(f, "{}", error::Error::description(self)),
-            Error::InvalidSignature => write!(f, "{}", error::Error::description(self)),
-            Error::WrongAlgorithmHeader => write!(f, "{}", error::Error::description(self)),
-        }
+    foreign_links {
+        Unspecified(ring::error::Unspecified) #[doc = "An error happened while signing/verifying a token with RSA"];
+        Base64(base64::Base64Error) #[doc = "An error happened while decoding some base64 text"];
+        Json(serde_json::Error) #[doc = "An error happened while serializing/deserializing JSON"];
+        Utf8(::std::string::FromUtf8Error) #[doc = "An error happened while trying to convert the result of base64 decoding to a String"];
     }
 }

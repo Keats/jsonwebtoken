@@ -1,6 +1,6 @@
 [package]
 name = "jsonwebtoken"
-version = "1.1.7"
+version = "2.0.0"
 authors = ["Vincent Prouillet <vincent@wearewizards.io>"]
 license = "MIT"
 readme = "README.md"
@@ -10,5 +10,11 @@ repository = "https://github.com/Keats/rust-jwt"
 keywords = ["jwt", "web", "api", "token", "json"]
 
 [dependencies]
-rustc-serialize = "^0.3"
-ring = "^0.7"
+error-chain = { version = "0.10", default-features = false }
+serde_json = "0.9"
+serde_derive = "0.9"
+serde = "0.9"
+ring = { version = "0.7", features = ["rsa_signing", "dev_urandom_fallback"] }
+base64 = "0.4"
+untrusted = "0.3"
+chrono = "0.3"
