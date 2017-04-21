@@ -11,9 +11,9 @@ keywords = ["jwt", "web", "api", "token", "json"]
 
 [dependencies]
 error-chain = { version = "0.10", default-features = false }
-serde_json = "0.9"
-serde_derive = "0.9"
-serde = "0.9"
+serde_json = "1.0"
+serde_derive = "1.0"
+serde = "1.0"
 ring = { version = "0.7", features = ["rsa_signing", "dev_urandom_fallback"] }
 base64 = "0.4"
 untrusted = "0.3"
