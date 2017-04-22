@@ -4,7 +4,7 @@ use ring;
 
 error_chain! {
     errors {
-        /// When a token doesn't have a valid token shape
+        /// When a token doesn't have a valid JWT shape
         InvalidToken {
             description("invalid token")
             display("Invalid token")
@@ -13,11 +13,6 @@ error_chain! {
         InvalidSignature {
             description("invalid signature")
             display("Invalid signature")
-        }
-        /// When the algorithm in the header doesn't match the one passed to `decode`
-        WrongAlgorithmHeader {
-            description("wrong algorithm header")
-            display("Wrong Algorithm Header")
         }
         /// When the secret given is not a valid RSA key
         InvalidKey {
@@ -56,6 +51,11 @@ error_chain! {
         ImmatureSignature {
             description("immature signature")
             display("Immature Signature")
+        }
+        /// When the algorithm in the header doesn't match the one passed to `decode`
+        InvalidAlgorithm {
+            description("Invalid algorithm")
+            display("Invalid Algorithm")
         }
     }
 

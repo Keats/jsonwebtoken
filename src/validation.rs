@@ -4,6 +4,7 @@ use serde_json::{Value, from_value, to_value};
 use serde_json::map::Map;
 
 use errors::{Result, ErrorKind};
+use crypto::Algorithm;
 
 
 /// Contains the various validations that are applied after decoding a token.
@@ -57,18 +58,23 @@ pub struct Validation {
     /// Since `aud` can be either a String or a Vec<String> in the JWT spec, you will need to use
     /// the [set_audience](struct.Validation.html#method.set_audience) method to set it.
     ///
-    /// Default to `None`.
+    /// Defaults to `None`.
     pub aud: Option<Value>,
     /// If it contains a value, the validation will check that the `iss` field is the same as the
     /// one provided and will error otherwise.
     ///
-    /// Default to None
+    /// Defaults to `None`.
     pub iss: Option<String>,
     /// If it contains a value, the validation will check that the `sub` field is the same as the
     /// one provided and will error otherwise.
     ///
-    /// Default to `None`.
+    /// Defaults to `None`.
     pub sub: Option<String>,
+    /// If it contains a value, the validation will check that the `alg` of the header is container
+    /// in the ones provided and will error otherwise.
+    ///
+    /// Defaults to `None`.
+    pub algorithms: Option<Vec<Algorithm>>,
 }
 
 impl Validation {
@@ -93,6 +99,8 @@ impl Default for Validation {
             iss: None,
             sub: None,
             aud: None,
+
+            algorithms: None,
         }
     }
 }

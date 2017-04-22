@@ -26,7 +26,7 @@ fn round_trip_claim() {
         company: "ACME".to_string()
     };
     let token = encode(&Header::new(Algorithm::RS256), &my_claims, include_bytes!("private_rsa_key.der")).unwrap();
-    let token_data = decode::<Claims>(&token, include_bytes!("public_rsa_key.der"), Algorithm::RS256, &Validation::default()).unwrap();
+    let token_data = decode::<Claims>(&token, include_bytes!("public_rsa_key.der"), &Validation::default()).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());
 }

@@ -35,7 +35,7 @@ Look at custom headers section to see how to change that.
 
 ### Decoding
 ```rust
-let token = decode::<Claims>(&token, "secret", Algorithm::HS256, &Validation::default()).unwrap();
+let token = decode::<Claims>(&token, "secret", &Validation::default()).unwrap();
 // token is a struct with 2 params: header and claims
 ```
 `decode` can error for a variety of reasons:
@@ -47,10 +47,11 @@ let token = decode::<Claims>(&token, "secret", Algorithm::HS256, &Validation::de
 ### Validation
 This library validates automatically the `iat`, `exp` and `nbf` claims if found. You can also validate the `sub`, `iss` and `aud` but
 those require setting the expected value.
-You can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` parameter as shown in the example below.
+You can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` parameter as shown in the example below as well
+as select allowed algorithms.
 
 ```rust
-use jsonwebtoken::Validation;
+use jsonwebtoken::{Validation, Algorithm};
 
 // Default valuation
 let validation = Validation::default();
@@ -62,6 +63,8 @@ let mut validation = Validation {iss: Some("issuer".to_string()), ..Default::def
 let mut validation = Validation::default();
 validation.set_audience(&"Me"); // string
 validation.set_audience(&["Me", "You"]); // array of strings
+// Will error if the token given has an algorithm that isn't HS256
+let mut validation = Validation {algorithms: Some(vec![Algorithm::HS256]), ..Default::default()};
 ```
 
 It's also possible to disable verifying the signature of a token by setting the `validate_signature` to `false`. This should
