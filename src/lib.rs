@@ -89,7 +89,7 @@ macro_rules! expect_two {
 /// ```rust,ignore
 /// #[macro_use]
 /// extern crate serde_derive;
-/// use jsonwebtoken::{decode, Algorithm, Validation};
+/// use jsonwebtoken::{decode, Validation};
 ///
 /// #[derive(Debug, Serialize, Deserialize)]
 /// struct Claims {
@@ -99,31 +99,26 @@ macro_rules! expect_two {
 ///
 /// let token = "a.jwt.token".to_string();
 /// // Claims is a struct that implements Deserialize
-/// let token_data = decode::<Claims>(&token, "secret", Algorithm::HS256, &Validation::default());
+/// let token_data = decode::<Claims>(&token, "secret", &Validation::default());
 /// ```
-pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], algorithm: Algorithm, validation: &Validation) -> Result<TokenData<T>> {
+pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validation) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
+    let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
+    let header: Header = from_jwt_part(header)?;
 
-    if validation.validate_signature && !verify(signature, signing_input, key, algorithm)? {
+    if validation.validate_signature && !verify(signature, signing_input, key, header.alg)? {
         return Err(ErrorKind::InvalidSignature.into());
     }
 
-    let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
-
-    let header: Header = from_jwt_part(header)?;
-    if header.alg != algorithm {
-        return Err(ErrorKind::WrongAlgorithmHeader.into());
+    if let Some(ref allowed_algs) = validation.algorithms {
+        if !allowed_algs.contains(&header.alg) {
+            return Err(ErrorKind::InvalidAlgorithm.into());
+        }
     }
+
     let (decoded_claims, claims_map): (T, _)  = from_jwt_part_claims(claims)?;
 
     validate(&claims_map, validation)?;
 
     Ok(TokenData { header: header, claims: decoded_claims })
 }
-
-// To consider:
-//pub mod prelude {
-//    pub use crypto::{Algorithm, encode, decode};
-//    pub use validation::Validation;
-//    pub use header::Header;
-//}
