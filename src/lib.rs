@@ -31,7 +31,7 @@ pub use crypto::{
 pub use validation::Validation;
 
 
-use serde::de::Deserialize;
+use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 
 use errors::{Result, ErrorKind};
@@ -101,7 +101,7 @@ macro_rules! expect_two {
 /// // Claims is a struct that implements Deserialize
 /// let token_data = decode::<Claims>(&token, "secret", Algorithm::HS256, &Validation::default());
 /// ```
-pub fn decode<T: Deserialize>(token: &str, key: &[u8], algorithm: Algorithm, validation: &Validation) -> Result<TokenData<T>> {
+pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], algorithm: Algorithm, validation: &Validation) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
 
     if validation.validate_signature && !verify(signature, signing_input, key, algorithm)? {

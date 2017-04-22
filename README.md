@@ -7,7 +7,7 @@ Add the following to Cargo.toml:
 
 ```toml
 jsonwebtoken = "2"
-serde_derive = "0.9"
+serde_derive = "1.0"
 ```
 
 ## How to use
