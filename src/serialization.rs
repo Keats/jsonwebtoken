@@ -10,7 +10,7 @@ use header::Header;
 
 /// The return type of a successful call to decode
 #[derive(Debug)]
-pub struct TokenData<T: DeserializeOwned> {
+pub struct TokenData<T> {
     pub header: Header,
     pub claims: T
 }
