@@ -1,5 +1,5 @@
 use base64;
-use serde::de::Deserialize;
+use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 use serde_json::{from_str, to_string, Value};
 use serde_json::map::Map;
@@ -10,7 +10,7 @@ use header::Header;
 
 /// The return type of a successful call to decode
 #[derive(Debug)]
-pub struct TokenData<T: Deserialize> {
+pub struct TokenData<T: DeserializeOwned> {
     pub header: Header,
     pub claims: T
 }
@@ -22,7 +22,7 @@ pub fn to_jwt_part<T: Serialize>(input: &T) -> Result<String> {
 }
 
 /// Decodes from base64 and deserializes from JSON to a struct
-pub fn from_jwt_part<B: AsRef<str>, T: Deserialize>(encoded: B) -> Result<T> {
+pub fn from_jwt_part<B: AsRef<str>, T: DeserializeOwned>(encoded: B) -> Result<T> {
     let decoded = base64::decode_config(encoded.as_ref(), base64::URL_SAFE_NO_PAD)?;
     let s = String::from_utf8(decoded)?;
 
@@ -30,7 +30,7 @@ pub fn from_jwt_part<B: AsRef<str>, T: Deserialize>(encoded: B) -> Result<T> {
 }
 
 /// Decodes from base64 and deserializes from JSON to a struct AND a hashmap
-pub fn from_jwt_part_claims<B: AsRef<str>, T: Deserialize>(encoded: B) -> Result<(T, Map<String, Value>)> {
+pub fn from_jwt_part_claims<B: AsRef<str>, T: DeserializeOwned>(encoded: B) -> Result<(T, Map<String, Value>)> {
     let decoded = base64::decode_config(encoded.as_ref(), base64::URL_SAFE_NO_PAD)?;
     let s = String::from_utf8(decoded)?;
 
