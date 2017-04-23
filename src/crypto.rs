@@ -29,10 +29,11 @@ pub enum Algorithm {
 /// The actual HS signing + encoding
 fn sign_hmac(alg: &'static digest::Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
     let signing_key = hmac::SigningKey::new(alg, key);
-    Ok(base64::encode_config(
-        hmac::sign(&signing_key, signing_input.as_bytes()).as_ref(),
-        base64::URL_SAFE_NO_PAD
-    ))
+    let digest = hmac::sign(&signing_key, signing_input.as_bytes());
+
+    Ok(
+        base64::encode_config::<digest::Digest>(&digest, base64::URL_SAFE_NO_PAD)
+    )
 }
 
 /// The actual RSA signing + encoding
@@ -46,9 +47,8 @@ fn sign_rsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
     };
 
     let key_pair = Arc::new(
-        signature::RSAKeyPair::from_der(
-            untrusted::Input::from(key)
-        ).map_err(|_| ErrorKind::InvalidKey)?
+        signature::RSAKeyPair::from_der(untrusted::Input::from(key))
+            .map_err(|_| ErrorKind::InvalidKey)?
     );
     let mut signing_state = signature::RSASigningState::new(key_pair)
         .map_err(|_| ErrorKind::InvalidKey)?;
@@ -57,10 +57,9 @@ fn sign_rsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
     signing_state.sign(ring_alg, &rng, signing_input.as_bytes(), &mut signature)
         .map_err(|_| ErrorKind::InvalidKey)?;
 
-    Ok(base64::encode_config(
-        signature.as_ref(),
-        base64::URL_SAFE_NO_PAD
-    ))
+    Ok(
+        base64::encode_config::<[u8]>(&signature, base64::URL_SAFE_NO_PAD)
+    )
 }
 
 /// Take the payload of a JWT, sign it using the algorithm given and return

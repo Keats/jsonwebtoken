@@ -1,10 +1,12 @@
 # Changelog
 
-## 2.0.0 (unreleased)
+## 2.0.0 (2017-04-23)
 
 - Use Serde instead of rustc_serialize
 - Add RSA support
-- Change API, see README for new usage
+- API overhaul, see README for new usage
+- Add validation
+- Update all dependencies
 
 ## Previous
 

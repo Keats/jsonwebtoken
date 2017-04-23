@@ -1,6 +1,6 @@
 [package]
 name = "jsonwebtoken"
-version = "2.0.0-beta-1"
+version = "2.0.0"
 authors = ["Vincent Prouillet <vincent@wearewizards.io>"]
 license = "MIT"
 readme = "README.md"
@@ -15,6 +15,6 @@ serde_json = "1.0"
 serde_derive = "1.0"
 serde = "1.0"
 ring = { version = "0.7", features = ["rsa_signing", "dev_urandom_fallback"] }
-base64 = "0.4"
+base64 = "0.5"
 untrusted = "0.3"
 chrono = "0.3"

@@ -61,7 +61,7 @@ error_chain! {
 
     foreign_links {
         Unspecified(ring::error::Unspecified) #[doc = "An error happened while signing/verifying a token with RSA"];
-        Base64(base64::Base64Error) #[doc = "An error happened while decoding some base64 text"];
+        Base64(base64::DecodeError) #[doc = "An error happened while decoding some base64 text"];
         Json(serde_json::Error) #[doc = "An error happened while serializing/deserializing JSON"];
         Utf8(::std::string::FromUtf8Error) #[doc = "An error happened while trying to convert the result of base64 decoding to a String"];
     }
