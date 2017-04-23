@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/Keats/rust-jwt.svg)](https://travis-ci.org/Keats/rust-jwt)
 
+[API documentation on docs.rs](https://docs.rs/jsonwebtoken/)
+
 ## Installation
 Add the following to Cargo.toml:
 
