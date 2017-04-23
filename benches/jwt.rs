@@ -4,7 +4,7 @@ extern crate jsonwebtoken as jwt;
 #[macro_use]
 extern crate serde_derive;
 
-use jwt::{encode, decode, Algorithm, Header, Validation};
+use jwt::{encode, decode, Header, Validation};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
