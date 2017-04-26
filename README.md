@@ -1,6 +1,6 @@
 # jsonwebtoken
 
-[![Build Status](https://travis-ci.org/Keats/rust-jwt.svg)](https://travis-ci.org/Keats/rust-jwt)
+[![Build Status](https://travis-ci.org/Keats/jsonwebtoken.svg)](https://travis-ci.org/Keats/jsonwebtoken)
 
 [API documentation on docs.rs](https://docs.rs/jsonwebtoken/)
 
