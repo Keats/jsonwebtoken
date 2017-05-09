@@ -14,7 +14,7 @@ error-chain = { version = "0.10", default-features = false }
 serde_json = "1.0"
 serde_derive = "1.0"
 serde = "1.0"
-ring = { version = "0.7", features = ["rsa_signing", "dev_urandom_fallback"] }
+ring = { version = "0.9.4", features = ["rsa_signing", "dev_urandom_fallback"] }
 base64 = "0.5"
-untrusted = "0.3"
+untrusted = "0.5"
 chrono = "0.3"

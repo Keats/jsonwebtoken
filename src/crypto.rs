@@ -32,7 +32,7 @@ fn sign_hmac(alg: &'static digest::Algorithm, key: &[u8], signing_input: &str) -
     let digest = hmac::sign(&signing_key, signing_input.as_bytes());
 
     Ok(
-        base64::encode_config::<digest::Digest>(&digest, base64::URL_SAFE_NO_PAD)
+        base64::encode_config::<hmac::Signature>(&digest, base64::URL_SAFE_NO_PAD)
     )
 }
 
