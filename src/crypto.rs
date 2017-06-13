@@ -112,3 +112,9 @@ pub fn verify(signature: &str, signing_input: &str, key: &[u8], algorithm: Algor
         Algorithm::RS512 => verify_rsa(&signature::RSA_PKCS1_2048_8192_SHA512, signature, signing_input, key),
     }
 }
+
+impl Default for Algorithm {
+    fn default() -> Self {
+        Algorithm::HS256
+    }
+}
