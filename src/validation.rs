@@ -10,13 +10,16 @@ use crypto::Algorithm;
 /// Contains the various validations that are applied after decoding a token.
 ///
 /// All time validation happen on UTC timestamps.
+///
 /// ```rust
 /// use jsonwebtoken::Validation;
 ///
 /// // Default value
 /// let validation = Validation::default();
+///
 /// // Changing one parameter
 /// let mut validation = Validation {leeway: 1000 * 60, ..Default::default()};
+///
 /// // Setting audience
 /// let mut validation = Validation::default();
 /// validation.set_audience(&"Me"); // string
