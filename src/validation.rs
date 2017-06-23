@@ -1,4 +1,4 @@
-use chrono::UTC;
+use chrono::Utc;
 use serde::ser::Serialize;
 use serde_json::{Value, from_value, to_value};
 use serde_json::map::Map;
@@ -111,7 +111,7 @@ impl Default for Validation {
 
 
 pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()> {
-    let now = UTC::now().timestamp();
+    let now = Utc::now().timestamp();
 
     if let Some(iat) = claims.get("iat") {
         if options.validate_iat && from_value::<i64>(iat.clone())? > now + options.leeway {
@@ -163,7 +163,7 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 mod tests {
     use serde_json::{to_value};
     use serde_json::map::Map;
-    use chrono::UTC;
+    use chrono::Utc;
 
     use super::{validate, Validation};
 
@@ -172,7 +172,7 @@ mod tests {
     #[test]
     fn iat_in_past_ok() {
         let mut claims = Map::new();
-        claims.insert("iat".to_string(), to_value(UTC::now().timestamp() - 10000).unwrap());
+        claims.insert("iat".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_ok());
     }
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn iat_in_future_fails() {
         let mut claims = Map::new();
-        claims.insert("iat".to_string(), to_value(UTC::now().timestamp() + 100000).unwrap());
+        claims.insert("iat".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_err());
 
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn iat_in_future_but_in_leeway_ok() {
         let mut claims = Map::new();
-        claims.insert("iat".to_string(), to_value(UTC::now().timestamp() + 50).unwrap());
+        claims.insert("iat".to_string(), to_value(Utc::now().timestamp() + 50).unwrap());
         let validation = Validation {
             leeway: 1000 * 60,
             ..Default::default()
@@ -205,7 +205,7 @@ mod tests {
     #[test]
     fn exp_in_future_ok() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(UTC::now().timestamp() + 10000).unwrap());
+        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() + 10000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_ok());
     }
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn exp_in_past_fails() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(UTC::now().timestamp() - 100000).unwrap());
+        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() - 100000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_err());
 
@@ -226,7 +226,7 @@ mod tests {
     #[test]
     fn exp_in_past_but_in_leeway_ok() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(UTC::now().timestamp() - 500).unwrap());
+        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() - 500).unwrap());
         let validation = Validation {
             leeway: 1000 * 60,
             ..Default::default()
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn nbf_in_past_ok() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(UTC::now().timestamp() - 10000).unwrap());
+        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_ok());
     }
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn nbf_in_future_fails() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(UTC::now().timestamp() + 100000).unwrap());
+        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_err());
 
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn nbf_in_future_but_in_leeway_ok() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(UTC::now().timestamp() + 500).unwrap());
+        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 500).unwrap());
         let validation = Validation {
             leeway: 1000 * 60,
             ..Default::default()
