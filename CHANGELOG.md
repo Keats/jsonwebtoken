@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2 (2017-06-24)
+
+- Update ring & chrono
+
 ## 2.0.1 (2017-05-09)
 
 - Update ring
