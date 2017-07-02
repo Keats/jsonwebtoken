@@ -11,7 +11,9 @@ use header::Header;
 /// The return type of a successful call to decode
 #[derive(Debug)]
 pub struct TokenData<T> {
+    /// The decoded JWT header
     pub header: Header,
+    /// The decoded JWT claims
     pub claims: T
 }
 
