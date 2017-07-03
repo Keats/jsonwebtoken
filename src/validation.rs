@@ -114,19 +114,25 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
     let now = Utc::now().timestamp();
 
     if let Some(iat) = claims.get("iat") {
-        if options.validate_iat && from_value::<i64>(iat.clone())? > now + options.leeway {
+        let iat_int = from_value::<f64>(iat.clone())? as i64;
+
+        if options.validate_iat && iat_int > now + options.leeway {
             return Err(ErrorKind::InvalidIssuedAt.into());
         }
     }
 
     if let Some(exp) = claims.get("exp") {
-        if options.validate_exp && from_value::<i64>(exp.clone())? < now - options.leeway {
+        let exp_int = from_value::<f64>(exp.clone())? as i64;
+
+        if options.validate_exp && exp_int < now - options.leeway {
             return Err(ErrorKind::ExpiredSignature.into());
         }
     }
 
     if let Some(nbf) = claims.get("nbf") {
-        if options.validate_nbf && from_value::<i64>(nbf.clone())? > now + options.leeway {
+        let nbf_int = from_value::<f64>(nbf.clone())? as i64;
+
+        if options.validate_nbf && nbf_int > now + options.leeway {
             return Err(ErrorKind::ImmatureSignature.into());
         }
     }
