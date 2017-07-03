@@ -29,13 +29,14 @@ pub use crypto::{
     verify,
 };
 pub use validation::Validation;
+pub use serialization::TokenData;
 
 
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 
 use errors::{Result, ErrorKind};
-use serialization::{TokenData, from_jwt_part, from_jwt_part_claims, to_jwt_part};
+use serialization::{from_jwt_part, from_jwt_part_claims, to_jwt_part};
 use validation::{validate};
 
 
