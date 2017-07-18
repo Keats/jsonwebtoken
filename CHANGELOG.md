@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3 (2017-07-18)
+
+- Make `TokenData` public
+
 ## 2.0.2 (2017-06-24)
 
 - Update ring & chrono
