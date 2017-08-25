@@ -2,7 +2,7 @@ extern crate jsonwebtoken;
 #[macro_use]
 extern crate serde_derive;
 
-use jsonwebtoken::{encode, decode, Algorithm, Header, sign, verify, Validation};
+use jsonwebtoken::{encode, decode, decode_header, Algorithm, Header, sign, verify, Validation};
 
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -97,9 +97,9 @@ fn decode_token_with_shuffled_header_fields() {
 }
 
 #[test]
-fn decode_without_validating_signature() {
+fn decode_header_only() {
     let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjb21wYW55IjoiMTIzNDU2Nzg5MCIsInN1YiI6IkpvaG4gRG9lIn0.S";
-    let claims = decode::<Claims>(token, "secret".as_ref(), &Validation {validate_signature: false, ..Validation::default()});
-    assert!(claims.is_ok());
+    let header = decode_header(token).unwrap();
+    assert_eq!(header.alg, Algorithm::HS256);
 
 }

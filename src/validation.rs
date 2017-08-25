@@ -32,12 +32,6 @@ pub struct Validation {
     ///
     /// Defaults to `0`.
     pub leeway: i64,
-    /// Whether to actually validate the signature of the token.
-    ///
-    /// WARNING: only set that to false if you know what you are doing.
-    ///
-    /// Defaults to `true`.
-    pub validate_signature: bool,
     /// Whether to validate the `exp` field.
     ///
     /// It will return an error if the time in the `exp` field is past.
@@ -92,8 +86,6 @@ impl Default for Validation {
     fn default() -> Validation {
         Validation {
             leeway: 0,
-
-            validate_signature: true,
 
             validate_exp: true,
             validate_iat: true,
