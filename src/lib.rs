@@ -132,7 +132,6 @@ pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validat
 /// ```rust,ignore
 /// use jsonwebtoken::decode_header;
 ///
-///
 /// let token = "a.jwt.token".to_string();
 /// let header = decode_header(&token);
 /// ```
