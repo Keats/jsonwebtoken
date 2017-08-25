@@ -8,7 +8,7 @@ pub struct Header {
     /// The type of JWS: it can only be "JWT" here
     ///
     /// Defined in [RFC7515#4.1.9](https://tools.ietf.org/html/rfc7515#section-4.1.9).
-    typ: String,
+    typ: Option<String>,
     /// The algorithm used
     ///
     /// Defined in [RFC7515#4.1.1](https://tools.ietf.org/html/rfc7515#section-4.1.1).
@@ -44,7 +44,7 @@ impl Header {
     /// Returns a JWT header with the algorithm given
     pub fn new(algorithm: Algorithm) -> Header {
         Header {
-            typ: "JWT".to_string(),
+            typ: Some("JWT".to_string()),
             alg: algorithm,
             cty: None,
             jku: None,

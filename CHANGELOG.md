@@ -4,6 +4,7 @@
 
 ### Breaking change
 - Remove `validate_signature` from `Validation`
+- Make `typ` optional in header, some providers apparently don't use it
 
 ### Other
 - Add `decode_header` to only decode the header: replaces the use case of `validate_signature`
