@@ -64,8 +64,8 @@ use jsonwebtoken::{Validation, Algorithm};
 
 // Default valuation
 let validation = Validation::default();
-// Adding some leeway (in ms) for iat, exp and nbf checks
-let mut validation = Validation {leeway: 1000 * 60, ..Default::default()};
+// Adding some leeway (in seconds) for iat, exp and nbf checks
+let mut validation = Validation {leeway: 60, ..Default::default()};
 // Checking issuer
 let mut validation = Validation {iss: Some("issuer".to_string()), ..Default::default()};
 // Setting audience

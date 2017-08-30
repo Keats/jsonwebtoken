@@ -6,6 +6,11 @@
 - Remove `validate_signature` from `Validation`
 - Make `typ` optional in header, some providers apparently don't use it
 
+### Others
+
+- Update ring
+- Fix documentation about `leeway` being in seconds and not milliseconds
+
 ### Other
 - Add `decode_header` to only decode the header: replaces the use case of `validate_signature`
 

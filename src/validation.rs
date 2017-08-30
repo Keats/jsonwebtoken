@@ -18,7 +18,7 @@ use crypto::Algorithm;
 /// let validation = Validation::default();
 ///
 /// // Changing one parameter
-/// let mut validation = Validation {leeway: 1000 * 60, ..Default::default()};
+/// let mut validation = Validation {leeway: 60, ..Default::default()};
 ///
 /// // Setting audience
 /// let mut validation = Validation::default();
@@ -27,7 +27,7 @@ use crypto::Algorithm;
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Validation {
-    /// Add some leeway (in ms) to the `exp`, `iat` and `nbf` validation to
+    /// Add some leeway (in seconds) to the `exp`, `iat` and `nbf` validation to
     /// account for clock skew.
     ///
     /// Defaults to `0`.
