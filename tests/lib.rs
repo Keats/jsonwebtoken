@@ -101,5 +101,6 @@ fn decode_header_only() {
     let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjb21wYW55IjoiMTIzNDU2Nzg5MCIsInN1YiI6IkpvaG4gRG9lIn0.S";
     let header = decode_header(token).unwrap();
     assert_eq!(header.alg, Algorithm::HS256);
+    assert_eq!(header.typ, Some("JWT".to_string()));
 
 }

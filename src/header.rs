@@ -9,7 +9,7 @@ pub struct Header {
     ///
     /// Defined in [RFC7515#4.1.9](https://tools.ietf.org/html/rfc7515#section-4.1.9).
     #[serde(skip_serializing_if = "Option::is_none")]
-    typ: Option<String>,
+    pub typ: Option<String>,
     /// The algorithm used
     ///
     /// Defined in [RFC7515#4.1.1](https://tools.ietf.org/html/rfc7515#section-4.1.1).
