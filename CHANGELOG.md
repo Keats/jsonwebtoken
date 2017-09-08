@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.0.0 (unreleased)
+
+### Breaking change
+- Remove `validate_signature` from `Validation`, use `decode_header` instead if you don't know the alg used
+- Make `typ` optional in header, some providers apparently don't use it
+
+### Others
+
+- Update ring & error-chain
+- Fix documentation about `leeway` being in seconds and not milliseconds
+- Add `decode_header` to only decode the header: replaces the use case of `validate_signature`
+
 ## 2.0.3 (2017-07-18)
 
 - Make `TokenData` public

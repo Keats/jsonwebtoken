@@ -22,7 +22,7 @@ mod crypto;
 mod serialization;
 mod validation;
 
-pub use header::{Header};
+pub use header::Header;
 pub use crypto::{
     Algorithm,
     sign,
@@ -107,7 +107,7 @@ pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validat
     let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
     let header: Header = from_jwt_part(header)?;
 
-    if validation.validate_signature && !verify(signature, signing_input, key, header.alg)? {
+    if !verify(signature, signing_input, key, header.alg)? {
         return Err(ErrorKind::InvalidSignature.into());
     }
 
@@ -122,4 +122,21 @@ pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validat
     validate(&claims_map, validation)?;
 
     Ok(TokenData { header: header, claims: decoded_claims })
+}
+
+/// Decode a token and return the Header. This is not doing any kind of validation: it is meant to be
+/// used when you don't know which `alg` the token is using and want to check
+///
+/// If the token is invalid, it will return an error.
+///
+/// ```rust,ignore
+/// use jsonwebtoken::decode_header;
+///
+/// let token = "a.jwt.token".to_string();
+/// let header = decode_header(&token);
+/// ```
+pub fn decode_header(token: &str) -> Result<Header> {
+    let (_, signing_input) = expect_two!(token.rsplitn(2, '.'));
+    let (_, header) = expect_two!(signing_input.rsplitn(2, '.'));
+    from_jwt_part(header)
 }
