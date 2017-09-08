@@ -8,32 +8,47 @@
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "2"
-serde_derive = "1.0"
+jsonwebtoken = "3"
+serde_derive = "1"
 ```
 
 ## How to use
-There is a complete example in `examples/claims.rs` but here's a quick one.
+Complete examples are available in the examples directory: a basic one and one with a custom header.
 
-In terms of imports:
+In terms of imports and structs:
 ```rust
 extern crate jsonwebtoken as jwt;
 #[macro_use]
 extern crate serde_derive;
 
 use jwt::{encode, decode, Header, Algorithm, Validation};
+
+/// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    sub: String,
+    company: String
+}
 ```
 
-Look at the examples directory for 2 examples: a basic one and one with a custom
-header.
-
 ### Encoding
+The default algorithm is HS256.
+
 ```rust
 let token = encode(&Header::default(), &my_claims, "secret".as_ref())?;
 ```
-In that example, `my_claims` is an instance of a Claims struct that derives `Serialize` and `Deserialize`.
-The default algorithm is HS256.
-Look at custom headers section to see how to change that.
+
+#### Custom headers & changing algorithm
+All the parameters from the RFC are supported but the default header only has `typ` and `alg` set.
+If you want to set the `kid` parameter or change the algorithm for example:
+
+```rust
+let mut header = Header::default();
+header.kid = Some("blabla".to_owned());
+header.alg = Algorithm::HS512;
+let token = encode(&header, &my_claims, "secret".as_ref())?;
+```
+Look at `examples/custom_header.rs` for a full working example.
 
 ### Decoding
 ```rust
@@ -46,18 +61,23 @@ let token = decode::<Claims>(&token, "secret", &Validation::default())?;
 - error while decoding base64 or the result of decoding base64 is not valid UTF-8
 - validation of at least one reserved claim failed
 
-In some cases, you will want to only decode the header:
-
+In some cases, for example if you don't know the algorithm used, you will want to only decode the header:
 
 ```rust
 let header = decode_header(&token)?;
 ```
 
-### Validation
-This library validates automatically the `iat`, `exp` and `nbf` claims if found. You can also validate the `sub`, `iss` and `aud` but
-those require setting the expected value.
-You can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` parameter as shown in the example below as well
-as select allowed algorithms.
+This does not perform any validation on the token.
+
+#### Validation
+This library validates automatically the `iat`, `exp` and `nbf` claims if present. You can also validate the `sub`, `iss` and `aud` but
+those require setting the expected value in the `Validation` struct.
+
+Since validating time fields is always a bit tricky due to clock skew, 
+you can add some leeway to the `iat`, `exp` and `nbf` validation by setting a `leeway` parameter.
+
+Last but not least, if you are not using HS256 for the algorithm, you will need to update the `algorithms` field of the `Validation` struct
+to the one you are using.
 
 ```rust
 use jsonwebtoken::{Validation, Algorithm};
@@ -75,18 +95,6 @@ validation.set_audience(&["Me", "You"]); // array of strings
 // Will error if the token given has an algorithm that isn't HS256
 let mut validation = Validation {algorithms: Some(vec![Algorithm::HS256]), ..Default::default()};
 ```
-
-### Custom headers
-All the parameters from the RFC are supported but the default header only has `typ` and `alg` set: all the other fields are optional.
-If you want to set the `kid` parameter for example:
-
-```rust
-let mut header = Header::default();
-header.kid = Some("blabla".to_owned());
-header.alg = Algorithm::HS512;
-let token = encode(&header, &my_claims, "secret".as_ref())?;
-```
-Look at `examples/custom_header.rs` for a full working example.
 
 ## Algorithms
 This library currently supports the following:
