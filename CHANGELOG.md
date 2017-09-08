@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0 (unreleased)
+## 3.0.0 (2017-09-08)
 
 ### Breaking change
 - Remove `validate_signature` from `Validation`, use `decode_header` instead if you don't know the alg used

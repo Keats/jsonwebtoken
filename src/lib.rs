@@ -125,9 +125,9 @@ pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validat
 }
 
 /// Decode a token and return the Header. This is not doing any kind of validation: it is meant to be
-/// used when you don't know which `alg` the token is using and want to check
+/// used when you don't know which `alg` the token is using and want to find out.
 ///
-/// If the token is invalid, it will return an error.
+/// If the token has an invalid format, it will return an error.
 ///
 /// ```rust,ignore
 /// use jsonwebtoken::decode_header;
