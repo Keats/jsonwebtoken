@@ -76,14 +76,15 @@ those require setting the expected value in the `Validation` struct.
 Since validating time fields is always a bit tricky due to clock skew, 
 you can add some leeway to the `iat`, `exp` and `nbf` validation by setting a `leeway` parameter.
 
-Last but not least, if you are not using HS256 for the algorithm, you will need to update the `algorithms` field of the `Validation` struct
-to the one you are using.
+Last but not least, you will need to set the algorithm(s) allowed for this token if you are not using `HS256`.
 
 ```rust
 use jsonwebtoken::{Validation, Algorithm};
 
-// Default valuation
+// Default valuation: the only algo allowed is HS256
 let validation = Validation::default();
+// Quick way to setup a validation where only the algorithm changes
+let validation = Validation::new(Algorithm::HS512);
 // Adding some leeway (in seconds) for iat, exp and nbf checks
 let mut validation = Validation {leeway: 60, ..Default::default()};
 // Checking issuer
@@ -92,8 +93,6 @@ let mut validation = Validation {iss: Some("issuer".to_string()), ..Default::def
 let mut validation = Validation::default();
 validation.set_audience(&"Me"); // string
 validation.set_audience(&["Me", "You"]); // array of strings
-// Will error if the token given has an algorithm that isn't HS256
-let mut validation = Validation {algorithms: Some(vec![Algorithm::HS256]), ..Default::default()};
 ```
 
 ## Algorithms

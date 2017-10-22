@@ -23,7 +23,10 @@ fn main() {
         Err(_) => panic!() // in practice you would return the error
     };
 
-    let validation = Validation {sub: Some("b@b.com".to_string()), ..Validation::default()};
+    let validation = Validation {
+        sub: Some("b@b.com".to_string()),
+        ..Validation::default()
+    };
 
     let token_data = match decode::<Claims>(&token, key.as_ref(), &validation) {
         Ok(c) => c,

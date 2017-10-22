@@ -90,7 +90,7 @@ macro_rules! expect_two {
 /// ```rust,ignore
 /// #[macro_use]
 /// extern crate serde_derive;
-/// use jsonwebtoken::{decode, Validation};
+/// use jsonwebtoken::{decode, Validation, Algorithm};
 ///
 /// #[derive(Debug, Serialize, Deserialize)]
 /// struct Claims {
@@ -100,7 +100,7 @@ macro_rules! expect_two {
 ///
 /// let token = "a.jwt.token".to_string();
 /// // Claims is a struct that implements Deserialize
-/// let token_data = decode::<Claims>(&token, "secret", &Validation::default());
+/// let token_data = decode::<Claims>(&token, "secret", &Validation::new(Algorithm::HS256));
 /// ```
 pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validation) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
@@ -111,10 +111,8 @@ pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validat
         return Err(ErrorKind::InvalidSignature.into());
     }
 
-    if let Some(ref allowed_algs) = validation.algorithms {
-        if !allowed_algs.contains(&header.alg) {
-            return Err(ErrorKind::InvalidAlgorithm.into());
-        }
+    if !validation.algorithms.contains(&header.alg) {
+        return Err(ErrorKind::InvalidAlgorithm.into());
     }
 
     let (decoded_claims, claims_map): (T, _)  = from_jwt_part_claims(claims)?;
