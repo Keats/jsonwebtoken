@@ -81,7 +81,7 @@ Last but not least, you will need to set the algorithm(s) allowed for this token
 ```rust
 use jsonwebtoken::{Validation, Algorithm};
 
-// Default valuation: the only algo allowed is HS256
+// Default validation: the only algo allowed is HS256
 let validation = Validation::default();
 // Quick way to setup a validation where only the algorithm changes
 let validation = Validation::new(Algorithm::HS512);

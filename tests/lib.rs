@@ -102,5 +102,4 @@ fn decode_header_only() {
     let header = decode_header(token).unwrap();
     assert_eq!(header.alg, Algorithm::HS256);
     assert_eq!(header.typ, Some("JWT".to_string()));
-
 }
