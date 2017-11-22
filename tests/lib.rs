@@ -78,7 +78,7 @@ fn decode_token_invalid_signature() {
 #[should_panic(expected = "InvalidAlgorithm")]
 fn decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
-    let claims = decode::<Claims>(token, "secret".as_ref(), &Validation {algorithms: Some(vec![Algorithm::RS512]), ..Validation::default()});
+    let claims = decode::<Claims>(token, "secret".as_ref(), &Validation::new(Algorithm::RS512));
     claims.unwrap();
 }
 
@@ -102,5 +102,4 @@ fn decode_header_only() {
     let header = decode_header(token).unwrap();
     assert_eq!(header.alg, Algorithm::HS256);
     assert_eq!(header.typ, Some("JWT".to_string()));
-
 }

@@ -67,14 +67,21 @@ pub struct Validation {
     ///
     /// Defaults to `None`.
     pub sub: Option<String>,
-    /// If it contains a value, the validation will check that the `alg` of the header is container
+    /// If it contains a value, the validation will check that the `alg` of the header is contained
     /// in the ones provided and will error otherwise.
     ///
-    /// Defaults to `None`.
-    pub algorithms: Option<Vec<Algorithm>>,
+    /// Defaults to `vec![Algorithm::HS256]`.
+    pub algorithms: Vec<Algorithm>,
 }
 
 impl Validation {
+    /// Create a default validation setup allowing the given alg
+    pub fn new(alg: Algorithm) -> Validation {
+        let mut validation = Validation::default();
+        validation.algorithms = vec![alg];
+        validation
+    }
+
     /// Since `aud` can be either a String or an array of String in the JWT spec, this method will take
     /// care of serializing the value.
     pub fn set_audience<T: Serialize>(&mut self, audience: &T) {
@@ -95,7 +102,7 @@ impl Default for Validation {
             sub: None,
             aud: None,
 
-            algorithms: None,
+            algorithms: vec![Algorithm::HS256],
         }
     }
 }
