@@ -1,8 +1,15 @@
 # Changelog
 
+## 4.0.0 (2017-11-22)
+
+### Breaking changes
+
+- Make it mandatory to specify the algorithm in `decode`
+
+
 ## 3.0.0 (2017-09-08)
 
-### Breaking change
+### Breaking changes
 - Remove `validate_signature` from `Validation`, use `decode_header` instead if you don't know the alg used
 - Make `typ` optional in header, some providers apparently don't use it
 
