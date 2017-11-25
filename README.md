@@ -52,7 +52,7 @@ Look at `examples/custom_header.rs` for a full working example.
 
 ### Decoding
 ```rust
-let token = decode::<Claims>(&token, "secret", &Validation::default())?;
+let token = decode::<Claims>(&token, "secret".as_ref(), &Validation::default())?;
 // token is a struct with 2 params: header and claims
 ```
 `decode` can error for a variety of reasons:
