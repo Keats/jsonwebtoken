@@ -11,6 +11,14 @@ use errors::{Result, ErrorKind};
 /// The algorithms supported for signing/verifying
 #[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
+    /// No signature
+    ///
+    /// This should be used with caution as it provides no guarantee of the authenticity of a
+    /// token. In particular this should not be selected as verification algorithm based on the
+    /// header of an untrusted token.
+    #[serde(rename = "none")]
+    None,
+
     /// HMAC using SHA-256
     HS256,
     /// HMAC using SHA-384
@@ -24,6 +32,15 @@ pub enum Algorithm {
     RS384,
     /// RSASSA-PKCS1-v1_5 using SHA-512
     RS512,
+}
+
+/// The actual "none" signing
+fn sign_none(key: &[u8]) -> Result<String> {
+    if key.len() == 0 {
+        Ok("".to_owned())
+    } else {
+        Err(ErrorKind::InvalidKey.into())
+    }
 }
 
 /// The actual HS signing + encoding
@@ -68,6 +85,8 @@ fn sign_rsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
 /// Only use this function if you want to do something other than JWT.
 pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<String> {
     match algorithm {
+        Algorithm::None => sign_none(key),
+
         Algorithm::HS256 => sign_hmac(&digest::SHA256, key, signing_input),
         Algorithm::HS384 => sign_hmac(&digest::SHA384, key, signing_input),
         Algorithm::HS512 => sign_hmac(&digest::SHA512, key, signing_input),
@@ -77,6 +96,19 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
 //        Algorithm::RS256 => sign_rsa(&signature::RSA_PKCS1_SHA256, key, signing_input),
 //        Algorithm::RS384 => sign_rsa(&signature::RSA_PKCS1_SHA384, key, signing_input),
 //        Algorithm::RS512 => sign_rsa(&signature::RSA_PKCS1_SHA512, key, signing_input),
+    }
+}
+
+/// Verifies a "none" signature by ensuring both the signature and key are empty
+///
+/// The key check ensures the caller isn't accidentally using the "none" algorithm with a key
+/// intended for RSA or HMAC.
+fn verify_none(signature: &str, key: &[u8]) -> Result<bool> {
+    if key.len() != 0 {
+        Err(ErrorKind::InvalidKey.into())
+    }
+    else {
+        Ok(signature.len() == 0)
     }
 }
 
@@ -102,6 +134,8 @@ fn verify_rsa(alg: &signature::RSAParameters, signature: &str, signing_input: &s
 /// `signing_input` is base64(header) + "." + base64(claims)
 pub fn verify(signature: &str, signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<bool> {
     match algorithm {
+        Algorithm::None => verify_none(signature, key),
+
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             // we just re-sign the data with the key and compare if they are equal
             let signed = sign(signing_input, key, algorithm)?;

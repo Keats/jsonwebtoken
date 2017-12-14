@@ -12,6 +12,36 @@ struct Claims {
 }
 
 #[test]
+fn sign_none() {
+    let result = sign("hello world", b"", Algorithm::None).unwrap();
+    assert_eq!(result, "");
+}
+
+#[test]
+#[should_panic(expected = "InvalidKey")]
+fn sign_none_with_key() {
+    sign("hello world", b"SomeKey", Algorithm::None).unwrap();
+}
+
+#[test]
+fn verify_none() {
+    let valid = verify("", "hello world", b"", Algorithm::None).unwrap();
+    assert!(valid);
+}
+
+#[test]
+#[should_panic(expected = "InvalidKey")]
+fn verify_none_with_key() {
+    verify("", "hello world", b"SomeKey", Algorithm::None).unwrap();
+}
+
+#[test]
+fn verify_none_with_nonempty_sig() {
+    let valid = verify("SomeSig", "hello world", b"", Algorithm::None).unwrap();
+    assert!(!valid);
+}
+
+#[test]
 fn sign_hs256() {
     let result = sign("hello world", b"secret", Algorithm::HS256).unwrap();
     let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
