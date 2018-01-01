@@ -8,8 +8,9 @@
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "3"
+jsonwebtoken = "4"
 serde_derive = "1"
+serde = "1"
 ```
 
 ## How to use
