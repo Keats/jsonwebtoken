@@ -2,7 +2,7 @@ extern crate jsonwebtoken;
 #[macro_use]
 extern crate serde_derive;
 
-use jsonwebtoken::{encode, decode, decode_header, Algorithm, Header, sign, verify, Validation};
+use jsonwebtoken::{encode, decode, decode_header, dangerous_unsafe_decode, Algorithm, Header, sign, verify, Validation};
 
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -102,4 +102,33 @@ fn decode_header_only() {
     let header = decode_header(token).unwrap();
     assert_eq!(header.alg, Algorithm::HS256);
     assert_eq!(header.typ, Some("JWT".to_string()));
+}
+
+#[test]
+fn dangerous_unsafe_decode_token() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let claims = dangerous_unsafe_decode::<Claims>(token);
+    claims.unwrap();
+}
+
+#[test]
+#[should_panic(expected = "InvalidToken")]
+fn dangerous_unsafe_decode_token_missing_parts() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+    let claims = dangerous_unsafe_decode::<Claims>(token);
+    claims.unwrap();
+}
+
+#[test]
+fn dangerous_unsafe_decode_token_invalid_signature() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
+    let claims = dangerous_unsafe_decode::<Claims>(token);
+    claims.unwrap();
+}
+
+#[test]
+fn dangerous_unsafe_decode_token_wrong_algorithm() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let claims = dangerous_unsafe_decode::<Claims>(token);
+    claims.unwrap();
 }
