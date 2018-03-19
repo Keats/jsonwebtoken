@@ -122,6 +122,35 @@ pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validat
     Ok(TokenData { header: header, claims: decoded_claims })
 }
 
+/// Decode a token without any signature validation into a struct containing 2 fields: `claims` and `header`.
+///
+/// NOTE: Do not use this unless you know what you are doing! If the token's signature is invalid, it will *not* return an error.
+///
+/// ```rust,ignore
+/// #[macro_use]
+/// extern crate serde_derive;
+/// use jsonwebtoken::{dangerous_unsafe_decode, Validation, Algorithm};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///     sub: String,
+///     company: String
+/// }
+///
+/// let token = "a.jwt.token".to_string();
+/// // Claims is a struct that implements Deserialize
+/// let token_data = dangerous_unsafe_decode::<Claims>(&token, &Validation::new(Algorithm::HS256));
+/// ```
+pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
+    let (_, signing_input) = expect_two!(token.rsplitn(2, '.'));
+    let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
+    let header: Header = from_jwt_part(header)?;
+
+    let (decoded_claims, _): (T, _)  = from_jwt_part_claims(claims)?;
+
+    Ok(TokenData { header: header, claims: decoded_claims })
+}
+
 /// Decode a token and return the Header. This is not doing any kind of validation: it is meant to be
 /// used when you don't know which `alg` the token is using and want to find out.
 ///
