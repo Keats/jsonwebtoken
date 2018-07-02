@@ -14,7 +14,9 @@ pub struct TokenData<T> {
     /// The decoded JWT header
     pub header: Header,
     /// The decoded JWT claims
-    pub claims: T
+    pub claims: T,
+    /// The decoded JWT claims as Map<String, Value>
+    pub claims_map: Map<String, Value>
 }
 
 /// Serializes to JSON and encodes to base64
