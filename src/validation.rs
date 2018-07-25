@@ -3,7 +3,7 @@ use serde::ser::Serialize;
 use serde_json::{Value, from_value, to_value};
 use serde_json::map::Map;
 
-use errors::{Result, ErrorKind};
+use errors::{Result, ErrorKind, new_error};
 use crypto::Algorithm;
 
 
@@ -114,26 +114,26 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if let Some(iat) = claims.get("iat") {
         if options.validate_iat && from_value::<i64>(iat.clone())? > now + options.leeway {
-            return Err(ErrorKind::InvalidIssuedAt.into());
+            return Err(new_error(ErrorKind::InvalidIssuedAt));
         }
     }
 
     if let Some(exp) = claims.get("exp") {
         if options.validate_exp && from_value::<i64>(exp.clone())? < now - options.leeway {
-            return Err(ErrorKind::ExpiredSignature.into());
+            return Err(new_error(ErrorKind::ExpiredSignature));
         }
     }
 
     if let Some(nbf) = claims.get("nbf") {
         if options.validate_nbf && from_value::<i64>(nbf.clone())? > now + options.leeway {
-            return Err(ErrorKind::ImmatureSignature.into());
+            return Err(new_error(ErrorKind::ImmatureSignature));
         }
     }
 
     if let Some(iss) = claims.get("iss") {
         if let Some(ref correct_iss) = options.iss {
             if from_value::<String>(iss.clone())? != *correct_iss {
-                return Err(ErrorKind::InvalidIssuer.into());
+                return Err(new_error(ErrorKind::InvalidIssuer));
             }
         }
     }
@@ -141,7 +141,7 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
     if let Some(sub) = claims.get("sub") {
         if let Some(ref correct_sub) = options.sub {
             if from_value::<String>(sub.clone())? != *correct_sub {
-                return Err(ErrorKind::InvalidSubject.into());
+                return Err(new_error(ErrorKind::InvalidSubject));
             }
         }
     }
@@ -149,7 +149,7 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
     if let Some(aud) = claims.get("aud") {
         if let Some(ref correct_aud) = options.aud {
             if aud != correct_aud {
-                return Err(ErrorKind::InvalidAudience.into());
+                return Err(new_error(ErrorKind::InvalidAudience));
             }
         }
     }

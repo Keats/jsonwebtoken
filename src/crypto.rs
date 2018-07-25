@@ -48,14 +48,14 @@ fn sign_rsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
 
     let key_pair = Arc::new(
         signature::RSAKeyPair::from_der(untrusted::Input::from(key))
-            .map_err(|_| ErrorKind::InvalidKey)?
+            .map_err(|_| ErrorKind::InvalidRsaKey)?
     );
     let mut signing_state = signature::RSASigningState::new(key_pair)
-        .map_err(|_| ErrorKind::InvalidKey)?;
+        .map_err(|_| ErrorKind::InvalidRsaKey)?;
     let mut signature = vec![0; signing_state.key_pair().public_modulus_len()];
     let rng = rand::SystemRandom::new();
     signing_state.sign(ring_alg, &rng, signing_input.as_bytes(), &mut signature)
-        .map_err(|_| ErrorKind::InvalidKey)?;
+        .map_err(|_| ErrorKind::InvalidRsaKey)?;
 
     Ok(
         base64::encode_config::<[u8]>(&signature, base64::URL_SAFE_NO_PAD)
@@ -73,7 +73,7 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
         Algorithm::HS512 => sign_hmac(&digest::SHA512, key, signing_input),
 
         Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 => sign_rsa(algorithm, key, signing_input),
-//        TODO: if PKCS1 is made prublic, remove the line above and uncomment below
+//        TODO: if PKCS1 is made public, remove the line above and uncomment below
 //        Algorithm::RS256 => sign_rsa(&signature::RSA_PKCS1_SHA256, key, signing_input),
 //        Algorithm::RS384 => sign_rsa(&signature::RSA_PKCS1_SHA384, key, signing_input),
 //        Algorithm::RS512 => sign_rsa(&signature::RSA_PKCS1_SHA512, key, signing_input),

@@ -5,8 +5,6 @@
 #![deny(missing_docs)]
 
 #[macro_use]
-extern crate error_chain;
-#[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 extern crate serde;
@@ -35,7 +33,7 @@ pub use serialization::TokenData;
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 
-use errors::{Result, ErrorKind};
+use errors::{Result, ErrorKind, new_error};
 use serialization::{from_jwt_part, from_jwt_part_claims, to_jwt_part};
 use validation::{validate};
 
@@ -78,7 +76,7 @@ macro_rules! expect_two {
         let mut i = $iter;
         match (i.next(), i.next(), i.next()) {
             (Some(first), Some(second), None) => (first, second),
-            _ => return Err(ErrorKind::InvalidToken.into())
+            _ => return Err(new_error(ErrorKind::InvalidToken))
         }
     }}
 }
@@ -108,11 +106,11 @@ pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validat
     let header: Header = from_jwt_part(header)?;
 
     if !verify(signature, signing_input, key, header.alg)? {
-        return Err(ErrorKind::InvalidSignature.into());
+        return Err(new_error(ErrorKind::InvalidSignature));
     }
 
     if !validation.algorithms.contains(&header.alg) {
-        return Err(ErrorKind::InvalidAlgorithm.into());
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
     let (decoded_claims, claims_map): (T, _)  = from_jwt_part_claims(claims)?;

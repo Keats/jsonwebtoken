@@ -1,6 +1,13 @@
 # Changelog
 
+## 5.0.0 (unreleased)
+
+- Update ring
+- Change error handling to be based on simple struct/enum rather than error-chain
+
 ## 4.0.1 (2018-03-19)
+
+- Add method to decode a token without signature verification
 
 ## 4.0.0 (2017-11-22)
 
