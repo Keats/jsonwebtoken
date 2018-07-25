@@ -4,6 +4,8 @@
 
 - Update ring
 - Change error handling to be based on simple struct/enum rather than error-chain
+- Fix validations not being called properly in some cases
+- Default validation is not checking `iat` and `nbf` anymore
 
 ## 4.0.1 (2018-03-19)
 

@@ -114,10 +114,9 @@ pub fn decode<T: DeserializeOwned>(token: &str, key: &[u8], validation: &Validat
     }
 
     let (decoded_claims, claims_map): (T, _)  = from_jwt_part_claims(claims)?;
-
     validate(&claims_map, validation)?;
 
-    Ok(TokenData { header: header, claims: decoded_claims })
+    Ok(TokenData { header, claims: decoded_claims })
 }
 
 /// Decode a token without any signature validation into a struct containing 2 fields: `claims` and `header`.

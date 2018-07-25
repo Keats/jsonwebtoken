@@ -1,14 +1,16 @@
 extern crate jsonwebtoken;
 #[macro_use]
 extern crate serde_derive;
+extern crate chrono;
 
 use jsonwebtoken::{encode, decode, decode_header, dangerous_unsafe_decode, Algorithm, Header, sign, verify, Validation};
-
+use chrono::Utc;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
     sub: String,
-    company: String
+    company: String,
+    exp: i64,
 }
 
 #[test]
@@ -29,7 +31,8 @@ fn verify_hs256() {
 fn encode_with_custom_header() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
-        company: "ACME".to_string()
+        company: "ACME".to_string(),
+        exp: Utc::now().timestamp() + 10000,
     };
     let mut header = Header::default();
     header.kid = Some("kid".to_string());
@@ -43,7 +46,8 @@ fn encode_with_custom_header() {
 fn round_trip_claim() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
-        company: "ACME".to_string()
+        company: "ACME".to_string(),
+        exp: Utc::now().timestamp() + 10000,
     };
     let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
     let token_data = decode::<Claims>(&token, "secret".as_ref(), &Validation::default()).unwrap();
@@ -53,8 +57,9 @@ fn round_trip_claim() {
 
 #[test]
 fn decode_token() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
     let claims = decode::<Claims>(token, "secret".as_ref(), &Validation::default());
+    println!("{:?}", claims);
     claims.unwrap();
 }
 
@@ -84,15 +89,8 @@ fn decode_token_wrong_algorithm() {
 
 #[test]
 fn decode_token_with_bytes_secret() {
-    let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiY29tcGFueSI6Ikdvb2dvbCJ9.27QxgG96vpX4akKNpD1YdRGHE3_u2X35wR3EHA2eCrs";
+    let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
     let claims = decode::<Claims>(token, b"\x01\x02\x03", &Validation::default());
-    assert!(claims.is_ok());
-}
-
-#[test]
-fn decode_token_with_shuffled_header_fields() {
-    let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjb21wYW55IjoiMTIzNDU2Nzg5MCIsInN1YiI6IkpvaG4gRG9lIn0.SEIZ4Jg46VGhquuwPYDLY5qHF8AkQczF14aXM3a2c28";
-    let claims = decode::<Claims>(token, "secret".as_ref(), &Validation::default());
     assert!(claims.is_ok());
 }
 
@@ -106,7 +104,7 @@ fn decode_header_only() {
 
 #[test]
 fn dangerous_unsafe_decode_token() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
     let claims = dangerous_unsafe_decode::<Claims>(token);
     claims.unwrap();
 }
@@ -121,14 +119,36 @@ fn dangerous_unsafe_decode_token_missing_parts() {
 
 #[test]
 fn dangerous_unsafe_decode_token_invalid_signature() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.wrong";
     let claims = dangerous_unsafe_decode::<Claims>(token);
     claims.unwrap();
 }
 
 #[test]
 fn dangerous_unsafe_decode_token_wrong_algorithm() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
     let claims = dangerous_unsafe_decode::<Claims>(token);
     claims.unwrap();
+}
+
+// https://github.com/Keats/jsonwebtoken/issues/51
+#[test]
+fn does_validation_in_right_order() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: Utc::now().timestamp() + 10000,
+    };
+    let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
+        let v = Validation {
+        leeway: 5,
+        validate_exp: true,
+        iss: Some("iss no check".to_string()),
+        sub: Some("sub no check".to_string()),
+        ..Validation::default()
+    };
+    let res = decode::<Claims>(&token, "secret".as_ref(), &v);
+    assert!(res.is_err());
+    println!("{:?}", res);
+    //assert!(res.is_ok());
 }

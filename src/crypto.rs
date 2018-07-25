@@ -26,6 +26,12 @@ pub enum Algorithm {
     RS512,
 }
 
+impl Default for Algorithm {
+    fn default() -> Self {
+        Algorithm::HS256
+    }
+}
+
 /// The actual HS signing + encoding
 fn sign_hmac(alg: &'static digest::Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
     let signing_key = hmac::SigningKey::new(alg, key);
@@ -110,11 +116,5 @@ pub fn verify(signature: &str, signing_input: &str, key: &[u8], algorithm: Algor
         Algorithm::RS256 => verify_rsa(&signature::RSA_PKCS1_2048_8192_SHA256, signature, signing_input, key),
         Algorithm::RS384 => verify_rsa(&signature::RSA_PKCS1_2048_8192_SHA384, signature, signing_input, key),
         Algorithm::RS512 => verify_rsa(&signature::RSA_PKCS1_2048_8192_SHA512, signature, signing_input, key),
-    }
-}
-
-impl Default for Algorithm {
-    fn default() -> Self {
-        Algorithm::HS256
     }
 }
