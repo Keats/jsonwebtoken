@@ -79,10 +79,6 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
         Algorithm::HS512 => sign_hmac(&digest::SHA512, key, signing_input),
 
         Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 => sign_rsa(algorithm, key, signing_input),
-//        TODO: if PKCS1 is made public, remove the line above and uncomment below
-//        Algorithm::RS256 => sign_rsa(&signature::RSA_PKCS1_SHA256, key, signing_input),
-//        Algorithm::RS384 => sign_rsa(&signature::RSA_PKCS1_SHA384, key, signing_input),
-//        Algorithm::RS512 => sign_rsa(&signature::RSA_PKCS1_SHA512, key, signing_input),
     }
 }
 
