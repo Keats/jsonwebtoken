@@ -1,14 +1,16 @@
 extern crate jsonwebtoken;
 #[macro_use]
 extern crate serde_derive;
+extern crate chrono;
 
 use jsonwebtoken::{encode, decode, Algorithm, Header, sign, verify, Validation};
-
+use chrono::Utc;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
     sub: String,
-    company: String
+    company: String,
+    exp: i64,
 }
 
 #[test]
@@ -23,7 +25,8 @@ fn round_trip_sign_verification() {
 fn round_trip_claim() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
-        company: "ACME".to_string()
+        company: "ACME".to_string(),
+        exp: Utc::now().timestamp() + 10000,
     };
     let token = encode(&Header::new(Algorithm::RS256), &my_claims, include_bytes!("private_rsa_key.der")).unwrap();
     let token_data = decode::<Claims>(&token, include_bytes!("public_rsa_key.der"), &Validation::new(Algorithm::RS256)).unwrap();

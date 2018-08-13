@@ -3,7 +3,7 @@ use serde::ser::Serialize;
 use serde_json::{Value, from_value, to_value};
 use serde_json::map::Map;
 
-use errors::{Result, ErrorKind};
+use errors::{Result, ErrorKind, new_error};
 use crypto::Algorithm;
 
 
@@ -95,8 +95,8 @@ impl Default for Validation {
             leeway: 0,
 
             validate_exp: true,
-            validate_iat: true,
-            validate_nbf: true,
+            validate_iat: false,
+            validate_nbf: false,
 
             iss: None,
             sub: None,
@@ -112,45 +112,63 @@ impl Default for Validation {
 pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()> {
     let now = Utc::now().timestamp();
 
-    if let Some(iat) = claims.get("iat") {
-        if options.validate_iat && from_value::<i64>(iat.clone())? > now + options.leeway {
-            return Err(ErrorKind::InvalidIssuedAt.into());
+    if options.validate_iat {
+        if let Some(iat) = claims.get("iat") {
+            if from_value::<i64>(iat.clone())? > now + options.leeway {
+                return Err(new_error(ErrorKind::InvalidIssuedAt));
+            }
+        } else {
+            return Err(new_error(ErrorKind::InvalidIssuedAt));
         }
     }
 
-    if let Some(exp) = claims.get("exp") {
-        if options.validate_exp && from_value::<i64>(exp.clone())? < now - options.leeway {
-            return Err(ErrorKind::ExpiredSignature.into());
+    if options.validate_exp {
+        if let Some(exp) = claims.get("exp") {
+            if from_value::<i64>(exp.clone())? < now - options.leeway {
+                return Err(new_error(ErrorKind::ExpiredSignature));
+            }
+        } else {
+            return Err(new_error(ErrorKind::ExpiredSignature));
         }
     }
 
-    if let Some(nbf) = claims.get("nbf") {
-        if options.validate_nbf && from_value::<i64>(nbf.clone())? > now + options.leeway {
-            return Err(ErrorKind::ImmatureSignature.into());
+    if options.validate_nbf {
+        if let Some(nbf) = claims.get("nbf") {
+            if from_value::<i64>(nbf.clone())? > now + options.leeway {
+                return Err(new_error(ErrorKind::ImmatureSignature));
+            }
+        } else {
+            return Err(new_error(ErrorKind::ImmatureSignature));
         }
     }
 
-    if let Some(iss) = claims.get("iss") {
-        if let Some(ref correct_iss) = options.iss {
+    if let Some(ref correct_iss) = options.iss {
+        if let Some(iss) = claims.get("iss") {
             if from_value::<String>(iss.clone())? != *correct_iss {
-                return Err(ErrorKind::InvalidIssuer.into());
+                return Err(new_error(ErrorKind::InvalidIssuer));
             }
+        } else {
+            return Err(new_error(ErrorKind::InvalidIssuer));
         }
     }
 
-    if let Some(sub) = claims.get("sub") {
-        if let Some(ref correct_sub) = options.sub {
+    if let Some(ref correct_sub) = options.sub {
+        if let Some(sub) = claims.get("sub") {
             if from_value::<String>(sub.clone())? != *correct_sub {
-                return Err(ErrorKind::InvalidSubject.into());
+                return Err(new_error(ErrorKind::InvalidSubject));
             }
+        } else {
+            return Err(new_error(ErrorKind::InvalidSubject));
         }
     }
 
-    if let Some(aud) = claims.get("aud") {
-        if let Some(ref correct_aud) = options.aud {
+    if let Some(ref correct_aud) = options.aud {
+        if let Some(aud) = claims.get("aud") {
             if aud != correct_aud {
-                return Err(ErrorKind::InvalidAudience.into());
+                return Err(new_error(ErrorKind::InvalidAudience));
             }
+        } else {
+            return Err(new_error(ErrorKind::InvalidAudience));
         }
     }
 
@@ -172,7 +190,8 @@ mod tests {
     fn iat_in_past_ok() {
         let mut claims = Map::new();
         claims.insert("iat".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
-        let res = validate(&claims, &Validation::default());
+        let validation = Validation { validate_exp: false, validate_iat: true, ..Validation::default() };
+        let res = validate(&claims, &validation);
         assert!(res.is_ok());
     }
 
@@ -180,7 +199,8 @@ mod tests {
     fn iat_in_future_fails() {
         let mut claims = Map::new();
         claims.insert("iat".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
-        let res = validate(&claims, &Validation::default());
+        let validation = Validation { validate_exp: false, validate_iat: true, ..Validation::default() };
+        let res = validate(&claims, &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -195,6 +215,8 @@ mod tests {
         claims.insert("iat".to_string(), to_value(Utc::now().timestamp() + 50).unwrap());
         let validation = Validation {
             leeway: 1000 * 60,
+            validate_iat: true,
+            validate_exp: false,
             ..Default::default()
         };
         let res = validate(&claims, &validation);
@@ -234,11 +256,24 @@ mod tests {
         assert!(res.is_ok());
     }
 
+    // https://github.com/Keats/jsonwebtoken/issues/51
+    #[test]
+    fn validation_called_even_if_field_is_empty() {
+        let claims = Map::new();
+        let res = validate(&claims, &Validation::default());
+        assert!(res.is_err());
+        match res.unwrap_err().kind() {
+            &ErrorKind::ExpiredSignature => (),
+            _ => assert!(false),
+        };
+    }
+
     #[test]
     fn nbf_in_past_ok() {
         let mut claims = Map::new();
         claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
-        let res = validate(&claims, &Validation::default());
+        let validation = Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
+        let res = validate(&claims, &validation);
         assert!(res.is_ok());
     }
 
@@ -246,7 +281,8 @@ mod tests {
     fn nbf_in_future_fails() {
         let mut claims = Map::new();
         claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
-        let res = validate(&claims, &Validation::default());
+        let validation = Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
+        let res = validate(&claims, &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -261,6 +297,8 @@ mod tests {
         claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 500).unwrap());
         let validation = Validation {
             leeway: 1000 * 60,
+            validate_nbf: true,
+            validate_exp: false,
             ..Default::default()
         };
         let res = validate(&claims, &validation);
@@ -272,6 +310,7 @@ mod tests {
         let mut claims = Map::new();
         claims.insert("iss".to_string(), to_value("Keats").unwrap());
         let validation = Validation {
+            validate_exp: false,
             iss: Some("Keats".to_string()),
             ..Default::default()
         };
@@ -284,6 +323,24 @@ mod tests {
         let mut claims = Map::new();
         claims.insert("iss".to_string(), to_value("Hacked").unwrap());
         let validation = Validation {
+            validate_exp: false,
+            iss: Some("Keats".to_string()),
+            ..Default::default()
+        };
+        let res = validate(&claims, &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            &ErrorKind::InvalidIssuer => (),
+            _ => assert!(false),
+        };
+    }
+
+    #[test]
+    fn iss_missing_fails() {
+        let claims = Map::new();
+        let validation = Validation {
+            validate_exp: false,
             iss: Some("Keats".to_string()),
             ..Default::default()
         };
@@ -301,6 +358,7 @@ mod tests {
         let mut claims = Map::new();
         claims.insert("sub".to_string(), to_value("Keats").unwrap());
         let validation = Validation {
+            validate_exp: false,
             sub: Some("Keats".to_string()),
             ..Default::default()
         };
@@ -313,6 +371,24 @@ mod tests {
         let mut claims = Map::new();
         claims.insert("sub".to_string(), to_value("Hacked").unwrap());
         let validation = Validation {
+            validate_exp: false,
+            sub: Some("Keats".to_string()),
+            ..Default::default()
+        };
+        let res = validate(&claims, &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            &ErrorKind::InvalidSubject => (),
+            _ => assert!(false),
+        };
+    }
+
+    #[test]
+    fn sub_missing_fails() {
+        let claims = Map::new();
+        let validation = Validation {
+            validate_exp: false,
             sub: Some("Keats".to_string()),
             ..Default::default()
         };
@@ -329,7 +405,10 @@ mod tests {
     fn aud_string_ok() {
         let mut claims = Map::new();
         claims.insert("aud".to_string(), to_value("Everyone").unwrap());
-        let mut validation = Validation::default();
+        let mut validation = Validation {
+            validate_exp: false,
+            ..Validation::default()
+        };
         validation.set_audience(&"Everyone");
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
@@ -339,7 +418,10 @@ mod tests {
     fn aud_array_of_string_ok() {
         let mut claims = Map::new();
         claims.insert("aud".to_string(), to_value(["UserA", "UserB"]).unwrap());
-        let mut validation = Validation::default();
+        let mut validation = Validation {
+            validate_exp: false,
+            ..Validation::default()
+        };
         validation.set_audience(&["UserA", "UserB"]);
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
@@ -349,7 +431,10 @@ mod tests {
     fn aud_type_mismatch_fails() {
         let mut claims = Map::new();
         claims.insert("aud".to_string(), to_value("Everyone").unwrap());
-        let mut validation = Validation::default();
+        let mut validation = Validation {
+            validate_exp: false,
+            ..Validation::default()
+        };
         validation.set_audience(&["UserA", "UserB"]);
         let res = validate(&claims, &validation);
         assert!(res.is_err());
@@ -364,7 +449,27 @@ mod tests {
     fn aud_correct_type_not_matching_fails() {
         let mut claims = Map::new();
         claims.insert("aud".to_string(), to_value("Everyone").unwrap());
-        let mut validation = Validation::default();
+        let mut validation = Validation {
+            validate_exp: false,
+            ..Validation::default()
+        };
+        validation.set_audience(&"None");
+        let res = validate(&claims, &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            &ErrorKind::InvalidAudience => (),
+            _ => assert!(false),
+        };
+    }
+
+    #[test]
+    fn aud_missing_fails() {
+        let claims = Map::new();
+        let mut validation = Validation {
+            validate_exp: false,
+            ..Validation::default()
+        };
         validation.set_audience(&"None");
         let res = validate(&claims, &validation);
         assert!(res.is_err());
