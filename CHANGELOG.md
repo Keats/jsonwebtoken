@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.0.0 (unreleased)
+## 5.0.0 (2018-08-13)
 
 - Update ring
 - Change error handling to be based on simple struct/enum rather than error-chain
@@ -16,7 +16,6 @@
 ### Breaking changes
 
 - Make it mandatory to specify the algorithm in `decode`
-
 
 ## 3.0.0 (2017-09-08)
 
