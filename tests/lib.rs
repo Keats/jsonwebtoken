@@ -5,6 +5,7 @@ extern crate chrono;
 
 use jsonwebtoken::{encode, decode, decode_header, dangerous_unsafe_decode, Algorithm, Header, sign, verify, Validation};
 use chrono::Utc;
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
@@ -151,4 +152,15 @@ fn does_validation_in_right_order() {
     assert!(res.is_err());
     println!("{:?}", res);
     //assert!(res.is_ok());
+}
+
+#[test]
+fn generate_algorithm_enum_from_str() {
+    assert!(Algorithm::from_str("HS256").is_ok());
+    assert!(Algorithm::from_str("HS384").is_ok());
+    assert!(Algorithm::from_str("HS512").is_ok());
+    assert!(Algorithm::from_str("RS256").is_ok());
+    assert!(Algorithm::from_str("RS384").is_ok());
+    assert!(Algorithm::from_str("RS512").is_ok());
+    assert!(Algorithm::from_str("").is_err());
 }
