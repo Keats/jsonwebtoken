@@ -4,8 +4,9 @@ use base64;
 use ring::{rand, digest, hmac, signature};
 use ring::constant_time::verify_slices_are_equal;
 use untrusted;
+use std::str::FromStr;
 
-use errors::{Result, ErrorKind};
+use errors::{Result, Error, ErrorKind, new_error};
 
 
 /// The algorithms supported for signing/verifying
@@ -29,6 +30,21 @@ pub enum Algorithm {
 impl Default for Algorithm {
     fn default() -> Self {
         Algorithm::HS256
+    }
+}
+
+impl FromStr for Algorithm {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "HS256" => Ok(Algorithm::HS256),
+            "HS384" => Ok(Algorithm::HS384),
+            "HS512" => Ok(Algorithm::HS512),
+            "RS256" => Ok(Algorithm::HS256),
+            "RS384" => Ok(Algorithm::HS384),
+            "RS512" => Ok(Algorithm::HS512),
+            _ => Err(new_error(ErrorKind::InvalidAlgorithmName)),
+        }
     }
 }
 

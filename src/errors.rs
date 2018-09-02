@@ -39,6 +39,8 @@ pub enum ErrorKind {
     InvalidSignature,
     /// When the secret given is not a valid RSA key
     InvalidRsaKey,
+    /// When the algorithm from string doesn't match the one passed to `from_str`
+    InvalidAlgorithmName,
 
     // validation error
 
