@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.1 (2018-09-10)
+
+- Add implementation of FromStr for Algorithm
+
 ## 5.0.0 (2018-08-13)
 
 - Update ring
