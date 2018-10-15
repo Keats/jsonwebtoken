@@ -108,7 +108,9 @@ This library currently supports the following:
 
 ### RSA
 `jsonwebtoken` can only read DER encoded keys currently. If you have openssl installed,
-you can run the following commands to obtain the DER keys from .pem:
+you can run the following commands to obtain the DER keys from PKCS#1 (ie with `BEGIN RSA PUBLIC KEY`) .pem.
+If you have a PKCS#8 pem file (ie starting with `BEGIN PUBLIC KEY`), you will need to first convert it to PKCS#1:
+`openssl rsa -pubin -in <filename> -RSAPublicKey_out -out <filename>`.
 
 ```bash
 // private key
