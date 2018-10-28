@@ -28,7 +28,8 @@ use jwt::{encode, decode, Header, Algorithm, Validation};
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     sub: String,
-    company: String
+    company: String,
+    exp: usize,
 }
 ```
 

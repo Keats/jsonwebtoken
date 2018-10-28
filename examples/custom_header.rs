@@ -9,13 +9,15 @@ use jwt::errors::{ErrorKind};
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     sub: String,
-    company: String
+    company: String,
+    exp: usize,
 }
 
 fn main() {
     let my_claims = Claims {
         sub: "b@b.com".to_owned(),
-        company: "ACME".to_owned()
+        company: "ACME".to_owned(),
+        exp: 10000000000,
     };
     let key = "secret";
 
