@@ -10,7 +10,6 @@ pub(crate) fn new_error(kind: ErrorKind) -> Error {
     Error(Box::new(kind))
 }
 
-
 /// A type alias for `Result<T, jsonwebtoken::Error>`.
 pub type Result<T> = result::Result<T, Error>;
 
@@ -43,7 +42,6 @@ pub enum ErrorKind {
     InvalidAlgorithmName,
 
     // validation error
-
     /// When a token’s `exp` claim indicates that it has expired
     ExpiredSignature,
     /// When a token’s `iss` claim does not match the expected issuer
@@ -60,14 +58,12 @@ pub enum ErrorKind {
     InvalidAlgorithm,
 
     // 3rd party errors
-
     /// An error happened when decoding some base64 text
     Base64(base64::DecodeError),
     /// An error happened while serializing/deserializing JSON
     Json(serde_json::Error),
     /// Some of the text was invalid UTF-8
     Utf8(::std::string::FromUtf8Error),
-
 
     /// Hints that destructuring should not be exhaustive.
     ///

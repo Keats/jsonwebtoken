@@ -3,8 +3,8 @@ extern crate jsonwebtoken;
 extern crate serde_derive;
 extern crate chrono;
 
-use jsonwebtoken::{encode, decode, Algorithm, Header, sign, verify, Validation};
 use chrono::Utc;
+use jsonwebtoken::{decode, encode, sign, verify, Algorithm, Header, Validation};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
@@ -15,11 +15,13 @@ struct Claims {
 
 #[test]
 fn round_trip_sign_verification() {
-    let encrypted = sign("hello world", include_bytes!("private_rsa_key.der"), Algorithm::RS256).unwrap();
-    let is_valid = verify(&encrypted, "hello world", include_bytes!("public_rsa_key.der"), Algorithm::RS256).unwrap();
+    let encrypted =
+        sign("hello world", include_bytes!("private_rsa_key.der"), Algorithm::RS256).unwrap();
+    let is_valid =
+        verify(&encrypted, "hello world", include_bytes!("public_rsa_key.der"), Algorithm::RS256)
+            .unwrap();
     assert!(is_valid);
 }
-
 
 #[test]
 fn round_trip_claim() {
@@ -28,8 +30,15 @@ fn round_trip_claim() {
         company: "ACME".to_string(),
         exp: Utc::now().timestamp() + 10000,
     };
-    let token = encode(&Header::new(Algorithm::RS256), &my_claims, include_bytes!("private_rsa_key.der")).unwrap();
-    let token_data = decode::<Claims>(&token, include_bytes!("public_rsa_key.der"), &Validation::new(Algorithm::RS256)).unwrap();
+    let token =
+        encode(&Header::new(Algorithm::RS256), &my_claims, include_bytes!("private_rsa_key.der"))
+            .unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        include_bytes!("public_rsa_key.der"),
+        &Validation::new(Algorithm::RS256),
+    )
+    .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());
 }

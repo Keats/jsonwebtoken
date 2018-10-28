@@ -3,8 +3,11 @@ extern crate jsonwebtoken;
 extern crate serde_derive;
 extern crate chrono;
 
-use jsonwebtoken::{encode, decode, decode_header, dangerous_unsafe_decode, Algorithm, Header, sign, verify, Validation};
 use chrono::Utc;
+use jsonwebtoken::{
+    dangerous_unsafe_decode, decode, decode_header, encode, sign, verify, Algorithm, Header,
+    Validation,
+};
 use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -75,7 +78,8 @@ fn decode_token_missing_parts() {
 #[test]
 #[should_panic(expected = "InvalidSignature")]
 fn decode_token_invalid_signature() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
+    let token =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
     let claims = decode::<Claims>(token, "secret".as_ref(), &Validation::default());
     claims.unwrap();
 }
@@ -141,7 +145,7 @@ fn does_validation_in_right_order() {
         exp: Utc::now().timestamp() + 10000,
     };
     let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
-        let v = Validation {
+    let v = Validation {
         leeway: 5,
         validate_exp: true,
         iss: Some("iss no check".to_string()),

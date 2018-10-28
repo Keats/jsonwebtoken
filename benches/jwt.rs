@@ -1,23 +1,20 @@
 #![feature(test)]
-extern crate test;
 extern crate jsonwebtoken as jwt;
+extern crate test;
 #[macro_use]
 extern crate serde_derive;
 
-use jwt::{encode, decode, Header, Validation};
+use jwt::{decode, encode, Header, Validation};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
     sub: String,
-    company: String
+    company: String,
 }
 
 #[bench]
 fn bench_encode(b: &mut test::Bencher) {
-    let claim = Claims {
-        sub: "b@b.com".to_owned(),
-        company: "ACME".to_owned()
-    };
+    let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned() };
 
     b.iter(|| encode(&Header::default(), &claim, "secret".as_ref()));
 }

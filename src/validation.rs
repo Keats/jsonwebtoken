@@ -1,11 +1,10 @@
 use chrono::Utc;
 use serde::ser::Serialize;
-use serde_json::{Value, from_value, to_value};
 use serde_json::map::Map;
+use serde_json::{from_value, to_value, Value};
 
-use errors::{Result, ErrorKind, new_error};
 use crypto::Algorithm;
-
+use errors::{new_error, ErrorKind, Result};
 
 /// Contains the various validations that are applied after decoding a token.
 ///
@@ -107,8 +106,6 @@ impl Default for Validation {
     }
 }
 
-
-
 pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()> {
     let now = Utc::now().timestamp();
 
@@ -175,12 +172,11 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
-    use serde_json::{to_value};
-    use serde_json::map::Map;
     use chrono::Utc;
+    use serde_json::map::Map;
+    use serde_json::to_value;
 
     use super::{validate, Validation};
 
@@ -190,7 +186,8 @@ mod tests {
     fn iat_in_past_ok() {
         let mut claims = Map::new();
         claims.insert("iat".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
-        let validation = Validation { validate_exp: false, validate_iat: true, ..Validation::default() };
+        let validation =
+            Validation { validate_exp: false, validate_iat: true, ..Validation::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
     }
@@ -199,7 +196,8 @@ mod tests {
     fn iat_in_future_fails() {
         let mut claims = Map::new();
         claims.insert("iat".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
-        let validation = Validation { validate_exp: false, validate_iat: true, ..Validation::default() };
+        let validation =
+            Validation { validate_exp: false, validate_iat: true, ..Validation::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_err());
 
@@ -248,10 +246,7 @@ mod tests {
     fn exp_in_past_but_in_leeway_ok() {
         let mut claims = Map::new();
         claims.insert("exp".to_string(), to_value(Utc::now().timestamp() - 500).unwrap());
-        let validation = Validation {
-            leeway: 1000 * 60,
-            ..Default::default()
-        };
+        let validation = Validation { leeway: 1000 * 60, ..Default::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
     }
@@ -272,7 +267,8 @@ mod tests {
     fn nbf_in_past_ok() {
         let mut claims = Map::new();
         claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
-        let validation = Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
+        let validation =
+            Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
     }
@@ -281,7 +277,8 @@ mod tests {
     fn nbf_in_future_fails() {
         let mut claims = Map::new();
         claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
-        let validation = Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
+        let validation =
+            Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_err());
 
@@ -405,10 +402,7 @@ mod tests {
     fn aud_string_ok() {
         let mut claims = Map::new();
         claims.insert("aud".to_string(), to_value("Everyone").unwrap());
-        let mut validation = Validation {
-            validate_exp: false,
-            ..Validation::default()
-        };
+        let mut validation = Validation { validate_exp: false, ..Validation::default() };
         validation.set_audience(&"Everyone");
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
@@ -418,10 +412,7 @@ mod tests {
     fn aud_array_of_string_ok() {
         let mut claims = Map::new();
         claims.insert("aud".to_string(), to_value(["UserA", "UserB"]).unwrap());
-        let mut validation = Validation {
-            validate_exp: false,
-            ..Validation::default()
-        };
+        let mut validation = Validation { validate_exp: false, ..Validation::default() };
         validation.set_audience(&["UserA", "UserB"]);
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
@@ -431,10 +422,7 @@ mod tests {
     fn aud_type_mismatch_fails() {
         let mut claims = Map::new();
         claims.insert("aud".to_string(), to_value("Everyone").unwrap());
-        let mut validation = Validation {
-            validate_exp: false,
-            ..Validation::default()
-        };
+        let mut validation = Validation { validate_exp: false, ..Validation::default() };
         validation.set_audience(&["UserA", "UserB"]);
         let res = validate(&claims, &validation);
         assert!(res.is_err());
@@ -449,10 +437,7 @@ mod tests {
     fn aud_correct_type_not_matching_fails() {
         let mut claims = Map::new();
         claims.insert("aud".to_string(), to_value("Everyone").unwrap());
-        let mut validation = Validation {
-            validate_exp: false,
-            ..Validation::default()
-        };
+        let mut validation = Validation { validate_exp: false, ..Validation::default() };
         validation.set_audience(&"None");
         let res = validate(&claims, &validation);
         assert!(res.is_err());
@@ -466,10 +451,7 @@ mod tests {
     #[test]
     fn aud_missing_fails() {
         let claims = Map::new();
-        let mut validation = Validation {
-            validate_exp: false,
-            ..Validation::default()
-        };
+        let mut validation = Validation { validate_exp: false, ..Validation::default() };
         validation.set_audience(&"None");
         let res = validate(&claims, &validation);
         assert!(res.is_err());
