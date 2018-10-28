@@ -64,7 +64,7 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &[u8]) -> Result<S
     let encoded_header = to_jwt_part(&header)?;
     let encoded_claims = to_jwt_part(&claims)?;
     let signing_input = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
-    let signature = sign(&*signing_input, key.as_ref(), header.alg)?;
+    let signature = sign(&*signing_input, key, header.alg)?;
 
     Ok([signing_input, signature].join("."))
 }
@@ -145,7 +145,7 @@ pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<Token
 
     let (decoded_claims, _): (T, _)  = from_jwt_part_claims(claims)?;
 
-    Ok(TokenData { header: header, claims: decoded_claims })
+    Ok(TokenData { header, claims: decoded_claims })
 }
 
 /// Decode a token and return the Header. This is not doing any kind of validation: it is meant to be
