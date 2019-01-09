@@ -18,6 +18,15 @@ pub enum Algorithm {
     /// HMAC using SHA-512
     HS512,
 
+    /// ECDSA using SHA-256
+    ES256,
+
+    /// ECDSA using SHA-384
+    ES384,
+
+    /// ECDSA using SHA-512
+    ES512,
+
     /// RSASSA-PKCS1-v1_5 using SHA-256
     RS256,
     /// RSASSA-PKCS1-v1_5 using SHA-384
@@ -39,6 +48,9 @@ impl FromStr for Algorithm {
             "HS256" => Ok(Algorithm::HS256),
             "HS384" => Ok(Algorithm::HS384),
             "HS512" => Ok(Algorithm::HS512),
+            "ES256" => Ok(Algorithm::ES256),
+            "ES384" => Ok(Algorithm::ES384),
+            "ES512" => Ok(Algorithm::ES512),
             "RS256" => Ok(Algorithm::HS256),
             "RS384" => Ok(Algorithm::HS384),
             "RS512" => Ok(Algorithm::HS512),
@@ -53,6 +65,11 @@ fn sign_hmac(alg: &'static digest::Algorithm, key: &[u8], signing_input: &str) -
     let digest = hmac::sign(&signing_key, signing_input.as_bytes());
 
     Ok(base64::encode_config::<hmac::Signature>(&digest, base64::URL_SAFE_NO_PAD))
+}
+
+/// The actual ECDSA signing + encoding
+fn sign_ecdsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
+    unimplemented!()
 }
 
 /// The actual RSA signing + encoding
@@ -89,6 +106,10 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
         Algorithm::HS256 => sign_hmac(&digest::SHA256, key, signing_input),
         Algorithm::HS384 => sign_hmac(&digest::SHA384, key, signing_input),
         Algorithm::HS512 => sign_hmac(&digest::SHA512, key, signing_input),
+
+        Algorithm::ES256 | Algorithm::ES384 | Algorithm::ES512 => {
+            sign_ecdsa(algorithm, key, signing_input)
+        }
 
         Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 => {
             sign_rsa(algorithm, key, signing_input)
@@ -132,6 +153,9 @@ pub fn verify(
             // we just re-sign the data with the key and compare if they are equal
             let signed = sign(signing_input, key, algorithm)?;
             Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
+        }
+        Algorithm::ES256 | Algorithm::ES384 | Algorithm::ES512 => {
+            unimplemented!()
         }
         Algorithm::RS256 => {
             verify_rsa(&signature::RSA_PKCS1_2048_8192_SHA256, signature, signing_input, key)
