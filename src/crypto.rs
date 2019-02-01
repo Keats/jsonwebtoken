@@ -73,14 +73,7 @@ fn sign_ecdsa(alg: &'static signature::EcdsaSigningAlgorithm, key: &[u8], signin
 
 /// The actual RSA signing + encoding
 /// Taken from Ring doc https://briansmith.org/rustdoc/ring/signature/index.html
-fn sign_rsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
-    let ring_alg = match alg {
-        Algorithm::RS256 => &signature::RSA_PKCS1_SHA256,
-        Algorithm::RS384 => &signature::RSA_PKCS1_SHA384,
-        Algorithm::RS512 => &signature::RSA_PKCS1_SHA512,
-        _ => unreachable!(),
-    };
-
+fn sign_rsa(alg: &'static signature::RsaEncoding, key: &[u8], signing_input: &str) -> Result<String> {
     let key_pair = Arc::new(
         signature::RsaKeyPair::from_der(untrusted::Input::from(key))
             .map_err(|_| ErrorKind::InvalidRsaKey)?,
@@ -88,7 +81,7 @@ fn sign_rsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
     let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
     key_pair
-        .sign(ring_alg, &rng, signing_input.as_bytes(), &mut signature)
+        .sign(alg, &rng, signing_input.as_bytes(), &mut signature)
         .map_err(|_| ErrorKind::InvalidRsaKey)?;
 
     Ok(base64::encode_config::<[u8]>(&signature, base64::URL_SAFE_NO_PAD))
@@ -107,15 +100,15 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
         Algorithm::ES256 => sign_ecdsa(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, signing_input),
         Algorithm::ES384 => sign_ecdsa(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, key, signing_input),
 
-        Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 => {
-            sign_rsa(algorithm, key, signing_input)
-        }
+        Algorithm::RS256 => sign_rsa(&signature::RSA_PKCS1_SHA256, key, signing_input),
+        Algorithm::RS384 => sign_rsa(&signature::RSA_PKCS1_SHA384, key, signing_input),
+        Algorithm::RS512 => sign_rsa(&signature::RSA_PKCS1_SHA512, key, signing_input),
     }
 }
 
-/// See Ring RSA docs for more details
-fn verify_rsa(
-    alg: &signature::RsaParameters,
+/// See Ring docs for more details
+fn verify_ring(
+    alg: &dyn signature::VerificationAlgorithm,
     signature: &str,
     signing_input: &str,
     key: &[u8],
@@ -150,17 +143,20 @@ pub fn verify(
             let signed = sign(signing_input, key, algorithm)?;
             Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
         }
-        Algorithm::ES256 | Algorithm::ES384 => {
-            unimplemented!()
+        Algorithm::ES256 => {
+            verify_ring(&signature::ECDSA_P256_SHA256_FIXED, signature, signing_input, key)
+        }
+        Algorithm::ES384 => {
+            verify_ring(&signature::ECDSA_P384_SHA384_FIXED, signature, signing_input, key)
         }
         Algorithm::RS256 => {
-            verify_rsa(&signature::RSA_PKCS1_2048_8192_SHA256, signature, signing_input, key)
+            verify_ring(&signature::RSA_PKCS1_2048_8192_SHA256, signature, signing_input, key)
         }
         Algorithm::RS384 => {
-            verify_rsa(&signature::RSA_PKCS1_2048_8192_SHA384, signature, signing_input, key)
+            verify_ring(&signature::RSA_PKCS1_2048_8192_SHA384, signature, signing_input, key)
         }
         Algorithm::RS512 => {
-            verify_rsa(&signature::RSA_PKCS1_2048_8192_SHA512, signature, signing_input, key)
+            verify_ring(&signature::RSA_PKCS1_2048_8192_SHA512, signature, signing_input, key)
         }
     }
 }
