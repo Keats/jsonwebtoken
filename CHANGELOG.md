@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.0 (unreleased)
+
+- 
+
 ## 5.0.1 (2018-09-10)
 
 - Add implementation of FromStr for Algorithm
