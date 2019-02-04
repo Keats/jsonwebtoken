@@ -2,7 +2,7 @@
 
 ## 6.0.0 (unreleased)
 
-- 
+- Update Ring to 0.14
 
 ## 5.0.1 (2018-09-10)
 
