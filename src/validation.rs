@@ -41,13 +41,13 @@ pub struct Validation {
     ///
     /// It will return an error if the time in the `iat` field is in the future.
     ///
-    /// Defaults to `true`.
+    /// Defaults to `false`.
     pub validate_iat: bool,
     /// Whether to validate the `nbf` field.
     ///
     /// It will return an error if the current timestamp is before the time in the `nbf` field.
     ///
-    /// Defaults to `true`.
+    /// Defaults to `false`.
     pub validate_nbf: bool,
     /// If it contains a value, the validation will check that the `aud` field is the same as the
     /// one provided and will error otherwise.
