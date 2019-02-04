@@ -67,6 +67,7 @@ fn sign_rsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
 
     let key_pair = Arc::new(
         signature::RSAKeyPair::from_der(untrusted::Input::from(key))
+            .or_else(|_| signature::RSAKeyPair::from_pkcs8(untrusted::Input::from(key)))
             .map_err(|_| ErrorKind::InvalidRsaKey)?,
     );
     let mut signing_state =
