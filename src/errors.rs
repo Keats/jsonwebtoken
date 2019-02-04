@@ -50,8 +50,6 @@ pub enum ErrorKind {
     InvalidAudience,
     /// When a token’s `aud` claim does not match one of the expected audience values
     InvalidSubject,
-    /// When a token’s `iat` claim is in the future
-    InvalidIssuedAt,
     /// When a token’s nbf claim represents a time in the future
     ImmatureSignature,
     /// When the algorithm in the header doesn't match the one passed to `decode`
@@ -84,7 +82,6 @@ impl StdError for Error {
             ErrorKind::InvalidIssuer => "invalid issuer",
             ErrorKind::InvalidAudience => "invalid audience",
             ErrorKind::InvalidSubject => "invalid subject",
-            ErrorKind::InvalidIssuedAt => "invalid issued at",
             ErrorKind::ImmatureSignature => "immature signature",
             ErrorKind::InvalidAlgorithm => "algorithms don't match",
             ErrorKind::Base64(ref err) => err.description(),
@@ -103,7 +100,6 @@ impl StdError for Error {
             ErrorKind::InvalidIssuer => None,
             ErrorKind::InvalidAudience => None,
             ErrorKind::InvalidSubject => None,
-            ErrorKind::InvalidIssuedAt => None,
             ErrorKind::ImmatureSignature => None,
             ErrorKind::InvalidAlgorithm => None,
             ErrorKind::Base64(ref err) => Some(err),
@@ -124,7 +120,6 @@ impl fmt::Display for Error {
             ErrorKind::InvalidIssuer => write!(f, "invalid issuer"),
             ErrorKind::InvalidAudience => write!(f, "invalid audience"),
             ErrorKind::InvalidSubject => write!(f, "invalid subject"),
-            ErrorKind::InvalidIssuedAt => write!(f, "invalid issued at"),
             ErrorKind::ImmatureSignature => write!(f, "immature signature"),
             ErrorKind::InvalidAlgorithm => write!(f, "algorithms don't match"),
             ErrorKind::Base64(ref err) => write!(f, "base64 error: {}", err),
