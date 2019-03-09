@@ -66,14 +66,12 @@ fn sign_rsa(alg: Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
     };
 
     let key_pair = Arc::new(
-        signature::RSAKeyPair::from_der(untrusted::Input::from(key))
+        signature::RsaKeyPair::from_der(untrusted::Input::from(key))
             .map_err(|_| ErrorKind::InvalidRsaKey)?,
     );
-    let mut signing_state =
-        signature::RSASigningState::new(key_pair).map_err(|_| ErrorKind::InvalidRsaKey)?;
-    let mut signature = vec![0; signing_state.key_pair().public_modulus_len()];
+    let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
-    signing_state
+    key_pair
         .sign(ring_alg, &rng, signing_input.as_bytes(), &mut signature)
         .map_err(|_| ErrorKind::InvalidRsaKey)?;
 
@@ -98,7 +96,7 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
 
 /// See Ring RSA docs for more details
 fn verify_rsa(
-    alg: &signature::RSAParameters,
+    alg: &signature::RsaParameters,
     signature: &str,
     signing_input: &str,
     key: &[u8],
