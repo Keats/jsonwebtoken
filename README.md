@@ -13,6 +13,15 @@ serde_derive = "1"
 serde = "1"
 ```
 
+## Help wanted for v7
+
+v6 was released as a stopgap version to update Ring and add a couple of features like ES256/384.
+The results are not very ergonomic once we factor in all the possible ways to load a RSA key for example.
+A possible solution is to have decoder types as described in https://github.com/Keats/jsonwebtoken/issues/76
+but I currently do not have the time to implement it myself.
+I will take any better idea as well of course!
+
+
 ## How to use
 Complete examples are available in the examples directory: a basic one and one with a custom header.
 
@@ -106,6 +115,8 @@ This library currently supports the following:
 - RS256
 - RS384
 - RS512
+- ES256
+- ES384
 
 ### RSA
 `jsonwebtoken` can only read DER encoded keys currently. If you have openssl installed,
