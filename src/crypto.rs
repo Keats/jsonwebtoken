@@ -123,6 +123,40 @@ fn verify_ring(
     Ok(res.is_ok())
 }
 
+/// Compares the signature given with a re-computed signature using the public key for RSA.
+///
+/// `signature` is the signature part of a jwt (text after the second '.')
+///
+/// `signing_input` is base64(header) + "." + base64(claims)
+pub fn verify_rsa(
+    signature: &str,
+    signing_input: &str,
+    (n, e): (&[u8], &[u8]),
+    algorithm: Algorithm,
+) -> Result<bool> {
+    let rsa_parameters = match algorithm {
+        Algorithm::RS256 => &signature::RSA_PKCS1_2048_8192_SHA256,
+        Algorithm::RS384 => &signature::RSA_PKCS1_2048_8192_SHA384,
+        Algorithm::RS512 => &signature::RSA_PKCS1_2048_8192_SHA512,
+        _ => return Err(new_error(ErrorKind::InvalidAlgorithmName)),
+    };
+
+    let signature_bytes = base64::decode_config(signature, base64::URL_SAFE_NO_PAD)?;
+    let message = untrusted::Input::from(signing_input.as_bytes());
+    let modulus = untrusted::Input::from(n);
+    let exponent = untrusted::Input::from(e);
+    let expected_signature = untrusted::Input::from(signature_bytes.as_slice());
+
+    let res = signature::primitive::verify_rsa(
+        rsa_parameters,
+        (modulus, exponent),
+        message,
+        expected_signature,
+    );
+
+    Ok(res.is_ok())
+}
+
 /// Compares the signature given with a re-computed signature for HMAC or using the public key
 /// for RSA.
 ///

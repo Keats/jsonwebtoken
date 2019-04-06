@@ -20,7 +20,7 @@ mod header;
 mod serialization;
 mod validation;
 
-pub use crypto::{sign, verify, Algorithm};
+pub use crypto::{sign, verify, verify_rsa, Algorithm};
 pub use header::Header;
 pub use serialization::TokenData;
 pub use validation::Validation;
@@ -104,6 +104,49 @@ pub fn decode<T: DeserializeOwned>(
     let header: Header = from_jwt_part(header)?;
 
     if !verify(signature, signing_input, key, header.alg)? {
+        return Err(new_error(ErrorKind::InvalidSignature));
+    }
+
+    if !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+
+    let (decoded_claims, claims_map): (T, _) = from_jwt_part_claims(claims)?;
+    validate(&claims_map, validation)?;
+
+    Ok(TokenData { header, claims: decoded_claims })
+}
+
+
+/// Decode a token into a struct containing 2 fields: `claims` and `header`.
+///
+/// If the token or its signature is invalid or the claims fail validation, it will return an error.
+///
+/// ```rust,ignore
+/// #[macro_use]
+/// extern crate serde_derive;
+/// use jsonwebtoken::{decode, Validation, Algorithm};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String
+/// }
+///
+/// let token = "a.jwt.token".to_string();
+/// // Claims is a struct that implements Deserialize
+/// let token_data = decode::<Claims>(&token, (n, e), &Validation::new(Algorithm::HS256));
+/// ```
+pub fn decode_rsa<T: DeserializeOwned>(
+    token: &str,
+    (n, e): (&[u8], &[u8]),
+    validation: &Validation,
+) -> Result<TokenData<T>> {
+    let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
+    let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
+    let header: Header = from_jwt_part(header)?;
+
+    if !verify_rsa(signature, signing_input, (n, e), header.alg)? {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
