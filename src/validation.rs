@@ -37,17 +37,11 @@ pub struct Validation {
     ///
     /// Defaults to `true`.
     pub validate_exp: bool,
-    /// Whether to validate the `iat` field.
-    ///
-    /// It will return an error if the time in the `iat` field is in the future.
-    ///
-    /// Defaults to `true`.
-    pub validate_iat: bool,
     /// Whether to validate the `nbf` field.
     ///
     /// It will return an error if the current timestamp is before the time in the `nbf` field.
     ///
-    /// Defaults to `true`.
+    /// Defaults to `false`.
     pub validate_nbf: bool,
     /// If it contains a value, the validation will check that the `aud` field is the same as the
     /// one provided and will error otherwise.
@@ -94,7 +88,6 @@ impl Default for Validation {
             leeway: 0,
 
             validate_exp: true,
-            validate_iat: false,
             validate_nbf: false,
 
             iss: None,
@@ -108,16 +101,6 @@ impl Default for Validation {
 
 pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()> {
     let now = Utc::now().timestamp();
-
-    if options.validate_iat {
-        if let Some(iat) = claims.get("iat") {
-            if from_value::<i64>(iat.clone())? > now + options.leeway {
-                return Err(new_error(ErrorKind::InvalidIssuedAt));
-            }
-        } else {
-            return Err(new_error(ErrorKind::InvalidIssuedAt));
-        }
-    }
 
     if options.validate_exp {
         if let Some(exp) = claims.get("exp") {
@@ -181,45 +164,6 @@ mod tests {
     use super::{validate, Validation};
 
     use errors::ErrorKind;
-
-    #[test]
-    fn iat_in_past_ok() {
-        let mut claims = Map::new();
-        claims.insert("iat".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
-        let validation =
-            Validation { validate_exp: false, validate_iat: true, ..Validation::default() };
-        let res = validate(&claims, &validation);
-        assert!(res.is_ok());
-    }
-
-    #[test]
-    fn iat_in_future_fails() {
-        let mut claims = Map::new();
-        claims.insert("iat".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
-        let validation =
-            Validation { validate_exp: false, validate_iat: true, ..Validation::default() };
-        let res = validate(&claims, &validation);
-        assert!(res.is_err());
-
-        match res.unwrap_err().kind() {
-            &ErrorKind::InvalidIssuedAt => (),
-            _ => assert!(false),
-        };
-    }
-
-    #[test]
-    fn iat_in_future_but_in_leeway_ok() {
-        let mut claims = Map::new();
-        claims.insert("iat".to_string(), to_value(Utc::now().timestamp() + 50).unwrap());
-        let validation = Validation {
-            leeway: 1000 * 60,
-            validate_iat: true,
-            validate_exp: false,
-            ..Default::default()
-        };
-        let res = validate(&claims, &validation);
-        assert!(res.is_ok());
-    }
 
     #[test]
     fn exp_in_future_ok() {

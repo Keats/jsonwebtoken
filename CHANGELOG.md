@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.0.0 (2019-04-21)
+
+- Update Ring to 0.14
+- Remove `iat` check to match the JWT spec
+- Add ES256 and ES384 signing decoding
+
 ## 5.0.1 (2018-09-10)
 
 - Add implementation of FromStr for Algorithm

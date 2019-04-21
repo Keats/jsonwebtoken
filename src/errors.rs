@@ -36,6 +36,8 @@ pub enum ErrorKind {
     InvalidToken,
     /// When the signature doesn't match
     InvalidSignature,
+    /// When the secret given is not a valid ECDSA key
+    InvalidEcdsaKey,
     /// When the secret given is not a valid RSA key
     InvalidRsaKey,
     /// When the algorithm from string doesn't match the one passed to `from_str`
@@ -50,8 +52,6 @@ pub enum ErrorKind {
     InvalidAudience,
     /// When a token’s `aud` claim does not match one of the expected audience values
     InvalidSubject,
-    /// When a token’s `iat` claim is in the future
-    InvalidIssuedAt,
     /// When a token’s nbf claim represents a time in the future
     ImmatureSignature,
     /// When the algorithm in the header doesn't match the one passed to `decode`
@@ -64,6 +64,8 @@ pub enum ErrorKind {
     Json(serde_json::Error),
     /// Some of the text was invalid UTF-8
     Utf8(::std::string::FromUtf8Error),
+    /// Something unspecified went wrong with crypto
+    Crypto(::ring::error::Unspecified),
 
     /// Hints that destructuring should not be exhaustive.
     ///
@@ -79,17 +81,18 @@ impl StdError for Error {
         match *self.0 {
             ErrorKind::InvalidToken => "invalid token",
             ErrorKind::InvalidSignature => "invalid signature",
+            ErrorKind::InvalidEcdsaKey => "invalid ECDSA key",
             ErrorKind::InvalidRsaKey => "invalid RSA key",
             ErrorKind::ExpiredSignature => "expired signature",
             ErrorKind::InvalidIssuer => "invalid issuer",
             ErrorKind::InvalidAudience => "invalid audience",
             ErrorKind::InvalidSubject => "invalid subject",
-            ErrorKind::InvalidIssuedAt => "invalid issued at",
             ErrorKind::ImmatureSignature => "immature signature",
             ErrorKind::InvalidAlgorithm => "algorithms don't match",
             ErrorKind::Base64(ref err) => err.description(),
             ErrorKind::Json(ref err) => err.description(),
             ErrorKind::Utf8(ref err) => err.description(),
+            ErrorKind::Crypto(ref err) => err.description(),
             _ => unreachable!(),
         }
     }
@@ -98,17 +101,18 @@ impl StdError for Error {
         match *self.0 {
             ErrorKind::InvalidToken => None,
             ErrorKind::InvalidSignature => None,
+            ErrorKind::InvalidEcdsaKey => None,
             ErrorKind::InvalidRsaKey => None,
             ErrorKind::ExpiredSignature => None,
             ErrorKind::InvalidIssuer => None,
             ErrorKind::InvalidAudience => None,
             ErrorKind::InvalidSubject => None,
-            ErrorKind::InvalidIssuedAt => None,
             ErrorKind::ImmatureSignature => None,
             ErrorKind::InvalidAlgorithm => None,
             ErrorKind::Base64(ref err) => Some(err),
             ErrorKind::Json(ref err) => Some(err),
             ErrorKind::Utf8(ref err) => Some(err),
+            ErrorKind::Crypto(ref err) => Some(err),
             _ => unreachable!(),
         }
     }
@@ -119,17 +123,18 @@ impl fmt::Display for Error {
         match *self.0 {
             ErrorKind::InvalidToken => write!(f, "invalid token"),
             ErrorKind::InvalidSignature => write!(f, "invalid signature"),
+            ErrorKind::InvalidEcdsaKey => write!(f, "invalid ECDSA key"),
             ErrorKind::InvalidRsaKey => write!(f, "invalid RSA key"),
             ErrorKind::ExpiredSignature => write!(f, "expired signature"),
             ErrorKind::InvalidIssuer => write!(f, "invalid issuer"),
             ErrorKind::InvalidAudience => write!(f, "invalid audience"),
             ErrorKind::InvalidSubject => write!(f, "invalid subject"),
-            ErrorKind::InvalidIssuedAt => write!(f, "invalid issued at"),
             ErrorKind::ImmatureSignature => write!(f, "immature signature"),
             ErrorKind::InvalidAlgorithm => write!(f, "algorithms don't match"),
             ErrorKind::Base64(ref err) => write!(f, "base64 error: {}", err),
             ErrorKind::Json(ref err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
+            ErrorKind::Crypto(ref err) => write!(f, "Crypto error: {}", err),
             _ => unreachable!(),
         }
     }
@@ -150,6 +155,18 @@ impl From<serde_json::Error> for Error {
 impl From<::std::string::FromUtf8Error> for Error {
     fn from(err: ::std::string::FromUtf8Error) -> Error {
         new_error(ErrorKind::Utf8(err))
+    }
+}
+
+impl From<::ring::error::Unspecified> for Error {
+    fn from(err: ::ring::error::Unspecified) -> Error {
+        new_error(ErrorKind::Crypto(err))
+    }
+}
+
+impl From<::ring::error::KeyRejected> for Error {
+    fn from(_err: ::ring::error::KeyRejected) -> Error {
+        new_error(ErrorKind::InvalidEcdsaKey)
     }
 }
 

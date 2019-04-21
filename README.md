@@ -8,10 +8,19 @@
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "5"
+jsonwebtoken = "6"
 serde_derive = "1"
 serde = "1"
 ```
+
+## Help wanted for v7
+
+v6 was released as a stopgap version to update Ring and add a couple of features like ES256/384.
+The results are not very ergonomic once we factor in all the possible ways to load a RSA key for example.
+A possible solution is to have decoder types as described in https://github.com/Keats/jsonwebtoken/issues/76
+but I currently do not have the time to implement it myself.
+I will take any better idea as well of course!
+
 
 ## How to use
 Complete examples are available in the examples directory: a basic one and one with a custom header.
@@ -72,7 +81,7 @@ let header = decode_header(&token)?;
 This does not perform any validation on the token.
 
 #### Validation
-This library validates automatically the `iat`, `exp` and `nbf` claims if present. You can also validate the `sub`, `iss` and `aud` but
+This library validates automatically the `exp` and `nbf` claims if present. You can also validate the `sub`, `iss` and `aud` but
 those require setting the expected value in the `Validation` struct.
 
 Since validating time fields is always a bit tricky due to clock skew, 
@@ -87,7 +96,7 @@ use jsonwebtoken::{Validation, Algorithm};
 let validation = Validation::default();
 // Quick way to setup a validation where only the algorithm changes
 let validation = Validation::new(Algorithm::HS512);
-// Adding some leeway (in seconds) for iat, exp and nbf checks
+// Adding some leeway (in seconds) for exp and nbf checks
 let mut validation = Validation {leeway: 60, ..Default::default()};
 // Checking issuer
 let mut validation = Validation {iss: Some("issuer".to_string()), ..Default::default()};
@@ -106,6 +115,8 @@ This library currently supports the following:
 - RS256
 - RS384
 - RS512
+- ES256
+- ES384
 
 ### RSA
 `jsonwebtoken` can only read DER encoded keys currently. If you have openssl installed,
