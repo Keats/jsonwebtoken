@@ -1,6 +1,6 @@
 # Changelog
 
-## 6.0.0 (unreleased)
+## 6.0.0 (2019-04-21)
 
 - Update Ring to 0.14
 - Remove `iat` check to match the JWT spec
