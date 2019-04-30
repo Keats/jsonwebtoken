@@ -18,6 +18,7 @@ mod crypto;
 pub mod errors;
 mod header;
 mod serialization;
+pub mod utils;
 mod validation;
 
 pub use crypto::{sign, verify, Algorithm};
