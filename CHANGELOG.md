@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.1 (2019-05-10)
+
+- Fix Algorithm mapping in FromStr for RSA
+
 ## 6.0.0 (2019-04-21)
 
 - Update Ring to 0.14
