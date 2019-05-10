@@ -47,9 +47,9 @@ impl FromStr for Algorithm {
             "HS512" => Ok(Algorithm::HS512),
             "ES256" => Ok(Algorithm::ES256),
             "ES384" => Ok(Algorithm::ES384),
-            "RS256" => Ok(Algorithm::HS256),
-            "RS384" => Ok(Algorithm::HS384),
-            "RS512" => Ok(Algorithm::HS512),
+            "RS256" => Ok(Algorithm::RS256),
+            "RS384" => Ok(Algorithm::RS384),
+            "RS512" => Ok(Algorithm::RS512),
             _ => Err(new_error(ErrorKind::InvalidAlgorithmName)),
         }
     }
