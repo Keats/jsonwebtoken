@@ -5,7 +5,7 @@ extern crate chrono;
 
 use chrono::Utc;
 use jsonwebtoken::{
-    dangerous_unsafe_decode, decode, decode_header, encode, sign, verify, Algorithm, Header,
+    dangerous_unsafe_decode, decode, decode_header, encode, sign, verify, Algorithm, Header, Hmac,
     Validation,
 };
 use std::str::FromStr;
@@ -19,7 +19,7 @@ struct Claims {
 
 #[test]
 fn sign_hs256() {
-    let result = sign("hello world", b"secret", Algorithm::HS256).unwrap();
+    let result = sign("hello world", Hmac::from(b"secret"), Algorithm::HS256).unwrap();
     let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
     assert_eq!(result, expected);
 }
@@ -40,7 +40,7 @@ fn encode_with_custom_header() {
     };
     let mut header = Header::default();
     header.kid = Some("kid".to_string());
-    let token = encode(&header, &my_claims, "secret".as_ref()).unwrap();
+    let token = encode(&header, &my_claims, Hmac::from(b"secret")).unwrap();
     let token_data = decode::<Claims>(&token, "secret".as_ref(), &Validation::default()).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
@@ -53,7 +53,7 @@ fn round_trip_claim() {
         company: "ACME".to_string(),
         exp: Utc::now().timestamp() + 10000,
     };
-    let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
+    let token = encode(&Header::default(), &my_claims, Hmac::from(b"secret")).unwrap();
     let token_data = decode::<Claims>(&token, "secret".as_ref(), &Validation::default()).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());
@@ -144,7 +144,7 @@ fn does_validation_in_right_order() {
         company: "ACME".to_string(),
         exp: Utc::now().timestamp() + 10000,
     };
-    let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
+    let token = encode(&Header::default(), &my_claims, Hmac::from(b"secret")).unwrap();
     let v = Validation {
         leeway: 5,
         validate_exp: true,
