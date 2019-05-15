@@ -20,7 +20,7 @@ mod header;
 mod serialization;
 mod validation;
 
-pub use crypto::{sign, verify, Algorithm};
+pub use crypto::{sign, verify, Algorithm, Der, Hmac, Key, KeyFormat, Pkcs8};
 pub use header::Header;
 pub use serialization::TokenData;
 pub use validation::Validation;
@@ -54,7 +54,7 @@ use validation::validate;
 /// // This will create a JWT using HS256 as algorithm
 /// let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
 /// ```
-pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &[u8]) -> Result<String> {
+pub fn encode<T: Serialize, K: Key>(header: &Header, claims: &T, key: K) -> Result<String> {
     let encoded_header = to_jwt_part(&header)?;
     let encoded_claims = to_jwt_part(&claims)?;
     let signing_input = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
