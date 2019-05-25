@@ -1,5 +1,7 @@
 # Changelog
 
+# 7.0.0 (unreleased)
+
 ## 6.0.1 (2019-05-10)
 
 - Fix Algorithm mapping in FromStr for RSA
