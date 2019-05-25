@@ -42,6 +42,8 @@ pub enum ErrorKind {
     InvalidRsaKey,
     /// When the algorithm from string doesn't match the one passed to `from_str`
     InvalidAlgorithmName,
+    /// When a key is provided with an invalid format
+    InvalidKeyFormat,
 
     // validation error
     /// When a token’s `exp` claim indicates that it has expired

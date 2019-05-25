@@ -15,8 +15,8 @@ struct Claims {
 fn main() {
     let my_claims =
         Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 10000000000 };
-    let key = "secret";
-    let token = match encode(&Header::default(), &my_claims, key.as_ref()) {
+    let key = b"secret";
+    let token = match encode(&Header::default(), &my_claims, jwt::Hmac::from(key)) {
         Ok(t) => t,
         Err(_) => panic!(), // in practice you would return the error
     };

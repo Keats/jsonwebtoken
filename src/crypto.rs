@@ -56,16 +56,32 @@ impl FromStr for Algorithm {
 }
 
 /// The actual HS signing + encoding
-fn sign_hmac(alg: &'static digest::Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
-    let signing_key = hmac::SigningKey::new(alg, key);
+fn sign_hmac<K: Key>(
+    alg: &'static digest::Algorithm,
+    key: K,
+    signing_input: &str,
+) -> Result<String> {
+    let signing_key = hmac::SigningKey::new(alg, key.as_ref());
     let digest = hmac::sign(&signing_key, signing_input.as_bytes());
 
     Ok(base64::encode_config::<hmac::Signature>(&digest, base64::URL_SAFE_NO_PAD))
 }
 
 /// The actual ECDSA signing + encoding
-fn sign_ecdsa(alg: &'static signature::EcdsaSigningAlgorithm, key: &[u8], signing_input: &str) -> Result<String> {
-    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, untrusted::Input::from(key))?;
+fn sign_ecdsa<K: Key>(
+    alg: &'static signature::EcdsaSigningAlgorithm,
+    key: K,
+    signing_input: &str,
+) -> Result<String> {
+    let signing_key = match key.format() {
+        KeyFormat::PKCS8 => {
+            signature::EcdsaKeyPair::from_pkcs8(alg, untrusted::Input::from(key.as_ref()))?
+        }
+        _ => {
+            return Err(ErrorKind::InvalidKeyFormat)?;
+        }
+    };
+
     let rng = rand::SystemRandom::new();
     let sig = signing_key.sign(&rng, untrusted::Input::from(signing_input.as_bytes()))?;
     Ok(base64::encode_config(&sig, base64::URL_SAFE_NO_PAD))
@@ -73,11 +89,25 @@ fn sign_ecdsa(alg: &'static signature::EcdsaSigningAlgorithm, key: &[u8], signin
 
 /// The actual RSA signing + encoding
 /// Taken from Ring doc https://briansmith.org/rustdoc/ring/signature/index.html
-fn sign_rsa(alg: &'static signature::RsaEncoding, key: &[u8], signing_input: &str) -> Result<String> {
-    let key_pair = Arc::new(
-        signature::RsaKeyPair::from_der(untrusted::Input::from(key))
-            .map_err(|_| ErrorKind::InvalidRsaKey)?,
-    );
+fn sign_rsa<K: Key>(
+    alg: &'static signature::RsaEncoding,
+    key: K,
+    signing_input: &str,
+) -> Result<String> {
+    let key_bytes = untrusted::Input::from(key.as_ref());
+    let key_pair = match key.format() {
+        KeyFormat::DER => {
+            signature::RsaKeyPair::from_der(key_bytes).map_err(|_| ErrorKind::InvalidRsaKey)?
+        }
+        KeyFormat::PKCS8 => {
+            signature::RsaKeyPair::from_pkcs8(key_bytes).map_err(|_| ErrorKind::InvalidRsaKey)?
+        }
+        _ => {
+            return Err(ErrorKind::InvalidKeyFormat)?;
+        }
+    };
+
+    let key_pair = Arc::new(key_pair);
     let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
     key_pair
@@ -91,14 +121,18 @@ fn sign_rsa(alg: &'static signature::RsaEncoding, key: &[u8], signing_input: &st
 /// the base64 url safe encoded of the result.
 ///
 /// Only use this function if you want to do something other than JWT.
-pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<String> {
+pub fn sign<K: Key>(signing_input: &str, key: K, algorithm: Algorithm) -> Result<String> {
     match algorithm {
         Algorithm::HS256 => sign_hmac(&digest::SHA256, key, signing_input),
         Algorithm::HS384 => sign_hmac(&digest::SHA384, key, signing_input),
         Algorithm::HS512 => sign_hmac(&digest::SHA512, key, signing_input),
 
-        Algorithm::ES256 => sign_ecdsa(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, signing_input),
-        Algorithm::ES384 => sign_ecdsa(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, key, signing_input),
+        Algorithm::ES256 => {
+            sign_ecdsa(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, signing_input)
+        }
+        Algorithm::ES384 => {
+            sign_ecdsa(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, key, signing_input)
+        }
 
         Algorithm::RS256 => sign_rsa(&signature::RSA_PKCS1_SHA256, key, signing_input),
         Algorithm::RS384 => sign_rsa(&signature::RSA_PKCS1_SHA384, key, signing_input),
@@ -134,29 +168,149 @@ fn verify_ring(
 pub fn verify(
     signature: &str,
     signing_input: &str,
-    key: &[u8],
+    public_key: &[u8],
     algorithm: Algorithm,
 ) -> Result<bool> {
     match algorithm {
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             // we just re-sign the data with the key and compare if they are equal
-            let signed = sign(signing_input, key, algorithm)?;
+            let signed = sign(signing_input, Hmac::from(&public_key), algorithm)?;
             Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
         }
         Algorithm::ES256 => {
-            verify_ring(&signature::ECDSA_P256_SHA256_FIXED, signature, signing_input, key)
+            verify_ring(&signature::ECDSA_P256_SHA256_FIXED, signature, signing_input, public_key)
         }
         Algorithm::ES384 => {
-            verify_ring(&signature::ECDSA_P384_SHA384_FIXED, signature, signing_input, key)
+            verify_ring(&signature::ECDSA_P384_SHA384_FIXED, signature, signing_input, public_key)
         }
-        Algorithm::RS256 => {
-            verify_ring(&signature::RSA_PKCS1_2048_8192_SHA256, signature, signing_input, key)
-        }
-        Algorithm::RS384 => {
-            verify_ring(&signature::RSA_PKCS1_2048_8192_SHA384, signature, signing_input, key)
-        }
-        Algorithm::RS512 => {
-            verify_ring(&signature::RSA_PKCS1_2048_8192_SHA512, signature, signing_input, key)
-        }
+        Algorithm::RS256 => verify_ring(
+            &signature::RSA_PKCS1_2048_8192_SHA256,
+            signature,
+            signing_input,
+            public_key,
+        ),
+        Algorithm::RS384 => verify_ring(
+            &signature::RSA_PKCS1_2048_8192_SHA384,
+            signature,
+            signing_input,
+            public_key,
+        ),
+        Algorithm::RS512 => verify_ring(
+            &signature::RSA_PKCS1_2048_8192_SHA512,
+            signature,
+            signing_input,
+            public_key,
+        ),
+    }
+}
+
+/// The supported RSA key formats, see the documentation for ring::signature::RsaKeyPair
+/// for more information
+pub enum KeyFormat {
+    /// An unencrypted PKCS#8-encoded key. Can be used with both ECDSA and RSA
+    /// algorithms when signing. See ring for information.
+    PKCS8,
+    /// A binary DER-encoded ASN.1 key. Can only be used with RSA algorithms
+    /// when signing. See ring for more information
+    DER,
+    /// This is not a key format, but provided for convenience since HMAC is
+    /// a supported signing algorithm.
+    HMAC,
+}
+
+/// A tiny abstraction on top of raw key buffers to add key format
+/// information
+pub trait Key: AsRef<[u8]> {
+    /// The format of the key
+    fn format(&self) -> KeyFormat;
+}
+
+/// This blanket implementation aligns with the key loading as of version 6.0.0
+// impl<T> Key for T
+// where
+//     T: AsRef<[u8]>,
+// {
+//     fn format(&self) -> KeyFormat {
+//         KeyFormat::DER
+//     }
+// }
+
+/// A convenience wrapper for a key buffer as an unencrypted PKCS#8-encoded,
+/// see ring for more details
+pub struct Pkcs8<'a> {
+    key_bytes: &'a [u8],
+}
+
+impl<'a> Key for Pkcs8<'a> {
+    fn format(&self) -> KeyFormat {
+        KeyFormat::PKCS8
+    }
+}
+
+impl<'a> AsRef<[u8]> for Pkcs8<'a> {
+    fn as_ref(&self) -> &[u8] {
+        self.key_bytes
+    }
+}
+
+impl<'a, T> From<&'a T> for Pkcs8<'a>
+where
+    T: AsRef<[u8]>,
+{
+    fn from(key: &'a T) -> Self {
+        Self { key_bytes: key.as_ref() }
+    }
+}
+
+/// A convenience wrapper for a key buffer as a binary DER-encoded ASN.1 key,
+/// see ring for more details
+pub struct Der<'a> {
+    key_bytes: &'a [u8],
+}
+
+impl<'a> Key for Der<'a> {
+    fn format(&self) -> KeyFormat {
+        KeyFormat::DER
+    }
+}
+
+impl<'a> AsRef<[u8]> for Der<'a> {
+    fn as_ref(&self) -> &[u8] {
+        self.key_bytes
+    }
+}
+
+impl<'a, T> From<&'a T> for Der<'a>
+where
+    T: AsRef<[u8]>,
+{
+    fn from(key: &'a T) -> Self {
+        Self { key_bytes: key.as_ref() }
+    }
+}
+
+/// Convenience wrapper for an HMAC key
+pub struct Hmac<'a> {
+    key_bytes: &'a [u8],
+}
+
+impl<'a> Key for Hmac<'a> {
+    fn format(&self) -> KeyFormat {
+        KeyFormat::HMAC
+    }
+}
+
+impl<'a> AsRef<[u8]> for Hmac<'a> {
+    fn as_ref(&self) -> &[u8] {
+        self.key_bytes
+    }
+}
+
+impl<'a, T> From<&'a T> for Hmac<'a>
+where
+    T: AsRef<[u8]>,
+{
+    fn from(key: &'a T) -> Self {
+        Self { key_bytes: key.as_ref() }
     }
 }
