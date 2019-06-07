@@ -166,5 +166,8 @@ fn generate_algorithm_enum_from_str() {
     assert!(Algorithm::from_str("RS256").is_ok());
     assert!(Algorithm::from_str("RS384").is_ok());
     assert!(Algorithm::from_str("RS512").is_ok());
+    assert!(Algorithm::from_str("PS256").is_ok());
+    assert!(Algorithm::from_str("PS384").is_ok());
+    assert!(Algorithm::from_str("PS512").is_ok());
     assert!(Algorithm::from_str("").is_err());
 }

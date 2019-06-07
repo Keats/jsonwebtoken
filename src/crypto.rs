@@ -30,6 +30,13 @@ pub enum Algorithm {
     RS384,
     /// RSASSA-PKCS1-v1_5 using SHA-512
     RS512,
+
+    /// RSASSA-PSS using SHA-256
+    PS256,
+    /// RSASSA-PSS using SHA-384
+    PS384,
+    /// RSASSA-PSS using SHA-512
+    PS512,
 }
 
 impl Default for Algorithm {
@@ -50,6 +57,9 @@ impl FromStr for Algorithm {
             "RS256" => Ok(Algorithm::RS256),
             "RS384" => Ok(Algorithm::RS384),
             "RS512" => Ok(Algorithm::RS512),
+            "PS256" => Ok(Algorithm::PS256),
+            "PS384" => Ok(Algorithm::PS384),
+            "PS512" => Ok(Algorithm::PS512),
             _ => Err(new_error(ErrorKind::InvalidAlgorithmName)),
         }
     }
@@ -64,7 +74,11 @@ fn sign_hmac(alg: &'static digest::Algorithm, key: &[u8], signing_input: &str) -
 }
 
 /// The actual ECDSA signing + encoding
-fn sign_ecdsa(alg: &'static signature::EcdsaSigningAlgorithm, key: &[u8], signing_input: &str) -> Result<String> {
+fn sign_ecdsa(
+    alg: &'static signature::EcdsaSigningAlgorithm,
+    key: &[u8],
+    signing_input: &str,
+) -> Result<String> {
     let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, untrusted::Input::from(key))?;
     let rng = rand::SystemRandom::new();
     let sig = signing_key.sign(&rng, untrusted::Input::from(signing_input.as_bytes()))?;
@@ -73,7 +87,11 @@ fn sign_ecdsa(alg: &'static signature::EcdsaSigningAlgorithm, key: &[u8], signin
 
 /// The actual RSA signing + encoding
 /// Taken from Ring doc https://briansmith.org/rustdoc/ring/signature/index.html
-fn sign_rsa(alg: &'static signature::RsaEncoding, key: &[u8], signing_input: &str) -> Result<String> {
+fn sign_rsa(
+    alg: &'static dyn signature::RsaEncoding,
+    key: &[u8],
+    signing_input: &str,
+) -> Result<String> {
     let key_pair = Arc::new(
         signature::RsaKeyPair::from_der(untrusted::Input::from(key))
             .map_err(|_| ErrorKind::InvalidRsaKey)?,
@@ -97,12 +115,20 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
         Algorithm::HS384 => sign_hmac(&digest::SHA384, key, signing_input),
         Algorithm::HS512 => sign_hmac(&digest::SHA512, key, signing_input),
 
-        Algorithm::ES256 => sign_ecdsa(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, signing_input),
-        Algorithm::ES384 => sign_ecdsa(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, key, signing_input),
+        Algorithm::ES256 => {
+            sign_ecdsa(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, signing_input)
+        }
+        Algorithm::ES384 => {
+            sign_ecdsa(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, key, signing_input)
+        }
 
         Algorithm::RS256 => sign_rsa(&signature::RSA_PKCS1_SHA256, key, signing_input),
         Algorithm::RS384 => sign_rsa(&signature::RSA_PKCS1_SHA384, key, signing_input),
         Algorithm::RS512 => sign_rsa(&signature::RSA_PKCS1_SHA512, key, signing_input),
+
+        Algorithm::PS256 => sign_rsa(&signature::RSA_PSS_SHA256, key, signing_input),
+        Algorithm::PS384 => sign_rsa(&signature::RSA_PSS_SHA384, key, signing_input),
+        Algorithm::PS512 => sign_rsa(&signature::RSA_PSS_SHA512, key, signing_input),
     }
 }
 
@@ -157,6 +183,15 @@ pub fn verify(
         }
         Algorithm::RS512 => {
             verify_ring(&signature::RSA_PKCS1_2048_8192_SHA512, signature, signing_input, key)
+        }
+        Algorithm::PS256 => {
+            verify_ring(&signature::RSA_PSS_2048_8192_SHA256, signature, signing_input, key)
+        }
+        Algorithm::PS384 => {
+            verify_ring(&signature::RSA_PSS_2048_8192_SHA384, signature, signing_input, key)
+        }
+        Algorithm::PS512 => {
+            verify_ring(&signature::RSA_PSS_2048_8192_SHA512, signature, signing_input, key)
         }
     }
 }
