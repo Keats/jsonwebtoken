@@ -4,7 +4,7 @@ extern crate serde_derive;
 extern crate chrono;
 
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, sign, verify, Algorithm, Key, Header, Validation};
+use jsonwebtoken::{decode, encode, sign, verify, Algorithm, Header, Key, Validation};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
@@ -33,7 +33,8 @@ fn round_trip_claim() {
     let token =
         encode(&Header::new(Algorithm::ES256), &my_claims, Key::Pkcs8(&privkey[..])).unwrap();
     let pubkey = include_bytes!("public_ecdsa_key.pk8");
-    let token_data = decode::<Claims>(&token, Key::Pkcs8(pubkey), &Validation::new(Algorithm::ES256)).unwrap();
+    let token_data =
+        decode::<Claims>(&token, Key::Pkcs8(pubkey), &Validation::new(Algorithm::ES256)).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());
 }

@@ -34,7 +34,6 @@ fn sign_ecdsa(
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
     };
-
     let rng = rand::SystemRandom::new();
     let sig = signing_key.sign(&rng, untrusted::Input::from(signing_input.as_bytes()))?;
     Ok(base64::encode_config(&sig, base64::URL_SAFE_NO_PAD))
@@ -83,6 +82,10 @@ pub fn sign(signing_input: &str, key: Key, algorithm: Algorithm) -> Result<Strin
         Algorithm::RS256 => sign_rsa(&signature::RSA_PKCS1_SHA256, key, signing_input),
         Algorithm::RS384 => sign_rsa(&signature::RSA_PKCS1_SHA384, key, signing_input),
         Algorithm::RS512 => sign_rsa(&signature::RSA_PKCS1_SHA512, key, signing_input),
+
+        Algorithm::PS256 => sign_rsa(&signature::RSA_PSS_SHA256, key, signing_input),
+        Algorithm::PS384 => sign_rsa(&signature::RSA_PSS_SHA384, key, signing_input),
+        Algorithm::PS512 => sign_rsa(&signature::RSA_PSS_SHA512, key, signing_input),
     }
 }
 
@@ -144,44 +147,38 @@ fn verify_ring_rsa(
 pub fn verify(
     signature: &str,
     signing_input: &str,
-    public_key: Key,
+    key: Key,
     algorithm: Algorithm,
 ) -> Result<bool> {
     match algorithm {
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             // we just re-sign the data with the key and compare if they are equal
-            let signed = sign(signing_input, public_key, algorithm)?;
+            let signed = sign(signing_input, key, algorithm)?;
             Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
         }
-        Algorithm::ES256 => verify_ring_es(
-            &signature::ECDSA_P256_SHA256_FIXED,
-            signature,
-            signing_input,
-            public_key,
-        ),
-        Algorithm::ES384 => verify_ring_es(
-            &signature::ECDSA_P384_SHA384_FIXED,
-            signature,
-            signing_input,
-            public_key,
-        ),
-        Algorithm::RS256 => verify_ring_rsa(
-            &signature::RSA_PKCS1_2048_8192_SHA256,
-            signature,
-            signing_input,
-            public_key,
-        ),
-        Algorithm::RS384 => verify_ring_rsa(
-            &signature::RSA_PKCS1_2048_8192_SHA384,
-            signature,
-            signing_input,
-            public_key,
-        ),
-        Algorithm::RS512 => verify_ring_rsa(
-            &signature::RSA_PKCS1_2048_8192_SHA512,
-            signature,
-            signing_input,
-            public_key,
-        ),
+        Algorithm::ES256 => {
+            verify_ring_es(&signature::ECDSA_P256_SHA256_FIXED, signature, signing_input, key)
+        }
+        Algorithm::ES384 => {
+            verify_ring_es(&signature::ECDSA_P384_SHA384_FIXED, signature, signing_input, key)
+        }
+        Algorithm::RS256 => {
+            verify_ring_rsa(&signature::RSA_PKCS1_2048_8192_SHA256, signature, signing_input, key)
+        }
+        Algorithm::RS384 => {
+            verify_ring_rsa(&signature::RSA_PKCS1_2048_8192_SHA384, signature, signing_input, key)
+        }
+        Algorithm::RS512 => {
+            verify_ring_rsa(&signature::RSA_PKCS1_2048_8192_SHA512, signature, signing_input, key)
+        }
+        Algorithm::PS256 => {
+            verify_ring_rsa(&signature::RSA_PSS_2048_8192_SHA256, signature, signing_input, key)
+        }
+        Algorithm::PS384 => {
+            verify_ring_rsa(&signature::RSA_PSS_2048_8192_SHA384, signature, signing_input, key)
+        }
+        Algorithm::PS512 => {
+            verify_ring_rsa(&signature::RSA_PSS_2048_8192_SHA512, signature, signing_input, key)
+        }
     }
 }

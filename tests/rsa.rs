@@ -4,7 +4,16 @@ extern crate serde_derive;
 extern crate chrono;
 
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, sign, verify, Algorithm, Key, Header, Validation};
+use jsonwebtoken::{decode, encode, sign, verify, Algorithm, Header, Key, Validation};
+
+const RSA_ALGORITHMS: &[Algorithm] = &[
+    Algorithm::RS256,
+    Algorithm::RS384,
+    Algorithm::RS512,
+    Algorithm::PS256,
+    Algorithm::PS384,
+    Algorithm::PS512,
+];
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 struct Claims {
@@ -16,11 +25,13 @@ struct Claims {
 #[test]
 fn round_trip_sign_verification() {
     let privkey = include_bytes!("private_rsa_key.der");
-    let encrypted = sign("hello world", Key::Der(&privkey[..]), Algorithm::RS256).unwrap();
-    let is_valid =
-        verify(&encrypted, "hello world", Key::Der(include_bytes!("public_rsa_key.der")), Algorithm::RS256)
-            .unwrap();
-    assert!(is_valid);
+    for &alg in RSA_ALGORITHMS {
+        let encrypted = sign("hello world", Key::Der(&privkey[..]), alg).unwrap();
+        let is_valid =
+            verify(&encrypted, "hello world", Key::Der(include_bytes!("public_rsa_key.der")), alg)
+                .unwrap();
+        assert!(is_valid);
+    }
 }
 
 #[test]
@@ -31,16 +42,18 @@ fn round_trip_claim() {
         exp: Utc::now().timestamp() + 10000,
     };
     let privkey = include_bytes!("private_rsa_key.der");
-    let token =
-        encode(&Header::new(Algorithm::RS256), &my_claims, Key::Der(&privkey[..])).unwrap();
-    let token_data = decode::<Claims>(
-        &token,
-        Key::Der(include_bytes!("public_rsa_key.der")),
-        &Validation::new(Algorithm::RS256),
-    )
-    .unwrap();
-    assert_eq!(my_claims, token_data.claims);
-    assert!(token_data.header.kid.is_none());
+
+    for &alg in RSA_ALGORITHMS {
+        let token = encode(&Header::new(alg), &my_claims, Key::Der(&privkey[..])).unwrap();
+        let token_data = decode::<Claims>(
+            &token,
+            Key::Der(include_bytes!("public_rsa_key.der")),
+            &Validation::new(alg),
+        )
+        .unwrap();
+        assert_eq!(my_claims, token_data.claims);
+        assert!(token_data.header.kid.is_none());
+    }
 }
 
 #[test]
