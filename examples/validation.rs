@@ -3,7 +3,7 @@ extern crate jsonwebtoken as jwt;
 extern crate serde_derive;
 
 use jwt::errors::ErrorKind;
-use jwt::{decode, encode, Header, Validation, Key};
+use jwt::{decode, encode, Header, Key, Validation};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {

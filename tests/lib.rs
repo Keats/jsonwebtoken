@@ -41,7 +41,8 @@ fn encode_with_custom_header() {
     let mut header = Header::default();
     header.kid = Some("kid".to_string());
     let token = encode(&header, &my_claims, Key::Hmac(b"secret")).unwrap();
-    let token_data = decode::<Claims>(&token, Key::Hmac(b"secret"), &Validation::default()).unwrap();
+    let token_data =
+        decode::<Claims>(&token, Key::Hmac(b"secret"), &Validation::default()).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
 }
@@ -54,7 +55,8 @@ fn round_trip_claim() {
         exp: Utc::now().timestamp() + 10000,
     };
     let token = encode(&Header::default(), &my_claims, Key::Hmac(b"secret")).unwrap();
-    let token_data = decode::<Claims>(&token, Key::Hmac(b"secret"), &Validation::default()).unwrap();
+    let token_data =
+        decode::<Claims>(&token, Key::Hmac(b"secret"), &Validation::default()).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());
 }
@@ -166,5 +168,8 @@ fn generate_algorithm_enum_from_str() {
     assert!(Algorithm::from_str("RS256").is_ok());
     assert!(Algorithm::from_str("RS384").is_ok());
     assert!(Algorithm::from_str("RS512").is_ok());
+    assert!(Algorithm::from_str("PS256").is_ok());
+    assert!(Algorithm::from_str("PS384").is_ok());
+    assert!(Algorithm::from_str("PS512").is_ok());
     assert!(Algorithm::from_str("").is_err());
 }
