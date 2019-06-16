@@ -1,4 +1,4 @@
-use crypto::Algorithm;
+use algorithms::Algorithm;
 
 /// A basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional.

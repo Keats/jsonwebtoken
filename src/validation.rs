@@ -3,7 +3,7 @@ use serde::ser::Serialize;
 use serde_json::map::Map;
 use serde_json::{from_value, to_value, Value};
 
-use crypto::Algorithm;
+use algorithms::Algorithm;
 use errors::{new_error, ErrorKind, Result};
 
 /// Contains the various validations that are applied after decoding a token.
@@ -78,6 +78,7 @@ impl Validation {
     /// Since `aud` can be either a String or an array of String in the JWT spec, this method will take
     /// care of serializing the value.
     pub fn set_audience<T: Serialize>(&mut self, audience: &T) {
+        // TODO: check if the value is a string or an array and error if not
         self.aud = Some(to_value(audience).unwrap());
     }
 }

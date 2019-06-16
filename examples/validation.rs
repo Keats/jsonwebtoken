@@ -3,7 +3,7 @@ extern crate jsonwebtoken as jwt;
 extern crate serde_derive;
 
 use jwt::errors::ErrorKind;
-use jwt::{decode, encode, Header, Validation};
+use jwt::{decode, encode, Header, Validation, Key};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -16,13 +16,13 @@ fn main() {
     let my_claims =
         Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 10000000000 };
     let key = b"secret";
-    let token = match encode(&Header::default(), &my_claims, jwt::Hmac::from(key)) {
+    let token = match encode(&Header::default(), &my_claims, Key::Hmac(key)) {
         Ok(t) => t,
         Err(_) => panic!(), // in practice you would return the error
     };
 
     let validation = Validation { sub: Some("b@b.com".to_string()), ..Validation::default() };
-    let token_data = match decode::<Claims>(&token, key.as_ref(), &validation) {
+    let token_data = match decode::<Claims>(&token, Key::Hmac(key), &validation) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
             ErrorKind::InvalidToken => panic!("Token is invalid"), // Example on how to handle a specific error

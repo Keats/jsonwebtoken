@@ -1,7 +1,6 @@
 //! Create and parses JWT (JSON Web Tokens)
 //!
 //! Documentation:  [stable](https://docs.rs/jsonwebtoken/)
-#![recursion_limit = "300"]
 #![deny(missing_docs)]
 
 #[macro_use]
@@ -13,15 +12,19 @@ extern crate serde;
 extern crate serde_json;
 extern crate untrusted;
 
+mod algorithms;
 mod crypto;
-/// All the errors, generated using error-chain
+/// All the errors
 pub mod errors;
 mod header;
+mod keys;
 mod serialization;
 mod validation;
 
-pub use crypto::{sign, verify, Algorithm, Der, Hmac, Key, KeyFormat, Pkcs8};
+pub use algorithms::Algorithm;
+pub use crypto::{sign, verify};
 pub use header::Header;
+pub use keys::Key;
 pub use serialization::TokenData;
 pub use validation::Validation;
 
@@ -52,9 +55,9 @@ use validation::validate;
 ///
 /// // my_claims is a struct that implements Serialize
 /// // This will create a JWT using HS256 as algorithm
-/// let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
+/// let token = encode(&Header::default(), &my_claims, Key::Hmac("secret".as_ref())).unwrap();
 /// ```
-pub fn encode<T: Serialize, K: Key>(header: &Header, claims: &T, key: K) -> Result<String> {
+pub fn encode<T: Serialize>(header: &Header, claims: &T, key: Key) -> Result<String> {
     let encoded_header = to_jwt_part(&header)?;
     let encoded_claims = to_jwt_part(&claims)?;
     let signing_input = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
@@ -92,11 +95,11 @@ macro_rules! expect_two {
 ///
 /// let token = "a.jwt.token".to_string();
 /// // Claims is a struct that implements Deserialize
-/// let token_data = decode::<Claims>(&token, "secret", &Validation::new(Algorithm::HS256));
+/// let token_data = decode::<Claims>(&token, Key::Hmac("secret"), &Validation::new(Algorithm::HS256));
 /// ```
 pub fn decode<T: DeserializeOwned>(
     token: &str,
-    key: &[u8],
+    key: Key,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));

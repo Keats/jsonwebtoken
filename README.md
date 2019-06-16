@@ -8,19 +8,10 @@
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "6"
+jsonwebtoken = "7"
 serde_derive = "1"
 serde = "1"
 ```
-
-## Help wanted for v7
-
-v6 was released as a stopgap version to update Ring and add a couple of features like ES256/384.
-The results are not very ergonomic once we factor in all the possible ways to load a RSA key for example.
-A possible solution is to have decoder types as described in https://github.com/Keats/jsonwebtoken/issues/76
-but I currently do not have the time to implement it myself.
-I will take any better idea as well of course!
-
 
 ## How to use
 Complete examples are available in the examples directory: a basic one and one with a custom header.
