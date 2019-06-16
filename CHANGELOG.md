@@ -2,6 +2,9 @@
 
 # 7.0.0 (unreleased)
 
+- Add support for PS256, PS384 and PS512
+- Change API for both sign/verify to take a `Key` enum rather than bytes
+
 ## 6.0.1 (2019-05-10)
 
 - Fix Algorithm mapping in FromStr for RSA
