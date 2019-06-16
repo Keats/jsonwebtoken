@@ -5,7 +5,7 @@ extern crate serde_derive;
 extern crate chrono;
 
 use chrono::prelude::*;
-use jwt::{Header, Validation};
+use jwt::{Header, Key, Validation};
 
 const SECRET: &str = "some-secret";
 
@@ -59,13 +59,14 @@ mod jwt_numeric_date {
 
             let claims = Claims { sub: sub.clone(), iat, exp };
 
-            let token = jwt::encode(&Header::default(), &claims, SECRET.as_ref())
+            let token = jwt::encode(&Header::default(), &claims, Key::Hmac(SECRET.as_ref()))
                 .expect("Failed to encode claims");
 
             assert_eq!(&token, EXPECTED_TOKEN);
 
-            let decoded = jwt::decode::<Claims>(&token, SECRET.as_ref(), &Validation::default())
-                .expect("Failed to decode token");
+            let decoded =
+                jwt::decode::<Claims>(&token, Key::Hmac(SECRET.as_ref()), &Validation::default())
+                    .expect("Failed to decode token");
 
             assert_eq!(decoded.claims, claims);
         }
@@ -90,11 +91,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let claims = Claims { sub: sub.clone(), iat, exp };
 
-    let token = jwt::encode(&Header::default(), &claims, SECRET.as_ref())?;
+    let token = jwt::encode(&Header::default(), &claims, Key::Hmac(SECRET.as_ref()))?;
 
     println!("serialized token: {}", &token);
 
-    let token_data = jwt::decode::<Claims>(&token, SECRET.as_ref(), &Validation::default())?;
+    let token_data =
+        jwt::decode::<Claims>(&token, Key::Hmac(SECRET.as_ref()), &Validation::default())?;
 
     println!("token data:\n{:#?}", &token_data);
     Ok(())
