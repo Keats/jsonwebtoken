@@ -32,6 +32,27 @@ fn verify_hs256() {
 }
 
 #[test]
+fn sign_none() {
+    let result = sign("hello world", b"secret", Algorithm::NONE).unwrap();
+    let expected = "";
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn verify_none_empty() {
+    let sig = "";
+    let valid = verify(sig, "Whatever", b"irrelevant", Algorithm::NONE).unwrap();
+    assert!(valid);
+}
+
+#[test]
+fn verify_none_signature_present() {
+    let sig = "random";
+    let valid = verify(sig, "Whatever", b"irrelevant", Algorithm::NONE).unwrap();
+    assert!(valid);
+}
+
+#[test]
 fn encode_with_custom_header() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
@@ -163,8 +184,11 @@ fn generate_algorithm_enum_from_str() {
     assert!(Algorithm::from_str("HS256").is_ok());
     assert!(Algorithm::from_str("HS384").is_ok());
     assert!(Algorithm::from_str("HS512").is_ok());
+    assert!(Algorithm::from_str("ES256").is_ok());
+    assert!(Algorithm::from_str("ES384").is_ok());
     assert!(Algorithm::from_str("RS256").is_ok());
     assert!(Algorithm::from_str("RS384").is_ok());
     assert!(Algorithm::from_str("RS512").is_ok());
+    assert!(Algorithm::from_str("NONE").is_ok());
     assert!(Algorithm::from_str("").is_err());
 }
