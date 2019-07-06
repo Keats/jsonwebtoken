@@ -1,13 +1,11 @@
-use std::sync::Arc;
-
 use base64;
 use ring::constant_time::verify_slices_are_equal;
 use ring::{digest, hmac, rand, signature};
 use untrusted;
 
-use algorithms::Algorithm;
-use errors::{new_error, ErrorKind, Result};
-use keys::Key;
+use crate::algorithms::Algorithm;
+use crate::errors::{new_error, ErrorKind, Result};
+use crate::keys::Key;
 
 /// The actual HS signing + encoding
 fn sign_hmac(alg: &'static digest::Algorithm, key: Key, signing_input: &str) -> Result<String> {
@@ -41,7 +39,11 @@ fn sign_ecdsa(
 
 /// The actual RSA signing + encoding
 /// Taken from Ring doc https://briansmith.org/rustdoc/ring/signature/index.html
-fn sign_rsa(alg: &'static signature::RsaEncoding, key: Key, signing_input: &str) -> Result<String> {
+fn sign_rsa(
+    alg: &'static dyn signature::RsaEncoding,
+    key: Key,
+    signing_input: &str,
+) -> Result<String> {
     let key_pair = match key {
         Key::Der(bytes) => signature::RsaKeyPair::from_der(untrusted::Input::from(bytes))
             .map_err(|_| ErrorKind::InvalidRsaKey)?,
@@ -52,7 +54,6 @@ fn sign_rsa(alg: &'static signature::RsaEncoding, key: Key, signing_input: &str)
         }
     };
 
-    let key_pair = Arc::new(key_pair);
     let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
     key_pair

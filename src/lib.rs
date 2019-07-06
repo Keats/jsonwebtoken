@@ -31,9 +31,9 @@ pub use validation::Validation;
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 
-use errors::{new_error, ErrorKind, Result};
-use serialization::{from_jwt_part, from_jwt_part_claims, to_jwt_part};
-use validation::validate;
+use crate::errors::{new_error, ErrorKind, Result};
+use crate::serialization::{from_jwt_part, from_jwt_part_claims, to_jwt_part};
+use crate::validation::validate;
 
 /// Encode the header and claims given and sign the payload using the algorithm from the header and the key
 ///

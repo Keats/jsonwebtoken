@@ -3,8 +3,8 @@ use serde::ser::Serialize;
 use serde_json::map::Map;
 use serde_json::{from_value, to_value, Value};
 
-use algorithms::Algorithm;
-use errors::{new_error, ErrorKind, Result};
+use crate::algorithms::Algorithm;
+use crate::errors::{new_error, ErrorKind, Result};
 
 /// Contains the various validations that are applied after decoding a token.
 ///
@@ -164,7 +164,7 @@ mod tests {
 
     use super::{validate, Validation};
 
-    use errors::ErrorKind;
+    use crate::errors::ErrorKind;
 
     #[test]
     fn exp_in_future_ok() {

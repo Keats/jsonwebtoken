@@ -7,7 +7,7 @@ use chrono::Utc;
 use jsonwebtoken::{decode, encode, sign, verify, Algorithm, Header, Key, Validation};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-struct Claims {
+pub struct Claims {
     sub: String,
     company: String,
     exp: i64,

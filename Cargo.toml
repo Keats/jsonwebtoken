@@ -8,6 +8,7 @@ description = "Create and parse JWT in a strongly typed way."
 homepage = "https://github.com/Keats/rust-jwt"
 repository = "https://github.com/Keats/rust-jwt"
 keywords = ["jwt", "web", "api", "token", "json"]
+edition = "2018"
 
 [dependencies]
 serde_json = "1.0"

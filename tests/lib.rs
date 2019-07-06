@@ -11,7 +11,7 @@ use jsonwebtoken::{
 use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-struct Claims {
+pub struct Claims {
     sub: String,
     company: String,
     exp: i64,

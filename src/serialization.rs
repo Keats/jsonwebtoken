@@ -4,8 +4,8 @@ use serde::ser::Serialize;
 use serde_json::map::Map;
 use serde_json::{from_str, to_string, Value};
 
-use errors::Result;
-use header::Header;
+use crate::errors::Result;
+use crate::header::Header;
 
 /// The return type of a successful call to decode
 #[derive(Debug)]

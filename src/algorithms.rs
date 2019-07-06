@@ -1,4 +1,4 @@
-use errors::{new_error, Error, ErrorKind, Result};
+use crate::errors::{new_error, Error, ErrorKind, Result};
 use std::str::FromStr;
 
 /// The algorithms supported for signing/verifying

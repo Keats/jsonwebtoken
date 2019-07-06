@@ -16,7 +16,7 @@ const RSA_ALGORITHMS: &[Algorithm] = &[
 ];
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-struct Claims {
+pub struct Claims {
     sub: String,
     company: String,
     exp: i64,
@@ -62,3 +62,6 @@ fn fails_with_different_key_format() {
     let privkey = include_bytes!("private_rsa_key.der");
     sign("hello world", Key::Pkcs8(&privkey[..]), Algorithm::RS256).unwrap();
 }
+
+#[test]
+fn can_decode_jwt_io_example() {}
