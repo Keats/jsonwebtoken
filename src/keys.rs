@@ -10,4 +10,6 @@ pub enum Key<'a> {
     /// This is not a key format, but provided for convenience since HMAC is
     /// a supported signing algorithm.
     Hmac(&'a [u8]),
+    /// A Modulus/exponent for a RSA public key
+    ModulusExponent(&'a [u8], &'a [u8]),
 }

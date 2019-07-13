@@ -123,18 +123,33 @@ fn verify_ring_es(
 }
 
 fn verify_ring_rsa(
-    alg: &dyn signature::VerificationAlgorithm,
+    alg: &signature::RsaParameters,
     signature: &str,
     signing_input: &str,
     key: Key,
 ) -> Result<bool> {
-    let bytes = match key {
-        Key::Der(bytes) | Key::Pkcs8(bytes) => bytes,
-        _ => {
-            return Err(ErrorKind::InvalidKeyFormat)?;
+    match key {
+        Key::Der(bytes) | Key::Pkcs8(bytes) => verify_ring(alg, signature, signing_input, bytes),
+        Key::ModulusExponent(n, e) => {
+            let signature_bytes = base64::decode_config(signature, base64::URL_SAFE_NO_PAD)?;
+            let message = untrusted::Input::from(signing_input.as_bytes());
+            let modulus = untrusted::Input::from(n);
+            let exponent = untrusted::Input::from(e);
+            let expected_signature = untrusted::Input::from(signature_bytes.as_slice());
+
+            let res = signature::primitive::verify_rsa(
+                alg,
+                (modulus, exponent),
+                message,
+                expected_signature,
+            );
+
+            Ok(res.is_ok())
         }
-    };
-    verify_ring(alg, signature, signing_input, bytes)
+        _ => {
+            Err(ErrorKind::InvalidKeyFormat)?
+        }
+    }
 }
 
 /// Compares the signature given with a re-computed signature for HMAC or using the public key
