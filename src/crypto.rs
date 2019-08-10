@@ -1,21 +1,20 @@
 use base64;
 use ring::constant_time::verify_slices_are_equal;
-use ring::{digest, hmac, rand, signature};
-use untrusted;
+use ring::{hmac, rand, signature};
 
 use crate::algorithms::Algorithm;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::keys::Key;
 
 /// The actual HS signing + encoding
-fn sign_hmac(alg: &'static digest::Algorithm, key: Key, signing_input: &str) -> Result<String> {
+fn sign_hmac(alg: hmac::Algorithm, key: Key, signing_input: &str) -> Result<String> {
     let signing_key = match key {
-        Key::Hmac(bytes) => hmac::SigningKey::new(alg, bytes),
+        Key::Hmac(bytes) => hmac::Key::new(alg, bytes),
         _ => return Err(ErrorKind::InvalidKeyFormat)?,
     };
     let digest = hmac::sign(&signing_key, signing_input.as_bytes());
 
-    Ok(base64::encode_config::<hmac::Signature>(&digest, base64::URL_SAFE_NO_PAD))
+    Ok(base64::encode_config::<hmac::Tag>(&digest, base64::URL_SAFE_NO_PAD))
 }
 
 /// The actual ECDSA signing + encoding
@@ -25,15 +24,13 @@ fn sign_ecdsa(
     signing_input: &str,
 ) -> Result<String> {
     let signing_key = match key {
-        Key::Pkcs8(bytes) => {
-            signature::EcdsaKeyPair::from_pkcs8(alg, untrusted::Input::from(bytes))?
-        }
+        Key::Pkcs8(bytes) => signature::EcdsaKeyPair::from_pkcs8(alg, bytes)?,
         _ => {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
     };
     let rng = rand::SystemRandom::new();
-    let sig = signing_key.sign(&rng, untrusted::Input::from(signing_input.as_bytes()))?;
+    let sig = signing_key.sign(&rng, signing_input.as_bytes())?;
     Ok(base64::encode_config(&sig, base64::URL_SAFE_NO_PAD))
 }
 
@@ -45,10 +42,12 @@ fn sign_rsa(
     signing_input: &str,
 ) -> Result<String> {
     let key_pair = match key {
-        Key::Der(bytes) => signature::RsaKeyPair::from_der(untrusted::Input::from(bytes))
-            .map_err(|_| ErrorKind::InvalidRsaKey)?,
-        Key::Pkcs8(bytes) => signature::RsaKeyPair::from_pkcs8(untrusted::Input::from(bytes))
-            .map_err(|_| ErrorKind::InvalidRsaKey)?,
+        Key::Der(bytes) => {
+            signature::RsaKeyPair::from_der(bytes).map_err(|_| ErrorKind::InvalidRsaKey)?
+        }
+        Key::Pkcs8(bytes) => {
+            signature::RsaKeyPair::from_pkcs8(bytes).map_err(|_| ErrorKind::InvalidRsaKey)?
+        }
         _ => {
             return Err(ErrorKind::InvalidKeyFormat)?;
         }
@@ -69,9 +68,9 @@ fn sign_rsa(
 /// Only use this function if you want to do something other than JWT.
 pub fn sign(signing_input: &str, key: Key, algorithm: Algorithm) -> Result<String> {
     match algorithm {
-        Algorithm::HS256 => sign_hmac(&digest::SHA256, key, signing_input),
-        Algorithm::HS384 => sign_hmac(&digest::SHA384, key, signing_input),
-        Algorithm::HS512 => sign_hmac(&digest::SHA512, key, signing_input),
+        Algorithm::HS256 => sign_hmac(hmac::HMAC_SHA256, key, signing_input),
+        Algorithm::HS384 => sign_hmac(hmac::HMAC_SHA384, key, signing_input),
+        Algorithm::HS512 => sign_hmac(hmac::HMAC_SHA512, key, signing_input),
 
         Algorithm::ES256 => {
             sign_ecdsa(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, signing_input)
@@ -92,23 +91,20 @@ pub fn sign(signing_input: &str, key: Key, algorithm: Algorithm) -> Result<Strin
 
 /// See Ring docs for more details
 fn verify_ring(
-    alg: &dyn signature::VerificationAlgorithm,
+    alg: &'static dyn signature::VerificationAlgorithm,
     signature: &str,
     signing_input: &str,
     key: &[u8],
 ) -> Result<bool> {
     let signature_bytes = base64::decode_config(signature, base64::URL_SAFE_NO_PAD)?;
-    let public_key_der = untrusted::Input::from(key);
-    let message = untrusted::Input::from(signing_input.as_bytes());
-    let expected_signature = untrusted::Input::from(signature_bytes.as_slice());
-
-    let res = signature::verify(alg, public_key_der, message, expected_signature);
+    let public_key = signature::UnparsedPublicKey::new(alg, key);
+    let res = public_key.verify(signing_input.as_bytes(), &signature_bytes);
 
     Ok(res.is_ok())
 }
 
 fn verify_ring_es(
-    alg: &dyn signature::VerificationAlgorithm,
+    alg: &'static dyn signature::VerificationAlgorithm,
     signature: &str,
     signing_input: &str,
     key: Key,
@@ -123,7 +119,7 @@ fn verify_ring_es(
 }
 
 fn verify_ring_rsa(
-    alg: &signature::RsaParameters,
+    alg: &'static signature::RsaParameters,
     signature: &str,
     signing_input: &str,
     key: Key,
@@ -131,24 +127,15 @@ fn verify_ring_rsa(
     match key {
         Key::Der(bytes) | Key::Pkcs8(bytes) => verify_ring(alg, signature, signing_input, bytes),
         Key::ModulusExponent(n, e) => {
-            let signature_bytes = base64::decode_config(signature, base64::URL_SAFE_NO_PAD)?;
-            let message = untrusted::Input::from(signing_input.as_bytes());
-            let modulus = untrusted::Input::from(n);
-            let exponent = untrusted::Input::from(e);
-            let expected_signature = untrusted::Input::from(signature_bytes.as_slice());
+            let public_key = signature::RsaPublicKeyComponents { n, e };
 
-            let res = signature::primitive::verify_rsa(
-                alg,
-                (modulus, exponent),
-                message,
-                expected_signature,
-            );
+            let signature_bytes = base64::decode_config(signature, base64::URL_SAFE_NO_PAD)?;
+
+            let res = public_key.verify(alg, signing_input.as_bytes(), &signature_bytes);
 
             Ok(res.is_ok())
         }
-        _ => {
-            Err(ErrorKind::InvalidKeyFormat)?
-        }
+        _ => Err(ErrorKind::InvalidKeyFormat)?,
     }
 }
 
