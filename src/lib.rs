@@ -10,7 +10,6 @@ extern crate chrono;
 extern crate ring;
 extern crate serde;
 extern crate serde_json;
-extern crate untrusted;
 
 mod algorithms;
 mod crypto;
