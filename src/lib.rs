@@ -11,7 +11,6 @@ extern crate chrono;
 extern crate ring;
 extern crate serde;
 extern crate serde_json;
-extern crate untrusted;
 
 mod crypto;
 /// All the errors, generated using error-chain
