@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.1.0 (2019-xx-xx)
+
+- Fixed audience validation and changed aud field type in claim to Option<String>.
+  Audience validation now tests for audience membership.
+
 ## 6.0.1 (2019-05-10)
 
 - Fix Algorithm mapping in FromStr for RSA

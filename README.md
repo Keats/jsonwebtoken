@@ -101,9 +101,7 @@ let mut validation = Validation {leeway: 60, ..Default::default()};
 // Checking issuer
 let mut validation = Validation {iss: Some("issuer".to_string()), ..Default::default()};
 // Setting audience
-let mut validation = Validation::default();
-validation.set_audience(&"Me"); // string
-validation.set_audience(&["Me", "You"]); // array of strings
+let mut validation = Validation {aud: Some("Me".to_string()), ..Default::default()};
 ```
 
 ## Algorithms

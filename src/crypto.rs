@@ -64,7 +64,11 @@ fn sign_hmac(alg: &'static digest::Algorithm, key: &[u8], signing_input: &str) -
 }
 
 /// The actual ECDSA signing + encoding
-fn sign_ecdsa(alg: &'static signature::EcdsaSigningAlgorithm, key: &[u8], signing_input: &str) -> Result<String> {
+fn sign_ecdsa(
+    alg: &'static signature::EcdsaSigningAlgorithm,
+    key: &[u8],
+    signing_input: &str,
+) -> Result<String> {
     let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, untrusted::Input::from(key))?;
     let rng = rand::SystemRandom::new();
     let sig = signing_key.sign(&rng, untrusted::Input::from(signing_input.as_bytes()))?;
@@ -73,7 +77,11 @@ fn sign_ecdsa(alg: &'static signature::EcdsaSigningAlgorithm, key: &[u8], signin
 
 /// The actual RSA signing + encoding
 /// Taken from Ring doc https://briansmith.org/rustdoc/ring/signature/index.html
-fn sign_rsa(alg: &'static signature::RsaEncoding, key: &[u8], signing_input: &str) -> Result<String> {
+fn sign_rsa(
+    alg: &'static signature::RsaEncoding,
+    key: &[u8],
+    signing_input: &str,
+) -> Result<String> {
     let key_pair = Arc::new(
         signature::RsaKeyPair::from_der(untrusted::Input::from(key))
             .map_err(|_| ErrorKind::InvalidRsaKey)?,
@@ -97,8 +105,12 @@ pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<Str
         Algorithm::HS384 => sign_hmac(&digest::SHA384, key, signing_input),
         Algorithm::HS512 => sign_hmac(&digest::SHA512, key, signing_input),
 
-        Algorithm::ES256 => sign_ecdsa(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, signing_input),
-        Algorithm::ES384 => sign_ecdsa(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, key, signing_input),
+        Algorithm::ES256 => {
+            sign_ecdsa(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, signing_input)
+        }
+        Algorithm::ES384 => {
+            sign_ecdsa(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, key, signing_input)
+        }
 
         Algorithm::RS256 => sign_rsa(&signature::RSA_PKCS1_SHA256, key, signing_input),
         Algorithm::RS384 => sign_rsa(&signature::RSA_PKCS1_SHA384, key, signing_input),
