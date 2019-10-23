@@ -72,7 +72,7 @@ let header = decode_header(&token)?;
 This does not perform any validation on the token.
 
 #### Validation
-This library validates automatically the `exp` and `nbf` claims if present. You can also validate the `sub`, `iss` and `aud` but
+This library validates automatically the `exp` claim. `nbf` is also validated if present. You can also validate the `sub`, `iss` and `aud` but
 those require setting the expected value in the `Validation` struct.
 
 Since validating time fields is always a bit tricky due to clock skew, 
