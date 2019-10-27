@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use chrono::Utc;
 use serde::ser::Serialize;
 use serde_json::map::Map;
@@ -49,7 +50,7 @@ pub struct Validation {
     /// the [set_audience](struct.Validation.html#method.set_audience) method to set it.
     ///
     /// Defaults to `None`.
-    pub aud: Option<Value>,
+    pub aud: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `iss` field is the same as the
     /// one provided and will error otherwise.
     ///
@@ -78,9 +79,29 @@ impl Validation {
     /// Since `aud` can be either a String or an array of String in the JWT spec, this method will take
     /// care of serializing the value.
     pub fn set_audience<T: Serialize>(&mut self, audience: &T) {
-        // TODO: check if the value is a string or an array and error if not
-        self.aud = Some(to_value(audience).unwrap());
+		let aud = to_value(audience)
+				  .unwrap_or_else(|_| panic!("Failed to_value within set_audience)"));
+		let aud = Validation::convert_aud(&aud)
+				  .unwrap_or_else(|_| panic!("Failed convert_aud within set_audience"));
+        self.aud = Some(aud);
     }
+
+	/// Converts a Value, representing a String or collection of Strings, to a
+    /// HashSet<String>, required for audience membership testing
+	fn convert_aud(aud: &Value) -> Result<HashSet<String>> {
+		let aud_from_claim: Vec<String> = match aud.is_array() {
+			true => from_value(aud.clone()).unwrap(),
+			false => {
+				let aud_str: String = match from_value(aud.clone()) {
+					Ok(val) => val,
+					Err(_) => return Err(new_error(ErrorKind::InvalidAudience)),
+				};
+				vec![aud_str]
+			}
+		};
+	   
+	   Ok(aud_from_claim.into_iter().collect())
+	}
 }
 
 impl Default for Validation {
@@ -145,7 +166,8 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if let Some(ref correct_aud) = options.aud {
         if let Some(aud) = claims.get("aud") {
-            if aud != correct_aud {
+			let converted_aud = Validation::convert_aud(aud)?;
+			if converted_aud.intersection(correct_aud).count() == 0 {
                 return Err(new_error(ErrorKind::InvalidAudience));
             }
         } else {
