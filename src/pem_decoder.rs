@@ -1,5 +1,4 @@
 use crate::keys::Key;
-use crate::algorithms::Algorithm;
 use crate::errors::{Result, ErrorKind};
 
 extern crate pem;
@@ -7,39 +6,34 @@ extern crate simple_asn1;
 
 use simple_asn1::{OID, BigUint};
 
-#[derive(Debug)]
-#[derive(PartialEq)]
-pub enum PemType {
-  ECPublicKey,
-  ECPrivateKey,
-  RSAPublicKey,
-  RSAPrivateKey,
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-pub enum PemEncodedWith {
-  PKCS1,
-  PKCS8,
-}
-
-/// TODO
-#[derive(Debug)]
-#[derive(PartialEq)]
+/// The return type of a successful PEM encoded key with `decode_pem`
+/// 
+/// This struct gives a way to parse a string to a key for use in jsonwebtoken.
+/// A struct is necessary as it provides the lifetime of the key
+/// 
+/// PEM public private keys are encoded PKCS#1 or PKCS#8
+/// You will find that with PKCS#8 RSA keys that the PKCS#1 content
+/// is embedded inside. This is what is provided to ring via `Key::Der`
+/// For EC keys, they are always PKCS#8 on the outside but like RSA keys
+/// EC keys contain a section within that ultimately has the configuration
+/// that ring uses.
+/// Documentation about these formats is at
+/// PKCS#1: https://tools.ietf.org/html/rfc8017
+/// PKCS#8: https://tools.ietf.org/html/rfc5958
 pub struct PemEncodedKey {
   content: Vec<u8>,
   asn1: Vec<simple_asn1::ASN1Block>,
   pem_type: PemType,
-  classification: Classification,
   encoded_with: PemEncodedWith,
 }
 
 impl PemEncodedKey {
-  /// TODO
+  /// Read the PEM file for later key use
   pub fn read(input: &str) -> Result<PemEncodedKey> {
     match pem::parse(input) {
       Ok(content) => {
-        let asn1_content = match simple_asn1::from_der(content.contents.as_slice()) {
+        let pem_contents = content.contents;
+        let asn1_content = match simple_asn1::from_der(pem_contents.as_slice()) {
           Ok(asn1) => asn1,
           Err(_) => return Err(ErrorKind::InvalidKeyFormat)?,
         };
@@ -47,17 +41,15 @@ impl PemEncodedKey {
         match content.tag.as_ref() {
           // This handles a PKCS#1 RSA Private key
           "RSA PRIVATE KEY" => Ok(PemEncodedKey {
-            content: content.contents,
+            content: pem_contents,
             asn1: asn1_content,
             pem_type: PemType::RSAPrivateKey,
-            classification: Classification::RSA,
             encoded_with: PemEncodedWith::PKCS1,
           }),
           "RSA PUBLIC KEY" => Ok(PemEncodedKey {
-            content: content.contents,
+            content: pem_contents,
             asn1: asn1_content,
             pem_type: PemType::RSAPublicKey,
-            classification: Classification::RSA,
             encoded_with: PemEncodedWith::PKCS1,
           }),
           
@@ -69,17 +61,15 @@ impl PemEncodedKey {
           "PRIVATE KEY" => {
             match classify_pem(&asn1_content) {
               Option::Some(Classification::EC) => Ok(PemEncodedKey {
-                content: content.contents,
+                content: pem_contents,
                 asn1: asn1_content,
                 pem_type: PemType::ECPrivateKey,
-                classification: Classification::EC,
                 encoded_with: PemEncodedWith::PKCS8,
               }),
               Option::Some(Classification::RSA) => Ok(PemEncodedKey {
-                content: content.contents,
+                content: pem_contents,
                 asn1: asn1_content,
                 pem_type: PemType::RSAPrivateKey,
-                classification: Classification::RSA,
                 encoded_with: PemEncodedWith::PKCS8,
               }),
               _ => return Err(ErrorKind::InvalidKeyFormat)?,
@@ -90,17 +80,15 @@ impl PemEncodedKey {
           "PUBLIC KEY" => {
             match classify_pem(&asn1_content) {
               Option::Some(Classification::EC) => Ok(PemEncodedKey {
-                content: content.contents,
+                content: pem_contents,
                 asn1: asn1_content,
                 pem_type: PemType::ECPublicKey,
-                classification: Classification::EC,
                 encoded_with: PemEncodedWith::PKCS8,
               }),
               Option::Some(Classification::RSA) => Ok(PemEncodedKey {
-                content: content.contents,
+                content: pem_contents,
                 asn1: asn1_content,
                 pem_type: PemType::RSAPublicKey,
-                classification: Classification::RSA,
                 encoded_with: PemEncodedWith::PKCS8,
               }),
               _ => return Err(ErrorKind::InvalidKeyFormat)?,
@@ -115,40 +103,40 @@ impl PemEncodedKey {
     }
   }
 
-  /// TODO
-  pub fn as_key(&self, algorithm: Algorithm) -> Result<Key> {
-    match self.classification {
-      Classification::RSA => {
-        let key = match self.encoded_with {
-          PemEncodedWith::PKCS1 => Key::Der(self.content.as_slice()),
-          // Convert to DER for ring
-          PemEncodedWith::PKCS8 => Key::Der(extract_first_bitstring(&self.asn1)?)
-        };
-        match algorithm {
-          Algorithm::RS256 => Ok(key),
-          Algorithm::RS384 => Ok(key),
-          Algorithm::RS512 => Ok(key),
-          Algorithm::PS256 => Ok(key),
-          Algorithm::PS384 => Ok(key),
-          Algorithm::PS512 => Ok(key),
-          _ => return Err(ErrorKind::InvalidAlgorithm)?,
-        }
-      },
-      Classification::EC => {
-        let key = match self.pem_type {
-          PemType::ECPrivateKey => Key::Pkcs8(self.content.as_slice()),
-          // I'm not sure why EC is a special case with ring
-          PemType::ECPublicKey => Key::Pkcs8(extract_first_bitstring(&self.asn1)?),
-          _ => return Err(ErrorKind::InvalidAlgorithm)?,
-        };
-        match algorithm {
-          Algorithm::ES256 => Ok(key),
-          Algorithm::ES384 => Ok(key),
-          _ => return Err(ErrorKind::InvalidAlgorithm)?,
+  /// This will do the initial parsing of a PEM file.
+  /// Supported tagged pems include "RSA PRIVATE KEY", "RSA PUBLIC KEY",
+  /// "PRIVATE KEY", "PUBLIC KEY"
+  /// PEMs with multiple tagged portions are not supported
+  pub fn as_key(&self) -> Result<Key<'_>> {
+    match self.encoded_with {
+      PemEncodedWith::PKCS1 => Ok(Key::Der(self.content.as_slice())),
+      PemEncodedWith::PKCS8 => {
+        match self.pem_type {
+          PemType::RSAPrivateKey => Ok(Key::Der(extract_first_bitstring(&self.asn1)?)),
+          PemType::RSAPublicKey => Ok(Key::Der(extract_first_bitstring(&self.asn1)?)),
+          PemType::ECPrivateKey => Ok(Key::Pkcs8(self.content.as_slice())),
+          PemType::ECPublicKey => Ok(Key::Pkcs8(extract_first_bitstring(&self.asn1)?)),
         }
       },
     }
   }
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+/// Supported PEM files for EC and RSA Public and Private Keys
+enum PemType {
+  ECPublicKey,
+  ECPrivateKey,
+  RSAPublicKey,
+  RSAPrivateKey,
+}
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+enum PemEncodedWith {
+  PKCS1,
+  PKCS8,
 }
 
 #[derive(Debug)]

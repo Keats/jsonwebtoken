@@ -25,10 +25,10 @@ fn round_trip_sign_verification_pk8() {
 #[test]
 fn round_trip_sign_verification_pem() {
     let privkey_pem = decode_pem(include_str!("private_ecdsa_key.pem")).unwrap();
-    let privkey = privkey_pem.as_key(Algorithm::ES256).unwrap();
+    let privkey = privkey_pem.as_key().unwrap();
     let encrypted = sign("hello world", privkey, Algorithm::ES256).unwrap();
     let pubkey_pem = decode_pem(include_str!("public_ecdsa_key.pem")).unwrap();
-    let pubkey = pubkey_pem.as_key(Algorithm::ES256).unwrap();
+    let pubkey = pubkey_pem.as_key().unwrap();
     let is_valid = verify(&encrypted, "hello world", pubkey, Algorithm::ES256).unwrap();
     assert!(is_valid);
 }
