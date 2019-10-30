@@ -4,7 +4,7 @@ extern crate serde_derive;
 extern crate chrono;
 
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, sign, verify, Algorithm, Header, Key, Validation};
+use jsonwebtoken::{decode, decode_pem, encode, sign, verify, Algorithm, Header, Key, Validation};
 
 const RSA_ALGORITHMS: &[Algorithm] = &[
     Algorithm::RS256,
@@ -23,12 +23,40 @@ pub struct Claims {
 }
 
 #[test]
-fn round_trip_sign_verification() {
+fn round_trip_sign_verification_der() {
     let privkey = include_bytes!("private_rsa_key.der");
     for &alg in RSA_ALGORITHMS {
         let encrypted = sign("hello world", Key::Der(&privkey[..]), alg).unwrap();
         let is_valid =
             verify(&encrypted, "hello world", Key::Der(include_bytes!("public_rsa_key.der")), alg)
+                .unwrap();
+        assert!(is_valid);
+    }
+}
+
+#[test]
+fn round_trip_sign_verification_pem_pkcs1() {
+    let privkey_pem = decode_pem(include_str!("private_rsa_key.pem")).unwrap();
+    let pubkey_pem = decode_pem(include_str!("public_rsa_key.pem")).unwrap();
+
+    for &alg in RSA_ALGORITHMS {
+        let privkey_key = privkey_pem.as_key(alg).unwrap();
+        let pubkey_key = pubkey_pem.as_key(alg).unwrap();
+        let encrypted = sign("hello world", privkey_key, alg).unwrap();
+        let is_valid = verify(&encrypted, "hello world", pubkey_key, alg).unwrap();
+        assert!(is_valid);
+    }
+}
+
+#[test]
+fn round_trip_sign_verification_pem_pkcs8() {
+    let privkey_pem = decode_pem(include_str!("private_rsa_key_pkcs8.pem")).unwrap();
+    let pubkey_pem = decode_pem(include_str!("public_rsa_key.pem")).unwrap();
+
+    for &alg in RSA_ALGORITHMS {
+        let encrypted = sign("hello world", privkey_pem.as_key(alg).unwrap(), alg).unwrap();
+        let is_valid =
+            verify(&encrypted, "hello world", pubkey_pem.as_key(alg).unwrap(), alg)
                 .unwrap();
         assert!(is_valid);
     }

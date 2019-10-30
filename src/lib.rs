@@ -10,6 +10,7 @@ extern crate chrono;
 extern crate ring;
 extern crate serde;
 extern crate serde_json;
+extern crate simple_asn1;
 
 mod algorithms;
 mod crypto;
@@ -19,6 +20,7 @@ mod header;
 mod keys;
 mod serialization;
 mod validation;
+mod pem_decoder;
 
 pub use algorithms::Algorithm;
 pub use crypto::{sign, verify};
@@ -26,6 +28,7 @@ pub use header::Header;
 pub use keys::Key;
 pub use serialization::TokenData;
 pub use validation::Validation;
+pub use pem_decoder::PemEncodedKey;
 
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
@@ -163,4 +166,9 @@ pub fn decode_header(token: &str) -> Result<Header> {
     let (_, signing_input) = expect_two!(token.rsplitn(2, '.'));
     let (_, header) = expect_two!(signing_input.rsplitn(2, '.'));
     from_jwt_part(header)
+}
+
+/// TODO
+pub fn decode_pem(content: &str) -> Result<PemEncodedKey> {
+    PemEncodedKey::read(content)
 }
