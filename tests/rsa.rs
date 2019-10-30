@@ -36,8 +36,8 @@ fn round_trip_sign_verification_der() {
 
 #[test]
 fn round_trip_sign_verification_pem_pkcs1() {
-    let privkey_pem = decode_pem(include_str!("private_rsa_key.pem")).unwrap();
-    let pubkey_pem = decode_pem(include_str!("public_rsa_key.pem")).unwrap();
+    let privkey_pem = decode_pem(include_str!("private_rsa_key_pkcs1.pem")).unwrap();
+    let pubkey_pem = decode_pem(include_str!("public_rsa_key_pkcs1.pem")).unwrap();
 
     for &alg in RSA_ALGORITHMS {
         let privkey_key = privkey_pem.as_key(alg).unwrap();
@@ -51,7 +51,7 @@ fn round_trip_sign_verification_pem_pkcs1() {
 #[test]
 fn round_trip_sign_verification_pem_pkcs8() {
     let privkey_pem = decode_pem(include_str!("private_rsa_key_pkcs8.pem")).unwrap();
-    let pubkey_pem = decode_pem(include_str!("public_rsa_key.pem")).unwrap();
+    let pubkey_pem = decode_pem(include_str!("public_rsa_key_pkcs8.pem")).unwrap();
 
     for &alg in RSA_ALGORITHMS {
         let encrypted = sign("hello world", privkey_pem.as_key(alg).unwrap(), alg).unwrap();
