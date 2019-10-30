@@ -115,7 +115,7 @@ This library currently supports the following:
 ### RSA
 `jsonwebtoken` can read DER and PEM encoded keys.
 
-If you want to use DER encoded keys review the following.
+#### DER Encoded
 If you have openssl installed, you can run the following commands to obtain the DER keys from PKCS#1 (ie with `BEGIN RSA PUBLIC KEY`) .pem.
 If you have a PKCS#8 pem file (ie starting with `BEGIN PUBLIC KEY`), you will need to first convert it to PKCS#1:
 `openssl rsa -pubin -in <filename> -RSAPublicKey_out -out <filename>`.
@@ -129,6 +129,10 @@ $ openssl rsa -in private_rsa_key.der -inform DER -RSAPublicKey_out -outform DER
 
 If you are getting an error with your public key, make sure you get it by using the command above to ensure
 it is in the right format.
+
+#### PEM Encoded
+To generate a PKCS#1 RSA key, run `openssl genrsa -out private_rsa_key_pkcs1.pem 2048`
+To convert a PKCS#1 RSA key to a PKCS#8 RSA key, run `openssl pkcs8 -topk8 -inform pem -in private_rsa_key_pkcs1.pem -outform pem -nocrypt -out private_rsa_key_pkcs8.pem`
 
 To use a PEM encoded private / public keys, a pem struct is returned by `decode_pem`.
 This carries the lifetime of the data inside. Finally to use the key like any other
