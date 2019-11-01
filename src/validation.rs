@@ -1,7 +1,7 @@
+use std::collections::HashSet;
 use chrono::Utc;
-use serde::ser::Serialize;
 use serde_json::map::Map;
-use serde_json::{from_value, to_value, Value};
+use serde_json::{from_value, Value};
 
 use crate::algorithms::Algorithm;
 use crate::errors::{new_error, ErrorKind, Result};
@@ -21,7 +21,7 @@ use crate::errors::{new_error, ErrorKind, Result};
 ///
 /// // Setting audience
 /// let mut validation = Validation::default();
-/// validation.set_audience(&"Me"); // string
+/// validation.set_audience(&["Me"]); // a single string
 /// validation.set_audience(&["Me", "You"]); // array of strings
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -43,13 +43,11 @@ pub struct Validation {
     ///
     /// Defaults to `false`.
     pub validate_nbf: bool,
-    /// If it contains a value, the validation will check that the `aud` field is the same as the
-    /// one provided and will error otherwise.
-    /// Since `aud` can be either a String or a Vec<String> in the JWT spec, you will need to use
-    /// the [set_audience](struct.Validation.html#method.set_audience) method to set it.
+    /// If it contains a value, the validation will check that the `aud` field is a member of the
+    /// audience provided and will error otherwise.
     ///
     /// Defaults to `None`.
-    pub aud: Option<Value>,
+    pub aud: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `iss` field is the same as the
     /// one provided and will error otherwise.
     ///
@@ -75,11 +73,9 @@ impl Validation {
         validation
     }
 
-    /// Since `aud` can be either a String or an array of String in the JWT spec, this method will take
-    /// care of serializing the value.
-    pub fn set_audience<T: Serialize>(&mut self, audience: &T) {
-        // TODO: check if the value is a string or an array and error if not
-        self.aud = Some(to_value(audience).unwrap());
+    /// `aud` is a collection of one or more acceptable audience members
+    pub fn set_audience<T: ToString>(&mut self, items: &[T]) {
+        self.aud = Some(items.iter().map(|x| x.to_string()).collect())
     }
 }
 
@@ -145,7 +141,8 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if let Some(ref correct_aud) = options.aud {
         if let Some(aud) = claims.get("aud") {
-            if aud != correct_aud {
+			let provided_aud: HashSet<String> = from_value(aud.clone())?;
+			if provided_aud.intersection(correct_aud).count() == 0 {
                 return Err(new_error(ErrorKind::InvalidAudience));
             }
         } else {
@@ -346,9 +343,9 @@ mod tests {
     #[test]
     fn aud_string_ok() {
         let mut claims = Map::new();
-        claims.insert("aud".to_string(), to_value("Everyone").unwrap());
+        claims.insert("aud".to_string(), to_value(["Everyone"]).unwrap());
         let mut validation = Validation { validate_exp: false, ..Validation::default() };
-        validation.set_audience(&"Everyone");
+        validation.set_audience(&["Everyone"]);
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
     }
@@ -366,7 +363,7 @@ mod tests {
     #[test]
     fn aud_type_mismatch_fails() {
         let mut claims = Map::new();
-        claims.insert("aud".to_string(), to_value("Everyone").unwrap());
+        claims.insert("aud".to_string(), to_value(["Everyone"]).unwrap());
         let mut validation = Validation { validate_exp: false, ..Validation::default() };
         validation.set_audience(&["UserA", "UserB"]);
         let res = validate(&claims, &validation);
@@ -381,9 +378,9 @@ mod tests {
     #[test]
     fn aud_correct_type_not_matching_fails() {
         let mut claims = Map::new();
-        claims.insert("aud".to_string(), to_value("Everyone").unwrap());
+        claims.insert("aud".to_string(), to_value(["Everyone"]).unwrap());
         let mut validation = Validation { validate_exp: false, ..Validation::default() };
-        validation.set_audience(&"None");
+        validation.set_audience(&["None"]);
         let res = validate(&claims, &validation);
         assert!(res.is_err());
 
@@ -397,7 +394,7 @@ mod tests {
     fn aud_missing_fails() {
         let claims = Map::new();
         let mut validation = Validation { validate_exp: false, ..Validation::default() };
-        validation.set_audience(&"None");
+        validation.set_audience(&["None"]);
         let res = validate(&claims, &validation);
         assert!(res.is_err());
 
