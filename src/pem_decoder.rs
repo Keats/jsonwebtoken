@@ -191,9 +191,7 @@ fn classify_pem(asn1: &Vec<simple_asn1::ASN1Block>) -> Option<Classification> {
           return Option::Some(Classification::RSA);
         }
       }
-      _ => {
-        println!("Ignoring {:?}", asn1_entry);
-      }
+      _ => {}
     }
   }
   return Option::default();
