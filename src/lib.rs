@@ -25,7 +25,7 @@ use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 
 use crate::errors::{new_error, ErrorKind, Result};
-use crate::serialization::{from_jwt_part, from_jwt_part_claims, to_jwt_part};
+use crate::serialization::{encode_part, from_jwt_part_claims};
 use crate::validation::validate;
 
 /// Encode the header and claims given and sign the payload using the algorithm from the header and the key
@@ -51,8 +51,8 @@ use crate::validation::validate;
 /// let token = encode(&Header::default(), &my_claims, Key::Hmac("secret".as_ref())).unwrap();
 /// ```
 pub fn encode<T: Serialize>(header: &Header, claims: &T, key: Key) -> Result<String> {
-    let encoded_header = to_jwt_part(&header)?;
-    let encoded_claims = to_jwt_part(&claims)?;
+    let encoded_header = encode_part(&header)?;
+    let encoded_claims = encode_part(&claims)?;
     let signing_input = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
     let signature = sign(&*signing_input, key, header.alg)?;
 
@@ -97,7 +97,7 @@ pub fn decode<T: DeserializeOwned>(
 ) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
     let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
-    let header: Header = from_jwt_part(header)?;
+    let header = Header::from_encoded(header)?;
 
     if !verify(signature, signing_input, key, header.alg)? {
         return Err(new_error(ErrorKind::InvalidSignature));
@@ -135,7 +135,7 @@ pub fn decode<T: DeserializeOwned>(
 pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
     let (_, signing_input) = expect_two!(token.rsplitn(2, '.'));
     let (claims, header) = expect_two!(signing_input.rsplitn(2, '.'));
-    let header: Header = from_jwt_part(header)?;
+    let header = Header::from_encoded(header)?;
 
     let (decoded_claims, _): (T, _) = from_jwt_part_claims(claims)?;
 
@@ -156,7 +156,7 @@ pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<Token
 pub fn decode_header(token: &str) -> Result<Header> {
     let (_, signing_input) = expect_two!(token.rsplitn(2, '.'));
     let (_, header) = expect_two!(signing_input.rsplitn(2, '.'));
-    from_jwt_part(header)
+    Header::from_encoded(header)
 }
 
 /// Decode a PEM string to obtain its key

@@ -16,18 +16,10 @@ pub struct TokenData<T> {
     pub claims: T,
 }
 
-/// Serializes to JSON and encodes to base64
-pub fn to_jwt_part<T: Serialize>(input: &T) -> Result<String> {
-    let encoded = to_string(input)?;
-    Ok(base64::encode_config(encoded.as_bytes(), base64::URL_SAFE_NO_PAD))
-}
-
-/// Decodes from base64 and deserializes from JSON to a struct
-pub fn from_jwt_part<B: AsRef<str>, T: DeserializeOwned>(encoded: B) -> Result<T> {
-    let decoded = base64::decode_config(encoded.as_ref(), base64::URL_SAFE_NO_PAD)?;
-    let s = String::from_utf8(decoded)?;
-
-    Ok(from_str(&s)?)
+/// Serializes a struct to JSON and encodes it in base64
+pub fn encode_part<T: Serialize>(input: &T) -> Result<String> {
+    let json = to_string(input)?;
+    Ok(base64::encode_config(json.as_bytes(), base64::URL_SAFE_NO_PAD))
 }
 
 /// Decodes from base64 and deserializes from JSON to a struct AND a hashmap
