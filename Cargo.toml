@@ -15,7 +15,9 @@ serde_json = "1.0"
 serde_derive = "1.0"
 serde = "1.0"
 ring = { version = "0.16.5", features = ["std"] }
-base64 = "0.10"
+base64 = "0.11"
+# For validation
 chrono = "0.4"
+# For PEM decoding
 pem = "0.7"
-simple_asn1 = "0.4.0"
+simple_asn1 = "0.4"

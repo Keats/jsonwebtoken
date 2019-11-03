@@ -1,10 +1,6 @@
-extern crate jsonwebtoken;
-#[macro_use]
-extern crate serde_derive;
-extern crate chrono;
-
 use chrono::Utc;
 use jsonwebtoken::{decode, decode_pem, encode, sign, verify, Algorithm, Header, Key, Validation};
+use serde_derive::{Deserialize, Serialize};
 
 const RSA_ALGORITHMS: &[Algorithm] = &[
     Algorithm::RS256,
@@ -125,4 +121,11 @@ fn rsa_modulus_exponent() {
     )
     .unwrap();
     assert!(is_valid);
+}
+
+#[test]
+#[should_panic(expected = "InvalidKeyFormat")]
+fn fails_with_non_pkcs8_key_format() {
+    let privkey = include_bytes!("private_rsa_key.der");
+    let _encrypted = sign("hello world", Key::Der(&privkey[..]), Algorithm::ES256).unwrap();
 }

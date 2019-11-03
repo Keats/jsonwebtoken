@@ -8,6 +8,7 @@
 - Update to 2018 edition
 - Changed aud field type in Validation to `Option<HashSet<String>>`.  Audience 
   validation now tests for "any-of-these" audience membership.
+- Add support for keys in PEM format
 
 ## 6.0.1 (2019-05-10)
 

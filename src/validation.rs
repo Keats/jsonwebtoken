@@ -403,4 +403,28 @@ mod tests {
             _ => assert!(false),
         };
     }
+
+    // https://github.com/Keats/jsonwebtoken/issues/51
+    #[test]
+    fn does_validation_in_right_order() {
+        let mut claims = Map::new();
+        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() + 10000).unwrap());
+        let v = Validation {
+            leeway: 5,
+            validate_exp: true,
+            iss: Some("iss no check".to_string()),
+            sub: Some("sub no check".to_string()),
+            ..Validation::default()
+        };
+        let res = validate(&claims, &v);
+        // It errors because it needs to validate iss/sub which are missing
+        assert!(res.is_err());
+        match res.unwrap_err().kind() {
+            &ErrorKind::InvalidIssuer => (),
+            t @ _ => {
+                println!("{:?}", t);
+                assert!(false)
+            }
+        };
+    }
 }

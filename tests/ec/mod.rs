@@ -1,10 +1,6 @@
-extern crate jsonwebtoken;
-#[macro_use]
-extern crate serde_derive;
-extern crate chrono;
-
 use chrono::Utc;
 use jsonwebtoken::{decode, decode_pem, encode, sign, verify, Algorithm, Header, Key, Validation};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -48,11 +44,4 @@ fn round_trip_claim() {
         decode::<Claims>(&token, Key::Pkcs8(pubkey), &Validation::new(Algorithm::ES256)).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());
-}
-
-#[test]
-#[should_panic(expected = "InvalidKeyFormat")]
-fn fails_with_non_pkcs8_key_format() {
-    let privkey = include_bytes!("private_rsa_key.der");
-    let _encrypted = sign("hello world", Key::Der(&privkey[..]), Algorithm::ES256).unwrap();
 }
