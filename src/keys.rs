@@ -1,5 +1,6 @@
 /// The supported RSA key formats, see the documentation for ring::signature::RsaKeyPair
 /// for more information
+#[derive(Debug, PartialEq)]
 pub enum Key<'a> {
     /// An unencrypted PKCS#8-encoded key. Can be used with both ECDSA and RSA
     /// algorithms when signing. See ring for information.
