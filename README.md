@@ -113,8 +113,10 @@ This library currently supports the following:
 - ES384
 
 ### RSA
-`jsonwebtoken` can only read DER encoded keys currently. If you have openssl installed,
-you can run the following commands to obtain the DER keys from PKCS#1 (ie with `BEGIN RSA PUBLIC KEY`) .pem.
+`jsonwebtoken` can read DER and PEM encoded keys.
+
+#### DER Encoded
+If you have openssl installed, you can run the following commands to obtain the DER keys from PKCS#1 (ie with `BEGIN RSA PUBLIC KEY`) .pem.
 If you have a PKCS#8 pem file (ie starting with `BEGIN PUBLIC KEY`), you will need to first convert it to PKCS#1:
 `openssl rsa -pubin -in <filename> -RSAPublicKey_out -out <filename>`.
 
@@ -127,3 +129,27 @@ $ openssl rsa -in private_rsa_key.der -inform DER -RSAPublicKey_out -outform DER
 
 If you are getting an error with your public key, make sure you get it by using the command above to ensure
 it is in the right format.
+
+#### PEM Encoded
+To generate a PKCS#1 RSA key, run `openssl genrsa -out private_rsa_key_pkcs1.pem 2048`
+To convert a PKCS#1 RSA key to a PKCS#8 RSA key, run `openssl pkcs8 -topk8 -inform pem -in private_rsa_key_pkcs1.pem -outform pem -nocrypt -out private_rsa_key_pkcs8.pem`
+
+To use a PEM encoded private / public keys, a pem struct is returned by `decode_pem`.
+This carries the lifetime of the data inside. Finally to use the key like any other
+use the `.as_key(alg)` function on the pem struct.
+```
+let privkey_pem = decode_pem(pem_string_here).unwrap();
+let privkey = privkey_pem.as_key(Algorithm::RS256).unwrap();
+```
+
+### ECDSA
+`jsonwebtoken` can read PKCS#8 DER encoded private keys and public keys, as well as PEM encoded keys. Like RSA, to read a PEM key, you must use the pem decoder.
+
+To generate an EC key, you can do the following.
+
+```bash
+// private key
+openssl ecparam -genkey -name prime256v1 | openssl ec -out private_key.pem
+// public key
+openssl ec -in private_key.pem -pubout -out public_key.pem
+```
