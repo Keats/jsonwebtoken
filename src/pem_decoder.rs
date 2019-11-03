@@ -6,11 +6,32 @@ extern crate simple_asn1;
 
 use simple_asn1::{OID, BigUint};
 
+/// Supported PEM files for EC and RSA Public and Private Keys
+#[derive(Debug, PartialEq)]
+enum PemType {
+  ECPublicKey,
+  ECPrivateKey,
+  RSAPublicKey,
+  RSAPrivateKey,
+}
+
+#[derive(Debug, PartialEq)]
+enum PemEncodedWith {
+  PKCS1,
+  PKCS8,
+}
+
+#[derive(Debug, PartialEq)]
+enum Classification {
+  EC,
+  RSA,
+}
+
 /// The return type of a successful PEM encoded key with `decode_pem`
-/// 
+///
 /// This struct gives a way to parse a string to a key for use in jsonwebtoken.
 /// A struct is necessary as it provides the lifetime of the key
-/// 
+///
 /// PEM public private keys are encoded PKCS#1 or PKCS#8
 /// You will find that with PKCS#8 RSA keys that the PKCS#1 content
 /// is embedded inside. This is what is provided to ring via `Key::Der`
@@ -37,7 +58,7 @@ impl PemEncodedKey {
           Ok(asn1) => asn1,
           Err(_) => return Err(ErrorKind::InvalidKeyFormat)?,
         };
-        
+
         match content.tag.as_ref() {
           // This handles a PKCS#1 RSA Private key
           "RSA PRIVATE KEY" => Ok(PemEncodedKey {
@@ -52,7 +73,7 @@ impl PemEncodedKey {
             pem_type: PemType::RSAPublicKey,
             encoded_with: PemEncodedWith::PKCS1,
           }),
-          
+
           // No "EC PRIVATE KEY"
           // https://security.stackexchange.com/questions/84327/converting-ecc-private-key-to-pkcs1-format
           // "there is no such thing as a "PKCS#1 format" for elliptic curve (EC) keys"
@@ -60,13 +81,13 @@ impl PemEncodedKey {
           // This handles PKCS#8 private keys
           "PRIVATE KEY" => {
             match classify_pem(&asn1_content) {
-              Option::Some(Classification::EC) => Ok(PemEncodedKey {
+              Some(Classification::EC) => Ok(PemEncodedKey {
                 content: pem_contents,
                 asn1: asn1_content,
                 pem_type: PemType::ECPrivateKey,
                 encoded_with: PemEncodedWith::PKCS8,
               }),
-              Option::Some(Classification::RSA) => Ok(PemEncodedKey {
+              Some(Classification::RSA) => Ok(PemEncodedKey {
                 content: pem_contents,
                 asn1: asn1_content,
                 pem_type: PemType::RSAPrivateKey,
@@ -79,13 +100,13 @@ impl PemEncodedKey {
           // This handles PKCS#8 public keys
           "PUBLIC KEY" => {
             match classify_pem(&asn1_content) {
-              Option::Some(Classification::EC) => Ok(PemEncodedKey {
+              Some(Classification::EC) => Ok(PemEncodedKey {
                 content: pem_contents,
                 asn1: asn1_content,
                 pem_type: PemType::ECPublicKey,
                 encoded_with: PemEncodedWith::PKCS8,
               }),
-              Option::Some(Classification::RSA) => Ok(PemEncodedKey {
+              Some(Classification::RSA) => Ok(PemEncodedKey {
                 content: pem_contents,
                 asn1: asn1_content,
                 pem_type: PemType::RSAPublicKey,
@@ -122,34 +143,10 @@ impl PemEncodedKey {
   }
 }
 
-#[derive(Debug)]
-#[derive(PartialEq)]
-/// Supported PEM files for EC and RSA Public and Private Keys
-enum PemType {
-  ECPublicKey,
-  ECPrivateKey,
-  RSAPublicKey,
-  RSAPrivateKey,
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum PemEncodedWith {
-  PKCS1,
-  PKCS8,
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum Classification {
-  EC,
-  RSA,
-}
-
 // This really just finds and returns the first bitstring or octet string
 // Which is the x coordinate for EC public keys
 // And the DER contents of an RSA key
-// Though PKCS#11 keys shouldn't have anything else. 
+// Though PKCS#11 keys shouldn't have anything else.
 // It will get confusing with certificates.
 fn extract_first_bitstring(asn1: &Vec<simple_asn1::ASN1Block>) -> Result<&[u8]> {
   for asn1_entry in asn1.iter() {
@@ -186,13 +183,13 @@ fn classify_pem(asn1: &Vec<simple_asn1::ASN1Block>) -> Option<Classification> {
       }
       simple_asn1::ASN1Block::ObjectIdentifier(_, oid) => {
         if oid == ec_public_key_oid {
-          return Option::Some(Classification::EC);
+          return Some(Classification::EC);
         } else if oid == rsa_public_key_oid {
-          return Option::Some(Classification::RSA);
+          return Some(Classification::RSA);
         }
       }
       _ => {}
     }
   }
-  return Option::default();
+    None
 }
