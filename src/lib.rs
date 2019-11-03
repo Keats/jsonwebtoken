@@ -18,17 +18,17 @@ mod crypto;
 pub mod errors;
 mod header;
 mod keys;
+mod pem_decoder;
 mod serialization;
 mod validation;
-mod pem_decoder;
 
 pub use algorithms::Algorithm;
 pub use crypto::{sign, verify};
 pub use header::Header;
 pub use keys::Key;
+pub use pem_decoder::PemEncodedKey;
 pub use serialization::TokenData;
 pub use validation::Validation;
-pub use pem_decoder::PemEncodedKey;
 
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
@@ -172,21 +172,21 @@ pub fn decode_header(token: &str) -> Result<Header> {
 ///
 /// This must be a tagged PEM encoded key, tags start with `-----BEGIN ..-----`
 /// and end with a `-----END ..-----`
-/// 
+///
 /// ```rust
 /// use jsonwebtoken::{decode_pem, sign, verify, Algorithm};
-/// 
+///
 /// let pem_content = "-----BEGIN PRIVATE KEY-----
 /// MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgWTFfCGljY6aw3Hrt
 /// kHmPRiazukxPLb6ilpRAewjW8nihRANCAATDskChT+Altkm9X7MI69T3IUmrQU0L
 /// 950IxEzvw/x5BMEINRMrXLBJhqzO9Bm+d6JbqA21YQmd1Kt4RzLJR1W+
 /// -----END PRIVATE KEY-----";
-/// 
+///
 /// // First use decode_pem from jsonwebtoken
 /// let privkey_pem = decode_pem(pem_content).unwrap();
 /// // If it decodes Ok, then you can start using it with a given algorithm
 /// let privkey = privkey_pem.as_key().unwrap();
-/// 
+///
 /// // When using the as_key function, you do not need to wrap in Key::Der or Key::Pkcs8
 /// // The same code can be used for public keys too.
 /// let encrypted = sign("hello world", privkey, Algorithm::ES256).unwrap();

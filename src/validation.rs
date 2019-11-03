@@ -1,7 +1,7 @@
-use std::collections::HashSet;
 use chrono::Utc;
 use serde_json::map::Map;
 use serde_json::{from_value, Value};
+use std::collections::HashSet;
 
 use crate::algorithms::Algorithm;
 use crate::errors::{new_error, ErrorKind, Result};
@@ -141,8 +141,8 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if let Some(ref correct_aud) = options.aud {
         if let Some(aud) = claims.get("aud") {
-			let provided_aud: HashSet<String> = from_value(aud.clone())?;
-			if provided_aud.intersection(correct_aud).count() == 0 {
+            let provided_aud: HashSet<String> = from_value(aud.clone())?;
+            if provided_aud.intersection(correct_aud).count() == 0 {
                 return Err(new_error(ErrorKind::InvalidAudience));
             }
         } else {
