@@ -3,15 +3,6 @@
 //! Documentation:  [stable](https://docs.rs/jsonwebtoken/)
 #![deny(missing_docs)]
 
-#[macro_use]
-extern crate serde_derive;
-extern crate base64;
-extern crate chrono;
-extern crate ring;
-extern crate serde;
-extern crate serde_json;
-extern crate simple_asn1;
-
 mod algorithms;
 mod crypto;
 /// All the errors

@@ -3,7 +3,7 @@ use jsonwebtoken::{
     dangerous_unsafe_decode, decode, decode_header, encode, sign, verify, Algorithm, Header, Key,
     Validation,
 };
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Claims {

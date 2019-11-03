@@ -1,6 +1,6 @@
 use chrono::Utc;
 use jsonwebtoken::{decode, decode_pem, encode, sign, verify, Algorithm, Header, Key, Validation};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 const RSA_ALGORITHMS: &[Algorithm] = &[
     Algorithm::RS256,

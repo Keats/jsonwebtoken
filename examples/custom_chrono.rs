@@ -1,11 +1,6 @@
-extern crate jsonwebtoken as jwt;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate chrono;
-
 use chrono::prelude::*;
-use jwt::{Header, Key, Validation};
+use jsonwebtoken::{Header, Key, Validation};
+use serde::{Deserialize, Serialize};
 
 const SECRET: &str = "some-secret";
 
@@ -44,9 +39,6 @@ mod jwt_numeric_date {
 
     #[cfg(test)]
     mod tests {
-        use super::*;
-        use jwt::{Header, Validation};
-
         const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gRGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.RTgha0S53MjPC2pMA4e2oMzaBxSY3DMjiYR2qFfV55A";
 
         use super::super::{Claims, SECRET};
@@ -59,13 +51,13 @@ mod jwt_numeric_date {
 
             let claims = Claims { sub: sub.clone(), iat, exp };
 
-            let token = jwt::encode(&Header::default(), &claims, Key::Hmac(SECRET.as_ref()))
+            let token = encode(&Header::default(), &claims, Key::Hmac(SECRET.as_ref()))
                 .expect("Failed to encode claims");
 
             assert_eq!(&token, EXPECTED_TOKEN);
 
             let decoded =
-                jwt::decode::<Claims>(&token, Key::Hmac(SECRET.as_ref()), &Validation::default())
+                decode::<Claims>(&token, Key::Hmac(SECRET.as_ref()), &Validation::default())
                     .expect("Failed to decode token");
 
             assert_eq!(decoded.claims, claims);
@@ -77,7 +69,7 @@ mod jwt_numeric_date {
             let overflow_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gRGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjkyMjMzNzIwMzY4NTQ3NzYwMDB9.G2PKreA27U8_xOwuIeCYXacFYeR46f9FyENIZfCrvEc";
 
             let decode_result =
-                jwt::decode::<Claims>(&overflow_token, SECRET.as_ref(), &Validation::default());
+                decode::<Claims>(&overflow_token, SECRET.as_ref(), &Validation::default());
 
             assert!(decode_result.is_err());
         }
@@ -91,12 +83,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let claims = Claims { sub: sub.clone(), iat, exp };
 
-    let token = jwt::encode(&Header::default(), &claims, Key::Hmac(SECRET.as_ref()))?;
+    let token = jsonwebtoken::encode(&Header::default(), &claims, Key::Hmac(SECRET.as_ref()))?;
 
     println!("serialized token: {}", &token);
 
     let token_data =
-        jwt::decode::<Claims>(&token, Key::Hmac(SECRET.as_ref()), &Validation::default())?;
+        jsonwebtoken::decode::<Claims>(&token, Key::Hmac(SECRET.as_ref()), &Validation::default())?;
 
     println!("token data:\n{:#?}", &token_data);
     Ok(())

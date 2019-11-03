@@ -1,4 +1,5 @@
 use crate::algorithms::Algorithm;
+use serde::{Deserialize, Serialize};
 
 /// A basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional.

@@ -1,4 +1,5 @@
 use crate::errors::{new_error, Error, ErrorKind, Result};
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 /// The algorithms supported for signing/verifying
