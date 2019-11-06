@@ -1,4 +1,4 @@
-use crate::errors::{new_error, Error, ErrorKind, Result};
+use crate::errors::{Error, ErrorKind, Result};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -53,7 +53,7 @@ impl FromStr for Algorithm {
             "PS384" => Ok(Algorithm::PS384),
             "PS512" => Ok(Algorithm::PS512),
             "RS512" => Ok(Algorithm::RS512),
-            _ => Err(new_error(ErrorKind::InvalidAlgorithmName)),
+            _ => Err(ErrorKind::InvalidAlgorithmName.into()),
         }
     }
 }

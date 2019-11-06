@@ -1,5 +1,4 @@
 use crate::errors::{ErrorKind, Result};
-use crate::keys::Key;
 
 extern crate pem;
 extern crate simple_asn1;
@@ -9,10 +8,10 @@ use simple_asn1::{BigUint, OID};
 /// Supported PEM files for EC and RSA Public and Private Keys
 #[derive(Debug, PartialEq)]
 enum PemType {
-    EcPublicKey,
-    EcPrivateKey,
-    RsaPublicKey,
-    RsaPrivateKey,
+    EcPublic,
+    EcPrivate,
+    RsaPublic,
+    RsaPrivate,
 }
 
 #[derive(Debug, PartialEq)]
@@ -42,7 +41,7 @@ enum Classification {
 /// PKCS#1: https://tools.ietf.org/html/rfc8017
 /// PKCS#8: https://tools.ietf.org/html/rfc5958
 #[derive(Debug)]
-pub struct PemEncodedKey {
+pub(crate) struct PemEncodedKey {
     content: Vec<u8>,
     asn1: Vec<simple_asn1::ASN1Block>,
     pem_type: PemType,
@@ -51,7 +50,7 @@ pub struct PemEncodedKey {
 
 impl PemEncodedKey {
     /// Read the PEM file for later key use
-    pub fn read(input: &str) -> Result<PemEncodedKey> {
+    pub fn new(input: &[u8]) -> Result<PemEncodedKey> {
         match pem::parse(input) {
             Ok(content) => {
                 let pem_contents = content.contents;
@@ -65,13 +64,13 @@ impl PemEncodedKey {
                     "RSA PRIVATE KEY" => Ok(PemEncodedKey {
                         content: pem_contents,
                         asn1: asn1_content,
-                        pem_type: PemType::RsaPrivateKey,
+                        pem_type: PemType::RsaPrivate,
                         standard: Standard::Pkcs1,
                     }),
                     "RSA PUBLIC KEY" => Ok(PemEncodedKey {
                         content: pem_contents,
                         asn1: asn1_content,
-                        pem_type: PemType::RsaPublicKey,
+                        pem_type: PemType::RsaPublic,
                         standard: Standard::Pkcs1,
                     }),
 
@@ -86,16 +85,16 @@ impl PemEncodedKey {
                             let pem_type = match c {
                                 Classification::Ec => {
                                     if is_private {
-                                        PemType::EcPrivateKey
+                                        PemType::EcPrivate
                                     } else {
-                                        PemType::EcPublicKey
+                                        PemType::EcPublic
                                     }
                                 }
                                 Classification::Rsa => {
                                     if is_private {
-                                        PemType::RsaPrivateKey
+                                        PemType::RsaPrivate
                                     } else {
-                                        PemType::RsaPublicKey
+                                        PemType::RsaPublic
                                     }
                                 }
                             };
@@ -117,18 +116,36 @@ impl PemEncodedKey {
         }
     }
 
-    /// This will do the initial parsing of a PEM file.
-    /// Supported tagged pems include "RSA PRIVATE KEY", "RSA PUBLIC KEY",
-    /// "PRIVATE KEY", "PUBLIC KEY"
-    /// PEMs with multiple tagged portions are not supported
-    pub fn as_key(&self) -> Result<Key<'_>> {
+    /// Can only be PKCS8
+    pub fn as_ec_private_key(&self) -> Result<&[u8]> {
         match self.standard {
-            Standard::Pkcs1 => Ok(Key::Der(self.content.as_slice())),
+            Standard::Pkcs1 => Err(ErrorKind::InvalidKeyFormat.into()),
             Standard::Pkcs8 => match self.pem_type {
-                PemType::RsaPrivateKey => Ok(Key::Der(extract_first_bitstring(&self.asn1)?)),
-                PemType::RsaPublicKey => Ok(Key::Der(extract_first_bitstring(&self.asn1)?)),
-                PemType::EcPrivateKey => Ok(Key::Pkcs8(self.content.as_slice())),
-                PemType::EcPublicKey => Ok(Key::Pkcs8(extract_first_bitstring(&self.asn1)?)),
+                PemType::EcPrivate => Ok(self.content.as_slice()),
+                _ => Err(ErrorKind::InvalidKeyFormat.into()),
+            },
+        }
+    }
+
+    /// Can only be PKCS8
+    pub fn as_ec_public_key(&self) -> Result<&[u8]> {
+        match self.standard {
+            Standard::Pkcs1 => Err(ErrorKind::InvalidKeyFormat.into()),
+            Standard::Pkcs8 => match self.pem_type {
+                PemType::EcPublic => extract_first_bitstring(&self.asn1),
+                _ => Err(ErrorKind::InvalidKeyFormat.into()),
+            },
+        }
+    }
+
+    /// Can be PKCS1 or PKCS8
+    pub fn as_rsa_key(&self) -> Result<&[u8]> {
+        match self.standard {
+            Standard::Pkcs1 => Ok(self.content.as_slice()),
+            Standard::Pkcs8 => match self.pem_type {
+                PemType::RsaPrivate => extract_first_bitstring(&self.asn1),
+                PemType::RsaPublic => extract_first_bitstring(&self.asn1),
+                _ => Err(ErrorKind::InvalidKeyFormat.into()),
             },
         }
     }

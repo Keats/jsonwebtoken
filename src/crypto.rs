@@ -3,32 +3,23 @@ use ring::constant_time::verify_slices_are_equal;
 use ring::{hmac, rand, signature};
 
 use crate::algorithms::Algorithm;
-use crate::errors::{new_error, ErrorKind, Result};
-use crate::keys::Key;
+use crate::errors::{ErrorKind, Result};
+use crate::pem_decoder::PemEncodedKey;
 
 /// The actual HS signing + encoding
-fn sign_hmac(alg: hmac::Algorithm, key: Key, signing_input: &str) -> Result<String> {
-    let signing_key = match key {
-        Key::Hmac(bytes) => hmac::Key::new(alg, bytes),
-        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
-    };
-    let digest = hmac::sign(&signing_key, signing_input.as_bytes());
-
+fn sign_hmac(alg: hmac::Algorithm, key: &[u8], signing_input: &str) -> Result<String> {
+    let digest = hmac::sign(&hmac::Key::new(alg, key), signing_input.as_bytes());
     Ok(base64::encode_config::<hmac::Tag>(&digest, base64::URL_SAFE_NO_PAD))
 }
 
 /// The actual ECDSA signing + encoding
 fn sign_ecdsa(
     alg: &'static signature::EcdsaSigningAlgorithm,
-    key: Key,
+    key: &[u8],
     signing_input: &str,
 ) -> Result<String> {
-    let signing_key = match key {
-        Key::Pkcs8(bytes) => signature::EcdsaKeyPair::from_pkcs8(alg, bytes)?,
-        _ => {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-    };
+    let pem_key = PemEncodedKey::new(key)?;
+    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, pem_key.as_ec_private_key()?)?;
     let rng = rand::SystemRandom::new();
     let sig = signing_key.sign(&rng, signing_input.as_bytes())?;
     Ok(base64::encode_config(&sig, base64::URL_SAFE_NO_PAD))
@@ -38,20 +29,12 @@ fn sign_ecdsa(
 /// Taken from Ring doc https://briansmith.org/rustdoc/ring/signature/index.html
 fn sign_rsa(
     alg: &'static dyn signature::RsaEncoding,
-    key: Key,
+    key: &[u8],
     signing_input: &str,
 ) -> Result<String> {
-    let key_pair = match key {
-        Key::Der(bytes) => {
-            signature::RsaKeyPair::from_der(bytes).map_err(|_| ErrorKind::InvalidRsaKey)?
-        }
-        Key::Pkcs8(bytes) => {
-            signature::RsaKeyPair::from_pkcs8(bytes).map_err(|_| ErrorKind::InvalidRsaKey)?
-        }
-        _ => {
-            return Err(ErrorKind::InvalidKeyFormat.into());
-        }
-    };
+    let pem_key = PemEncodedKey::new(key)?;
+    let key_pair = signature::RsaKeyPair::from_der(pem_key.as_rsa_key()?)
+        .map_err(|_| ErrorKind::InvalidRsaKey)?;
 
     let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
@@ -66,7 +49,7 @@ fn sign_rsa(
 /// the base64 url safe encoded of the result.
 ///
 /// Only use this function if you want to do something other than JWT.
-pub fn sign(signing_input: &str, key: Key, algorithm: Algorithm) -> Result<String> {
+pub fn sign(signing_input: &str, key: &[u8], algorithm: Algorithm) -> Result<String> {
     match algorithm {
         Algorithm::HS256 => sign_hmac(hmac::HMAC_SHA256, key, signing_input),
         Algorithm::HS384 => sign_hmac(hmac::HMAC_SHA384, key, signing_input),
@@ -107,36 +90,20 @@ fn verify_ring_es(
     alg: &'static dyn signature::VerificationAlgorithm,
     signature: &str,
     signing_input: &str,
-    key: Key,
+    key: &[u8],
 ) -> Result<bool> {
-    let bytes = match key {
-        Key::Pkcs8(bytes) => bytes,
-        _ => {
-            return Err(ErrorKind::InvalidKeyFormat.into());
-        }
-    };
-    verify_ring(alg, signature, signing_input, bytes)
+    let pem_key = PemEncodedKey::new(key)?;
+    verify_ring(alg, signature, signing_input, pem_key.as_ec_public_key()?)
 }
 
 fn verify_ring_rsa(
     alg: &'static signature::RsaParameters,
     signature: &str,
     signing_input: &str,
-    key: Key,
+    key: &[u8],
 ) -> Result<bool> {
-    match key {
-        Key::Der(bytes) | Key::Pkcs8(bytes) => verify_ring(alg, signature, signing_input, bytes),
-        Key::ModulusExponent(n, e) => {
-            let public_key = signature::RsaPublicKeyComponents { n, e };
-
-            let signature_bytes = base64::decode_config(signature, base64::URL_SAFE_NO_PAD)?;
-
-            let res = public_key.verify(alg, signing_input.as_bytes(), &signature_bytes);
-
-            Ok(res.is_ok())
-        }
-        _ => Err(ErrorKind::InvalidKeyFormat.into()),
-    }
+    let pem_key = PemEncodedKey::new(key)?;
+    verify_ring(alg, signature, signing_input, pem_key.as_rsa_key()?)
 }
 
 /// Compares the signature given with a re-computed signature for HMAC or using the public key
@@ -150,7 +117,7 @@ fn verify_ring_rsa(
 pub fn verify(
     signature: &str,
     signing_input: &str,
-    key: Key,
+    key: &[u8],
     algorithm: Algorithm,
 ) -> Result<bool> {
     match algorithm {

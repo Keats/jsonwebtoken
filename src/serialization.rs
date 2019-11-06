@@ -22,7 +22,8 @@ pub fn encode_part<T: Serialize>(input: &T) -> Result<String> {
     Ok(base64::encode_config(json.as_bytes(), base64::URL_SAFE_NO_PAD))
 }
 
-/// Decodes from base64 and deserializes from JSON to a struct AND a hashmap
+/// Decodes from base64 and deserializes from JSON to a struct AND a hashmap of Value so we can
+/// run validation on it
 pub fn from_jwt_part_claims<B: AsRef<str>, T: DeserializeOwned>(
     encoded: B,
 ) -> Result<(T, Map<String, Value>)> {

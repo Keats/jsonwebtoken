@@ -8,7 +8,6 @@ mod crypto;
 /// All the errors
 pub mod errors;
 mod header;
-mod keys;
 mod pem_decoder;
 mod pem_encoder;
 mod serialization;
@@ -17,8 +16,6 @@ mod validation;
 pub use algorithms::Algorithm;
 pub use crypto::{sign, verify};
 pub use header::Header;
-pub use keys::Key;
-pub use pem_decoder::PemEncodedKey;
 pub use serialization::TokenData;
 pub use validation::Validation;
 
@@ -49,9 +46,9 @@ use crate::validation::validate;
 ///
 /// // my_claims is a struct that implements Serialize
 /// // This will create a JWT using HS256 as algorithm
-/// let token = encode(&Header::default(), &my_claims, Key::Hmac("secret".as_ref())).unwrap();
+/// let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
 /// ```
-pub fn encode<T: Serialize>(header: &Header, claims: &T, key: Key) -> Result<String> {
+pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &[u8]) -> Result<String> {
     let encoded_header = encode_part(&header)?;
     let encoded_claims = encode_part(&claims)?;
     let signing_input = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
@@ -93,7 +90,7 @@ macro_rules! expect_two {
 /// ```
 pub fn decode<T: DeserializeOwned>(
     token: &str,
-    key: Key,
+    key: &[u8],
     validation: &Validation,
 ) -> Result<TokenData<T>> {
     let (signature, signing_input) = expect_two!(token.rsplitn(2, '.'));
@@ -158,33 +155,6 @@ pub fn decode_header(token: &str) -> Result<Header> {
     let (_, signing_input) = expect_two!(token.rsplitn(2, '.'));
     let (_, header) = expect_two!(signing_input.rsplitn(2, '.'));
     Header::from_encoded(header)
-}
-
-/// Decode a PEM string to obtain its key
-///
-/// This must be a tagged PEM encoded key, tags start with `-----BEGIN ..-----`
-/// and end with a `-----END ..-----`
-///
-/// ```rust
-/// use jsonwebtoken::{decode_pem, sign, verify, Algorithm};
-///
-/// let pem_content = "-----BEGIN PRIVATE KEY-----
-/// MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgWTFfCGljY6aw3Hrt
-/// kHmPRiazukxPLb6ilpRAewjW8nihRANCAATDskChT+Altkm9X7MI69T3IUmrQU0L
-/// 950IxEzvw/x5BMEINRMrXLBJhqzO9Bm+d6JbqA21YQmd1Kt4RzLJR1W+
-/// -----END PRIVATE KEY-----";
-///
-/// // First use decode_pem from jsonwebtoken
-/// let privkey_pem = decode_pem(pem_content).unwrap();
-/// // If it decodes Ok, then you can start using it with a given algorithm
-/// let privkey = privkey_pem.as_key().unwrap();
-///
-/// // When using the as_key function, you do not need to wrap in Key::Der or Key::Pkcs8
-/// // The same code can be used for public keys too.
-/// let encrypted = sign("hello world", privkey, Algorithm::ES256).unwrap();
-/// ```
-pub fn decode_pem(content: &str) -> Result<PemEncodedKey> {
-    PemEncodedKey::read(content)
 }
 
 /// TODO

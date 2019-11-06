@@ -92,11 +92,12 @@ impl StdError for Error {
             ErrorKind::ImmatureSignature => "immature signature",
             ErrorKind::InvalidAlgorithm => "algorithms don't match",
             ErrorKind::InvalidAlgorithmName => "not a known algorithm",
+            ErrorKind::InvalidKeyFormat => "invalid key format",
+            ErrorKind::__Nonexhaustive => "unknown error",
             ErrorKind::Base64(ref err) => err.description(),
             ErrorKind::Json(ref err) => err.description(),
             ErrorKind::Utf8(ref err) => err.description(),
             ErrorKind::Crypto(ref err) => err.description(),
-            _ => unreachable!(),
         }
     }
 
@@ -113,11 +114,12 @@ impl StdError for Error {
             ErrorKind::ImmatureSignature => None,
             ErrorKind::InvalidAlgorithm => None,
             ErrorKind::InvalidAlgorithmName => None,
+            ErrorKind::InvalidKeyFormat => None,
+            ErrorKind::__Nonexhaustive => None,
             ErrorKind::Base64(ref err) => Some(err),
             ErrorKind::Json(ref err) => Some(err),
             ErrorKind::Utf8(ref err) => Some(err),
             ErrorKind::Crypto(ref err) => Some(err),
-            _ => unreachable!(),
         }
     }
 }
@@ -135,11 +137,13 @@ impl fmt::Display for Error {
             | ErrorKind::InvalidSubject
             | ErrorKind::ImmatureSignature
             | ErrorKind::InvalidAlgorithm
+            | ErrorKind::InvalidKeyFormat
             | ErrorKind::InvalidAlgorithmName => write!(f, "{}", self.description()),
             ErrorKind::Json(ref err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Crypto(ref err) => write!(f, "Crypto error: {}", err),
-            _ => unreachable!(),
+            ErrorKind::Base64(ref err) => write!(f, "Base64 error: {}", err),
+            ErrorKind::__Nonexhaustive => write!(f, "Unknown error"),
         }
     }
 }

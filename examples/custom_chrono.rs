@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use jsonwebtoken::{Header, Key, Validation};
+use jsonwebtoken::{Header, Validation};
 use serde::{Deserialize, Serialize};
 
 const SECRET: &str = "some-secret";
@@ -51,14 +51,13 @@ mod jwt_numeric_date {
 
             let claims = Claims { sub: sub.clone(), iat, exp };
 
-            let token = encode(&Header::default(), &claims, Key::Hmac(SECRET.as_ref()))
+            let token = encode(&Header::default(), &claims, SECRET.as_ref())
                 .expect("Failed to encode claims");
 
             assert_eq!(&token, EXPECTED_TOKEN);
 
-            let decoded =
-                decode::<Claims>(&token, Key::Hmac(SECRET.as_ref()), &Validation::default())
-                    .expect("Failed to decode token");
+            let decoded = decode::<Claims>(&token, SECRET.as_ref(), &Validation::default())
+                .expect("Failed to decode token");
 
             assert_eq!(decoded.claims, claims);
         }
@@ -83,12 +82,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let claims = Claims { sub: sub.clone(), iat, exp };
 
-    let token = jsonwebtoken::encode(&Header::default(), &claims, Key::Hmac(SECRET.as_ref()))?;
+    let token = jsonwebtoken::encode(&Header::default(), &claims, SECRET.as_ref())?;
 
     println!("serialized token: {}", &token);
 
     let token_data =
-        jsonwebtoken::decode::<Claims>(&token, Key::Hmac(SECRET.as_ref()), &Validation::default())?;
+        jsonwebtoken::decode::<Claims>(&token, SECRET.as_ref(), &Validation::default())?;
 
     println!("token data:\n{:#?}", &token_data);
     Ok(())
