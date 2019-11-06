@@ -57,7 +57,7 @@ impl PemEncodedKey {
                 let pem_contents = content.contents;
                 let asn1_content = match simple_asn1::from_der(pem_contents.as_slice()) {
                     Ok(asn1) => asn1,
-                    Err(_) => return Err(ErrorKind::InvalidKeyFormat)?,
+                    Err(_) => return Err(ErrorKind::InvalidKeyFormat.into()),
                 };
 
                 match content.tag.as_ref() {
@@ -106,14 +106,14 @@ impl PemEncodedKey {
                                 standard: Standard::Pkcs8,
                             })
                         }
-                        None => return Err(ErrorKind::InvalidKeyFormat)?,
+                        None => Err(ErrorKind::InvalidKeyFormat.into()),
                     },
 
                     // Unknown/unsupported type
-                    _ => return Err(ErrorKind::InvalidKeyFormat)?,
+                    _ => Err(ErrorKind::InvalidKeyFormat.into()),
                 }
             }
-            Err(_) => return Err(ErrorKind::InvalidKeyFormat)?,
+            Err(_) => Err(ErrorKind::InvalidKeyFormat.into()),
         }
     }
 
@@ -139,7 +139,7 @@ impl PemEncodedKey {
 // And the DER contents of an RSA key
 // Though PKCS#11 keys shouldn't have anything else.
 // It will get confusing with certificates.
-fn extract_first_bitstring(asn1: &Vec<simple_asn1::ASN1Block>) -> Result<&[u8]> {
+fn extract_first_bitstring(asn1: &[simple_asn1::ASN1Block]) -> Result<&[u8]> {
     for asn1_entry in asn1.iter() {
         match asn1_entry {
             simple_asn1::ASN1Block::Sequence(_, entries) => {
@@ -156,15 +156,16 @@ fn extract_first_bitstring(asn1: &Vec<simple_asn1::ASN1Block>) -> Result<&[u8]> 
             _ => (),
         }
     }
-    Err(ErrorKind::InvalidEcdsaKey)?
+
+    Err(ErrorKind::InvalidEcdsaKey.into())
 }
 
 /// Find whether this is EC or RSA
-fn classify_pem(asn1: &Vec<simple_asn1::ASN1Block>) -> Option<Classification> {
+fn classify_pem(asn1: &[simple_asn1::ASN1Block]) -> Option<Classification> {
     // These should be constant but the macro requires
     // #![feature(const_vec_new)]
-    let ec_public_key_oid = simple_asn1::oid!(1, 2, 840, 10045, 2, 1);
-    let rsa_public_key_oid = simple_asn1::oid!(1, 2, 840, 113549, 1, 1, 1);
+    let ec_public_key_oid = simple_asn1::oid!(1, 2, 840, 10_045, 2, 1);
+    let rsa_public_key_oid = simple_asn1::oid!(1, 2, 840, 113_549, 1, 1, 1);
 
     for asn1_entry in asn1.iter() {
         match asn1_entry {

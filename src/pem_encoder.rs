@@ -16,7 +16,7 @@ pub fn encode_rsa_public_pkcs1_pem(modulus: &[u8], exponent: &[u8]) -> Result<St
 pub fn encode_rsa_public_pkcs1_der(modulus: &[u8], exponent: &[u8]) -> Result<Vec<u8>> {
     match simple_asn1::to_der(&encode_rsa_public_pksc1_asn1(modulus, exponent)) {
         Ok(bytes) => Ok(bytes),
-        Err(_) => return Err(ErrorKind::InvalidRsaKey)?,
+        Err(_) => Err(ErrorKind::InvalidRsaKey.into()),
     }
 }
 
@@ -30,7 +30,7 @@ pub fn encode_rsa_public_pkcs8_pem(modulus: &[u8], exponent: &[u8]) -> Result<St
 pub fn encode_rsa_public_pkcs8_der(modulus: &[u8], exponent: &[u8]) -> Result<Vec<u8>> {
     match simple_asn1::to_der(&encode_rsa_public_pksc8_asn1(modulus, exponent)?) {
         Ok(bytes) => Ok(bytes),
-        Err(_) => return Err(ErrorKind::InvalidRsaKey)?,
+        Err(_) => Err(ErrorKind::InvalidRsaKey.into()),
     }
 }
 
@@ -41,14 +41,14 @@ pub fn encode_ec_public_pem(x: &[u8]) -> Result<String> {
 pub fn encode_ec_public_der(x: &[u8]) -> Result<Vec<u8>> {
     match simple_asn1::to_der(&encode_ec_public_asn1(x)) {
         Ok(bytes) => Ok(bytes),
-        Err(_) => return Err(ErrorKind::InvalidEcdsaKey)?,
+        Err(_) => Err(ErrorKind::InvalidEcdsaKey.into()),
     }
 }
 
 fn encode_rsa_public_pksc8_asn1(modulus: &[u8], exponent: &[u8]) -> Result<ASN1Block> {
     let pksc1 = match simple_asn1::to_der(&encode_rsa_public_pksc1_asn1(modulus, exponent)) {
         Ok(bytes) => bytes,
-        Err(_) => return Err(ErrorKind::InvalidRsaKey)?,
+        Err(_) => return Err(ErrorKind::InvalidRsaKey.into()),
     };
     Ok(ASN1Block::Sequence(
         0,
@@ -57,7 +57,7 @@ fn encode_rsa_public_pksc8_asn1(modulus: &[u8], exponent: &[u8]) -> Result<ASN1B
                 0,
                 vec![
                     // rsaEncryption (PKCS #1)
-                    ASN1Block::ObjectIdentifier(0, simple_asn1::oid!(1, 2, 840, 113549, 1, 1, 1)),
+                    ASN1Block::ObjectIdentifier(0, simple_asn1::oid!(1, 2, 840, 113_549, 1, 1, 1)),
                     ASN1Block::Null(0),
                 ],
             ),

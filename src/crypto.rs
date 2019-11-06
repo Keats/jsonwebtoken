@@ -10,7 +10,7 @@ use crate::keys::Key;
 fn sign_hmac(alg: hmac::Algorithm, key: Key, signing_input: &str) -> Result<String> {
     let signing_key = match key {
         Key::Hmac(bytes) => hmac::Key::new(alg, bytes),
-        _ => return Err(ErrorKind::InvalidKeyFormat)?,
+        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
     };
     let digest = hmac::sign(&signing_key, signing_input.as_bytes());
 
@@ -49,7 +49,7 @@ fn sign_rsa(
             signature::RsaKeyPair::from_pkcs8(bytes).map_err(|_| ErrorKind::InvalidRsaKey)?
         }
         _ => {
-            return Err(ErrorKind::InvalidKeyFormat)?;
+            return Err(ErrorKind::InvalidKeyFormat.into());
         }
     };
 
@@ -112,7 +112,7 @@ fn verify_ring_es(
     let bytes = match key {
         Key::Pkcs8(bytes) => bytes,
         _ => {
-            return Err(ErrorKind::InvalidKeyFormat)?;
+            return Err(ErrorKind::InvalidKeyFormat.into());
         }
     };
     verify_ring(alg, signature, signing_input, bytes)
@@ -135,7 +135,7 @@ fn verify_ring_rsa(
 
             Ok(res.is_ok())
         }
-        _ => Err(ErrorKind::InvalidKeyFormat)?,
+        _ => Err(ErrorKind::InvalidKeyFormat.into()),
     }
 }
 
