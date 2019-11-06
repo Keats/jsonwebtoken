@@ -10,6 +10,7 @@ pub mod errors;
 mod header;
 mod keys;
 mod pem_decoder;
+mod pem_encoder;
 mod serialization;
 mod validation;
 
@@ -184,4 +185,34 @@ pub fn decode_header(token: &str) -> Result<Header> {
 /// ```
 pub fn decode_pem(content: &str) -> Result<PemEncodedKey> {
     PemEncodedKey::read(content)
+}
+
+/// TODO
+pub fn encode_rsa_public_pkcs1_pem(modulus: &[u8], exponent: &[u8]) -> Result<String> {
+    pem_encoder::encode_rsa_public_pkcs1_pem(modulus, exponent)
+}
+
+/// TODO
+pub fn encode_rsa_public_pkcs1_der(modulus: &[u8], exponent: &[u8]) -> Result<Vec<u8>> {
+    pem_encoder::encode_rsa_public_pkcs1_der(modulus, exponent)
+}
+
+/// TODO
+pub fn encode_rsa_public_pkcs8_pem(modulus: &[u8], exponent: &[u8]) -> Result<String> {
+    pem_encoder::encode_rsa_public_pkcs8_pem(modulus, exponent)
+}
+
+/// TODO
+pub fn encode_rsa_public_pkcs8_der(modulus: &[u8], exponent: &[u8]) -> Result<Vec<u8>> {
+    pem_encoder::encode_rsa_public_pkcs8_der(modulus, exponent)
+}
+
+/// TODO
+pub fn encode_ec_public_pem(x_coordinate: &[u8]) -> Result<String> {
+    pem_encoder::encode_ec_public_pem(x_coordinate)
+}
+
+/// TODO
+pub fn encode_ec_public_der(x_coordinate: &[u8]) -> Result<Vec<u8>> {
+    pem_encoder::encode_ec_public_der(x_coordinate)
 }
