@@ -1,6 +1,7 @@
 use chrono::Utc;
-use jsonwebtoken::{decode, decode_pem, encode, sign, verify, Algorithm, Header, Key, Validation};
+use jsonwebtoken::{decode, decode_pem, encode_rsa_public_pkcs1_pem, encode_rsa_public_pkcs1_der, encode_rsa_public_pkcs8_pem, encode, sign, verify, Algorithm, Header, Key, Validation};
 use serde::{Deserialize, Serialize};
+use ring::{signature, signature::KeyPair};
 
 const RSA_ALGORITHMS: &[Algorithm] = &[
     Algorithm::RS256,
@@ -128,4 +129,48 @@ fn rsa_modulus_exponent() {
 fn fails_with_non_pkcs8_key_format() {
     let privkey = include_bytes!("private_rsa_key.der");
     let _encrypted = sign("hello world", Key::Der(&privkey[..]), Algorithm::ES256).unwrap();
+}
+
+#[test]
+fn public_key_encoding_pkcs1() {
+    let privkey_pem = decode_pem(include_str!("private_rsa_key_pkcs8.pem")).unwrap();
+    let privkey = privkey_pem.as_key().unwrap();
+    let ring_key = signature::RsaKeyPair::from_der(match privkey {
+        Key::Der(bytes) => bytes,
+        _ => panic!("Unexpected")
+    }).unwrap();
+    let mut modulus = vec!(0);
+    modulus.extend(ring_key.public_key().modulus().big_endian_without_leading_zero());
+    let exponent = ring_key.public_key().exponent();
+
+    let public_key_pkcs1_pem = encode_rsa_public_pkcs1_pem(
+        modulus.as_ref(), 
+        exponent.big_endian_without_leading_zero()
+    ).unwrap();
+    assert_eq!(include_str!("public_rsa_key_pkcs1.pem").trim(), public_key_pkcs1_pem.replace('\r', "").trim());
+
+    let public_key_pkcs1_der = encode_rsa_public_pkcs1_der(
+        modulus.as_ref(), 
+        exponent.big_endian_without_leading_zero()
+    ).unwrap();
+    assert_eq!(include_bytes!("public_rsa_key.der").to_vec(), public_key_pkcs1_der);
+}
+
+#[test]
+fn public_key_encoding_pkcs8() {
+    let privkey_pem = decode_pem(include_str!("private_rsa_key_pkcs8.pem")).unwrap();
+    let privkey = privkey_pem.as_key().unwrap();
+    let ring_key = signature::RsaKeyPair::from_der(match privkey {
+        Key::Der(bytes) => bytes,
+        _ => panic!("Unexpected")
+    }).unwrap();
+    let mut modulus = vec!(0);
+    modulus.extend(ring_key.public_key().modulus().big_endian_without_leading_zero());
+    let exponent = ring_key.public_key().exponent();
+
+    let public_key_pkcs8 = encode_rsa_public_pkcs8_pem(
+        modulus.as_ref(), 
+        exponent.big_endian_without_leading_zero()
+    ).unwrap();
+    assert_eq!(include_str!("public_rsa_key_pkcs8.pem").trim(), public_key_pkcs8.replace('\r', "").trim());
 }
