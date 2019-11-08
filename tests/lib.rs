@@ -1,2 +1,2 @@
-mod ec;
+mod ecdsa;
 mod rsa;

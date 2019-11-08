@@ -12,6 +12,7 @@ mod pem_decoder;
 mod pem_encoder;
 mod serialization;
 mod validation;
+// mod jwk;
 
 pub use algorithms::Algorithm;
 pub use crypto::{sign, verify};

@@ -1,4 +1,3 @@
-use base64;
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 use serde_json::map::Map;
@@ -16,19 +15,26 @@ pub struct TokenData<T> {
     pub claims: T,
 }
 
+pub(crate) fn encode(input: &[u8]) -> String {
+    base64::encode_config(input, base64::URL_SAFE_NO_PAD)
+}
+
+pub(crate) fn decode(input: &str) -> Result<Vec<u8>> {
+    base64::decode_config(input, base64::URL_SAFE_NO_PAD).map_err(|e| e.into())
+}
+
 /// Serializes a struct to JSON and encodes it in base64
-pub fn encode_part<T: Serialize>(input: &T) -> Result<String> {
+pub(crate) fn encode_part<T: Serialize>(input: &T) -> Result<String> {
     let json = to_string(input)?;
-    Ok(base64::encode_config(json.as_bytes(), base64::URL_SAFE_NO_PAD))
+    Ok(encode(json.as_bytes()))
 }
 
 /// Decodes from base64 and deserializes from JSON to a struct AND a hashmap of Value so we can
 /// run validation on it
-pub fn from_jwt_part_claims<B: AsRef<str>, T: DeserializeOwned>(
+pub(crate) fn from_jwt_part_claims<B: AsRef<str>, T: DeserializeOwned>(
     encoded: B,
 ) -> Result<(T, Map<String, Value>)> {
-    let decoded = base64::decode_config(encoded.as_ref(), base64::URL_SAFE_NO_PAD)?;
-    let s = String::from_utf8(decoded)?;
+    let s = String::from_utf8(decode(encoded.as_ref())?)?;
 
     let claims: T = from_str(&s)?;
     let map: Map<_, _> = from_str(&s)?;
