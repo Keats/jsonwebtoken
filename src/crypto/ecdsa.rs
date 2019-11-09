@@ -1,6 +1,6 @@
 use ring::{rand, signature};
 
-use crate::errors::{Result};
+use crate::errors::Result;
 use crate::pem_decoder::PemEncodedKey;
 use crate::serialization::encode;
 

@@ -37,6 +37,6 @@ pub(crate) fn from_jwt_part_claims<B: AsRef<str>, T: DeserializeOwned>(
     let s = String::from_utf8(decode(encoded.as_ref())?)?;
 
     let claims: T = from_str(&s)?;
-    let map: Map<_, _> = from_str(&s)?;
-    Ok((claims, map))
+    let validation_map: Map<_, _> = from_str(&s)?;
+    Ok((claims, validation_map))
 }
