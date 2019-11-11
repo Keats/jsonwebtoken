@@ -118,8 +118,8 @@ pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<Token
     Ok(TokenData { header, claims: decoded_claims })
 }
 
-/// Decode a token and return the Header. This is not doing any kind of validation: it is meant to be
-/// used when you don't know which `alg` the token is using and want to find out.
+/// Decode a token and return the Header. This is not doing any kind of validation: it only splits
+/// on the `.` and return the base64 decoded header.
 ///
 /// If the token has an invalid format, it will return an error.
 ///

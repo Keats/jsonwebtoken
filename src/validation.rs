@@ -1,5 +1,5 @@
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::collections::HashSet;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::map::Map;
 use serde_json::{from_value, Value};
@@ -164,7 +164,7 @@ mod tests {
     use serde_json::map::Map;
     use serde_json::to_value;
 
-    use super::{validate, Validation, get_current_timestamp};
+    use super::{get_current_timestamp, validate, Validation};
 
     use crate::errors::ErrorKind;
 

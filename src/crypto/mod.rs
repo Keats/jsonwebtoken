@@ -27,17 +27,31 @@ pub fn sign(message: &str, key: &[u8], algorithm: Algorithm) -> Result<String> {
         Algorithm::HS384 => sign_hmac(hmac::HMAC_SHA384, key, message),
         Algorithm::HS512 => sign_hmac(hmac::HMAC_SHA512, key, message),
 
-        Algorithm::ES256 => ecdsa::sign(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, key, message),
-        Algorithm::ES384 => ecdsa::sign(&signature::ECDSA_P384_SHA384_FIXED_SIGNING, key, message),
+        Algorithm::ES256 | Algorithm::ES384 => {
+            ecdsa::sign(ecdsa::alg_to_ec_signing(algorithm), key, message)
+        }
 
-        Algorithm::RS256 => rsa::sign(&signature::RSA_PKCS1_SHA256, key, message),
-        Algorithm::RS384 => rsa::sign(&signature::RSA_PKCS1_SHA384, key, message),
-        Algorithm::RS512 => rsa::sign(&signature::RSA_PKCS1_SHA512, key, message),
-
-        Algorithm::PS256 => rsa::sign(&signature::RSA_PSS_SHA256, key, message),
-        Algorithm::PS384 => rsa::sign(&signature::RSA_PSS_SHA384, key, message),
-        Algorithm::PS512 => rsa::sign(&signature::RSA_PSS_SHA512, key, message),
+        Algorithm::RS256
+        | Algorithm::RS384
+        | Algorithm::RS512
+        | Algorithm::PS256
+        | Algorithm::PS384
+        | Algorithm::PS512 => rsa::sign(rsa::alg_to_rsa_signing(algorithm), key, message),
     }
+}
+
+/// See Ring docs for more details
+fn verify_ring(
+    alg: &'static dyn signature::VerificationAlgorithm,
+    signature: &str,
+    message: &str,
+    key: &[u8],
+) -> Result<bool> {
+    let signature_bytes = b64_decode(signature)?;
+    let public_key = signature::UnparsedPublicKey::new(alg, key);
+    let res = public_key.verify(message.as_bytes(), &signature_bytes);
+
+    Ok(res.is_ok())
 }
 
 /// Compares the signature given with a re-computed signature for HMAC or using the public key
@@ -59,29 +73,28 @@ pub fn verify(signature: &str, message: &str, key: &[u8], algorithm: Algorithm) 
         }
         Algorithm::ES256 | Algorithm::ES384 => {
             let pem_key = PemEncodedKey::new(key)?;
-            verify_ring(ecdsa::alg_to_ec_verification(algorithm), signature, message, pem_key.as_ec_public_key()?)
+            verify_ring(
+                ecdsa::alg_to_ec_verification(algorithm),
+                signature,
+                message,
+                pem_key.as_ec_public_key()?,
+            )
         }
-        // only RSAs left
-        _ => {
+        Algorithm::RS256
+        | Algorithm::RS384
+        | Algorithm::RS512
+        | Algorithm::PS256
+        | Algorithm::PS384
+        | Algorithm::PS512 => {
             let pem_key = PemEncodedKey::new(key)?;
-            verify_ring(rsa::alg_to_rsa_parameters(algorithm), signature, message, pem_key.as_rsa_key()?)
-        },
+            verify_ring(
+                rsa::alg_to_rsa_parameters(algorithm),
+                signature,
+                message,
+                pem_key.as_rsa_key()?,
+            )
+        }
     }
-}
-
-
-/// See Ring docs for more details
-fn verify_ring(
-    alg: &'static dyn signature::VerificationAlgorithm,
-    signature: &str,
-    message: &str,
-    key: &[u8],
-) -> Result<bool> {
-    let signature_bytes = b64_decode(signature)?;
-    let public_key = signature::UnparsedPublicKey::new(alg, key);
-    let res = public_key.verify(message.as_bytes(), &signature_bytes);
-
-    Ok(res.is_ok())
 }
 
 /// Verify the signature given using the (n, e) components of a RSA public key.
@@ -96,5 +109,5 @@ pub fn verify_rsa_components(
     alg: Algorithm,
 ) -> Result<bool> {
     let signature_bytes = b64_decode(signature)?;
-    rsa::verify_from_components(&signature_bytes, message, components, alg)
+    rsa::verify_from_components(rsa::alg_to_rsa_parameters(alg), &signature_bytes, message, components)
 }
