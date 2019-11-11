@@ -1,14 +1,15 @@
-use chrono::Utc;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::collections::HashSet;
+
 use serde_json::map::Map;
 use serde_json::{from_value, Value};
-use std::collections::HashSet;
 
 use crate::algorithms::Algorithm;
 use crate::errors::{new_error, ErrorKind, Result};
 
 /// Contains the various validations that are applied after decoding a token.
 ///
-/// All time validation happen on UTC timestamps.
+/// All time validation happen on UTC timestamps as seconds.
 ///
 /// ```rust
 /// use jsonwebtoken::Validation;
@@ -30,7 +31,7 @@ pub struct Validation {
     /// account for clock skew.
     ///
     /// Defaults to `0`.
-    pub leeway: i64,
+    pub leeway: u64,
     /// Whether to validate the `exp` field.
     ///
     /// It will return an error if the time in the `exp` field is past.
@@ -96,12 +97,17 @@ impl Default for Validation {
     }
 }
 
+fn get_current_timestamp() -> u64 {
+    let start = SystemTime::now();
+    start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs()
+}
+
 pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()> {
-    let now = Utc::now().timestamp();
+    let now = get_current_timestamp();
 
     if options.validate_exp {
         if let Some(exp) = claims.get("exp") {
-            if from_value::<i64>(exp.clone())? < now - options.leeway {
+            if from_value::<u64>(exp.clone())? < now - options.leeway {
                 return Err(new_error(ErrorKind::ExpiredSignature));
             }
         } else {
@@ -111,7 +117,7 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if options.validate_nbf {
         if let Some(nbf) = claims.get("nbf") {
-            if from_value::<i64>(nbf.clone())? > now + options.leeway {
+            if from_value::<u64>(nbf.clone())? > now + options.leeway {
                 return Err(new_error(ErrorKind::ImmatureSignature));
             }
         } else {
@@ -155,18 +161,17 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
     use serde_json::map::Map;
     use serde_json::to_value;
 
-    use super::{validate, Validation};
+    use super::{validate, Validation, get_current_timestamp};
 
     use crate::errors::ErrorKind;
 
     #[test]
     fn exp_in_future_ok() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() + 10000).unwrap());
+        claims.insert("exp".to_string(), to_value(get_current_timestamp() + 10000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_ok());
     }
@@ -174,7 +179,7 @@ mod tests {
     #[test]
     fn exp_in_past_fails() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() - 100000).unwrap());
+        claims.insert("exp".to_string(), to_value(get_current_timestamp() - 100000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_err());
 
@@ -187,7 +192,7 @@ mod tests {
     #[test]
     fn exp_in_past_but_in_leeway_ok() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() - 500).unwrap());
+        claims.insert("exp".to_string(), to_value(get_current_timestamp() - 500).unwrap());
         let validation = Validation { leeway: 1000 * 60, ..Default::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
@@ -208,7 +213,7 @@ mod tests {
     #[test]
     fn nbf_in_past_ok() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
+        claims.insert("nbf".to_string(), to_value(get_current_timestamp() - 10000).unwrap());
         let validation =
             Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
         let res = validate(&claims, &validation);
@@ -218,7 +223,7 @@ mod tests {
     #[test]
     fn nbf_in_future_fails() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
+        claims.insert("nbf".to_string(), to_value(get_current_timestamp() + 100000).unwrap());
         let validation =
             Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
         let res = validate(&claims, &validation);
@@ -233,7 +238,7 @@ mod tests {
     #[test]
     fn nbf_in_future_but_in_leeway_ok() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 500).unwrap());
+        claims.insert("nbf".to_string(), to_value(get_current_timestamp() + 500).unwrap());
         let validation = Validation {
             leeway: 1000 * 60,
             validate_nbf: true,
@@ -408,7 +413,7 @@ mod tests {
     #[test]
     fn does_validation_in_right_order() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() + 10000).unwrap());
+        claims.insert("exp".to_string(), to_value(get_current_timestamp() + 10000).unwrap());
         let v = Validation {
             leeway: 5,
             validate_exp: true,
