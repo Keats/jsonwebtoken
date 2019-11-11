@@ -120,9 +120,10 @@ pub fn verify_rsa_modulus_exponent(
     message: &str,
     components: (&str, &str),
 ) -> Result<bool> {
+    let signature_bytes = decode(signature)?;
     let n = BigUint::from_bytes_be(&decode(components.0)?).to_bytes_be();
     let e = BigUint::from_bytes_be(&decode(components.1)?).to_bytes_be();
     let pubkey = signature::RsaPublicKeyComponents { n, e };
-    let res = pubkey.verify(rsa_alg_to_rsa_parameters(alg), message.as_ref(), signature.as_ref());
+    let res = pubkey.verify(rsa_alg_to_rsa_parameters(alg), message.as_ref(), &signature_bytes);
     Ok(res.is_ok())
 }
