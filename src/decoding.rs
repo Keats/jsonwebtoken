@@ -1,6 +1,6 @@
 use serde::de::DeserializeOwned;
 
-use crate::crypto::{verify, verify_rsa_modulus_exponent};
+use crate::crypto::{verify, verify_rsa_components};
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 use crate::serialization::{from_jwt_part_claims, TokenData};
@@ -40,7 +40,7 @@ fn _decode<T: DeserializeOwned>(
     let is_valid = match key {
         DecodingKey::SecretOrPem(k) => verify(signature, message, k, header.alg),
         DecodingKey::RsaModulusExponent { n, e } => {
-            verify_rsa_modulus_exponent(header.alg, signature, message, (n, e))
+            verify_rsa_components(signature, message, (n, e), header.alg)
         }
     }?;
 

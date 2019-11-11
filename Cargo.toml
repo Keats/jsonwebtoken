@@ -22,3 +22,6 @@ simple_asn1 = "0.4"
 [dev-dependencies]
 # For the custom chrono example
 chrono = "0.4"
+
+[badges]
+maintenance = { status = "passively-developed" }

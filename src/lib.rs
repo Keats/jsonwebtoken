@@ -24,7 +24,7 @@ pub use validation::Validation;
 use serde::ser::Serialize;
 
 use crate::errors::Result;
-use crate::serialization::encode_part;
+use crate::serialization::b64_encode_part;
 
 /// Encode the header and claims given and sign the payload using the algorithm from the header and the key
 ///
@@ -48,8 +48,8 @@ use crate::serialization::encode_part;
 /// let token = encode(&Header::default(), &my_claims, "secret".as_ref()).unwrap();
 /// ```
 pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &[u8]) -> Result<String> {
-    let encoded_header = encode_part(&header)?;
-    let encoded_claims = encode_part(&claims)?;
+    let encoded_header = b64_encode_part(&header)?;
+    let encoded_claims = b64_encode_part(&claims)?;
     let message = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
     let signature = sign(&*message, key, header.alg)?;
 
