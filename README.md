@@ -4,6 +4,8 @@
 
 [API documentation on docs.rs](https://docs.rs/jsonwebtoken/)
 
+See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more information on what are JSON Web Tokens.
+
 ## Installation
 Add the following to Cargo.toml:
 
@@ -11,6 +13,24 @@ Add the following to Cargo.toml:
 jsonwebtoken = "7"
 serde = {version = "1.0", features = ["derive"] }
 ```
+
+The minimum required Rust version is 1.34.
+
+## Algorithms
+This library currently supports the following:
+
+- HS256
+- HS384
+- HS512
+- RS256
+- RS384
+- RS512
+- PS256
+- PS384
+- PS512
+- ES256
+- ES384
+
 
 ## How to use
 Complete examples are available in the examples directory: a basic one and one with a custom header.
@@ -30,7 +50,7 @@ struct Claims {
 ```
 
 ### Header
-The default algorithm is HS256.
+The default algorithm is HS256, which uses a shared secret.
 
 ```rust
 let token = encode(&Header::default(), &my_claims, "secret".as_ref())?;
@@ -59,7 +79,7 @@ Encoding a JWT takes 3 parameters:
 
 - a header: the `Header` struct
 - some claims: your own struct
-- a key
+- a key/secret
 
 When using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
 RSA/EC, the key should always be the content of the private key in the PEM format.
@@ -67,8 +87,8 @@ RSA/EC, the key should always be the content of the private key in the PEM forma
 ### Decoding
 
 ```rust
+// `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
 let token = decode::<Claims>(&token, "secret".as_ref(), &Validation::default())?;
-// token is a struct with 2 fields: `header` and `claims` and `claims` is your own struct.
 ```
 `decode` can error for a variety of reasons:
 
@@ -79,16 +99,16 @@ let token = decode::<Claims>(&token, "secret".as_ref(), &Validation::default())?
 As with encoding, when using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
 RSA/EC, the key should always be the content of the public key in the PEM format.
 
-In some cases, for example if you don't know the algorithm used or need to grab the `kid`, you can decode only the header:
+In some cases, for example if you don't know the algorithm used or need to grab the `kid`, you can choose to decode only the header:
 
 ```rust
 let header = decode_header(&token)?;
 ```
 
-This does not perform any signature verification/validations on the token so it could have been tampered with.
+This does not perform any signature verification or validate the token claims.
 
 You can also decode a token using the public key components of a RSA key in base64 format. 
-The main use-case is for JWK where your public key is a JSON format like so:
+The main use-case is for JWK where your public key is in a JSON format like so:
 
 ```json
 {
@@ -100,11 +120,11 @@ The main use-case is for JWK where your public key is a JSON format like so:
 ```
 
 ```rust
+// `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
 let token = decode_rsa_components::<Claims>(&token, jwk["n"], jwk["e"], &Validation::new(Algorithm::RS256))?;
-// token is a struct with 2 fields: `header` and `claims` and `claims` is your own struct.
 ```
 
-### Convertion .der to .pem
+### Converting .der to .pem
 
 You can use openssl for that:
 
@@ -113,8 +133,8 @@ openssl rsa -inform DER -outform PEM -in mykey.der -out mykey.pem
 ```
 
 
-#### Validation
-This library validates automatically the `exp` claim. `nbf` is also validated if present. You can also validate the `sub`, `iss` and `aud` but
+## Validation
+This library validates automatically the `exp` claim and `nbf` is validated if present. You can also validate the `sub`, `iss` and `aud` but
 those require setting the expected value in the `Validation` struct.
 
 Since validating time fields is always a bit tricky due to clock skew, 
@@ -138,22 +158,3 @@ let mut validation = Validation::default();
 validation.set_audience(&"Me"); // string
 validation.set_audience(&["Me", "You"]); // array of strings
 ```
-
-## Algorithms
-This library currently supports the following:
-
-- HS256
-- HS384
-- HS512
-- RS256
-- RS384
-- RS512
-- PS256
-- PS384
-- PS512
-- ES256
-- ES384
-
-### RSA & ECDSA
-By default, the `encode`/`decode` functions takes the PEM format since it is the most common.
-RSA can also use the public key components modulus/exponent in base64 format for decoding.
