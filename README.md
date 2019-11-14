@@ -9,8 +9,7 @@ Add the following to Cargo.toml:
 
 ```toml
 jsonwebtoken = "7"
-serde_derive = "1"
-serde = "1"
+serde = {version = "1.0", features = ["derive"] }
 ```
 
 ## How to use
@@ -18,11 +17,8 @@ Complete examples are available in the examples directory: a basic one and one w
 
 In terms of imports and structs:
 ```rust
-extern crate jsonwebtoken as jwt;
-#[macro_use]
-extern crate serde_derive;
-
-use jwt::{encode, decode, Header, Algorithm, Validation};
+use serde::{Serialize, Deserialize};
+use jsonwebtoken::{encode, decode, Header, Algorithm, Validation};
 
 /// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,7 +29,7 @@ struct Claims {
 }
 ```
 
-### Encoding
+### Header
 The default algorithm is HS256.
 
 ```rust
@@ -45,38 +41,84 @@ All the parameters from the RFC are supported but the default header only has `t
 If you want to set the `kid` parameter or change the algorithm for example:
 
 ```rust
-let mut header = Header::default();
+let mut header = Header::new(Algorithm::HS512);
 header.kid = Some("blabla".to_owned());
-header.alg = Algorithm::HS512;
 let token = encode(&header, &my_claims, "secret".as_ref())?;
 ```
 Look at `examples/custom_header.rs` for a full working example.
 
+### Encoding
+
+```rust
+// HS256
+let token = encode(&Header::default(), &my_claims, "secret".as_ref())?;
+// RSA
+let token = encode(&Header::new(Algorithm::RS256), &my_claims, include_str!("privkey.pem"))?;
+```
+Encoding a JWT takes 3 parameters:
+
+- a header: the `Header` struct
+- some claims: your own struct
+- a key
+
+When using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
+RSA/EC, the key should always be the content of the private key in the PEM format.
+
 ### Decoding
+
 ```rust
 let token = decode::<Claims>(&token, "secret".as_ref(), &Validation::default())?;
-// token is a struct with 2 params: header and claims
+// token is a struct with 2 fields: `header` and `claims` and `claims` is your own struct.
 ```
 `decode` can error for a variety of reasons:
 
 - the token or its signature is invalid
-- error while decoding base64 or the result of decoding base64 is not valid UTF-8
+- the token had invalid base64
 - validation of at least one reserved claim failed
 
-In some cases, for example if you don't know the algorithm used, you will want to only decode the header:
+As with encoding, when using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
+RSA/EC, the key should always be the content of the public key in the PEM format.
+
+In some cases, for example if you don't know the algorithm used or need to grab the `kid`, you can decode only the header:
 
 ```rust
 let header = decode_header(&token)?;
 ```
 
-This does not perform any validation on the token.
+This does not perform any signature verification/validations on the token so it could have been tampered with.
+
+You can also decode a token using the public key components of a RSA key in base64 format. 
+The main use-case is for JWK where your public key is a JSON format like so:
+
+```json
+{
+   "kty":"RSA",
+   "e":"AQAB",
+   "kid":"6a7a119f-0876-4f7e-8d0f-bf3ea1391dd8",
+   "n":"yRE6rHuNR0QbHO3H3Kt2pOKGVhQqGZXInOduQNxXzuKlvQTLUTv4l4sggh5_CYYi_cvI-SXVT9kPWSKXxJXBXd_4LkvcPuUakBoAkfh-eiFVMh2VrUyWyj3MFl0HTVF9KwRXLAcwkREiS3npThHRyIxuy0ZMeZfxVL5arMhw1SRELB8HoGfG_AtH89BIE9jDBHZ9dLelK9a184zAf8LwoPLxvJb3Il5nncqPcSfKDDodMFBIMc4lQzDKL5gvmiXLXB1AGLm8KBjfE8s3L5xqi-yUod-j8MtvIj812dkS4QMiRVN_by2h3ZY8LYVGrqZXZTcgn2ujn8uKjXLZVD5TdQ"
+}
+```
+
+```rust
+let token = decode_rsa_components::<Claims>(&token, jwk["n"], jwk["e"], &Validation::new(Algorithm::RS256))?;
+// token is a struct with 2 fields: `header` and `claims` and `claims` is your own struct.
+```
+
+### Convertion .der to .pem
+
+You can use openssl for that:
+
+```bash
+openssl rsa -inform DER -outform PEM -in mykey.der -out mykey.pem
+```
+
 
 #### Validation
 This library validates automatically the `exp` claim. `nbf` is also validated if present. You can also validate the `sub`, `iss` and `aud` but
 those require setting the expected value in the `Validation` struct.
 
 Since validating time fields is always a bit tricky due to clock skew, 
-you can add some leeway to the `iat`, `exp` and `nbf` validation by setting a `leeway` parameter.
+you can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` field.
 
 Last but not least, you will need to set the algorithm(s) allowed for this token if you are not using `HS256`.
 
@@ -112,44 +154,6 @@ This library currently supports the following:
 - ES256
 - ES384
 
-### RSA
-`jsonwebtoken` can read DER and PEM encoded keys.
-
-#### DER Encoded
-If you have openssl installed, you can run the following commands to obtain the DER keys from PKCS#1 (ie with `BEGIN RSA PUBLIC KEY`) .pem.
-If you have a PKCS#8 pem file (ie starting with `BEGIN PUBLIC KEY`), you will need to first convert it to PKCS#1:
-`openssl rsa -pubin -in <filename> -RSAPublicKey_out -out <filename>`.
-
-```bash
-// private key
-$ openssl rsa -in private_rsa_key.pem -outform DER -out private_rsa_key.der
-// public key
-$ openssl rsa -in private_rsa_key.der -inform DER -RSAPublicKey_out -outform DER -out public_key.der
-```
-
-If you are getting an error with your public key, make sure you get it by using the command above to ensure
-it is in the right format.
-
-#### PEM Encoded
-To generate a PKCS#1 RSA key, run `openssl genrsa -out private_rsa_key_pkcs1.pem 2048`
-To convert a PKCS#1 RSA key to a PKCS#8 RSA key, run `openssl pkcs8 -topk8 -inform pem -in private_rsa_key_pkcs1.pem -outform pem -nocrypt -out private_rsa_key_pkcs8.pem`
-
-To use a PEM encoded private / public keys, a pem struct is returned by `decode_pem`.
-This carries the lifetime of the data inside. Finally to use the key like any other
-use the `.as_key(alg)` function on the pem struct.
-```
-let privkey_pem = decode_pem(pem_string_here).unwrap();
-let privkey = privkey_pem.as_key(Algorithm::RS256).unwrap();
-```
-
-### ECDSA
-`jsonwebtoken` can read PKCS#8 DER encoded private keys and public keys, as well as PEM encoded keys. Like RSA, to read a PEM key, you must use the pem decoder.
-
-To generate an EC key, you can do the following.
-
-```bash
-// private key
-openssl ecparam -genkey -name prime256v1 | openssl ec -out private_key.pem
-// public key
-openssl ec -in private_key.pem -pubout -out public_key.pem
-```
+### RSA & ECDSA
+By default, the `encode`/`decode` functions takes the PEM format since it is the most common.
+RSA can also use the public key components modulus/exponent in base64 format for decoding.

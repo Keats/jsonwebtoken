@@ -1,5 +1,8 @@
 use chrono::Utc;
-use jsonwebtoken::{decode, decode_rsa_jwk, encode, sign, verify, Algorithm, Header, Validation};
+use jsonwebtoken::{
+    crypto::{sign, verify},
+    decode, decode_rsa_components, encode, Algorithm, Header, Validation,
+};
 use serde::{Deserialize, Serialize};
 
 const RSA_ALGORITHMS: &[Algorithm] = &[
@@ -76,7 +79,7 @@ fn rsa_modulus_exponent() {
     let e = "AQAB";
 
     let encrypted = encode(&Header::new(Algorithm::RS256), &my_claims, privkey.as_ref()).unwrap();
-    let res = decode_rsa_jwk::<Claims>(&encrypted, n, e, &Validation::new(Algorithm::RS256));
+    let res = decode_rsa_components::<Claims>(&encrypted, n, e, &Validation::new(Algorithm::RS256));
     assert!(res.is_ok());
 }
 

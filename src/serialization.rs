@@ -4,16 +4,6 @@ use serde_json::map::Map;
 use serde_json::{from_str, to_string, Value};
 
 use crate::errors::Result;
-use crate::header::Header;
-
-/// The return type of a successful call to decode
-#[derive(Debug)]
-pub struct TokenData<T> {
-    /// The decoded JWT header
-    pub header: Header,
-    /// The decoded JWT claims
-    pub claims: T,
-}
 
 pub(crate) fn b64_encode(input: &[u8]) -> String {
     base64::encode_config(input, base64::URL_SAFE_NO_PAD)

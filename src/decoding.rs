@@ -3,8 +3,17 @@ use serde::de::DeserializeOwned;
 use crate::crypto::{verify, verify_rsa_components};
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
-use crate::serialization::{from_jwt_part_claims, TokenData};
+use crate::serialization::from_jwt_part_claims;
 use crate::validation::{validate, Validation};
+
+/// The return type of a successful call to [decode](fn.decode.html).
+#[derive(Debug)]
+pub struct TokenData<T> {
+    /// The decoded JWT header
+    pub header: Header,
+    /// The decoded JWT claims
+    pub claims: T,
+}
 
 /// Takes the result of a rsplit and ensure we only get 2 parts
 /// Errors if we don't
@@ -54,7 +63,7 @@ fn _decode<T: DeserializeOwned>(
     Ok(TokenData { header, claims: decoded_claims })
 }
 
-/// Decode a token into a struct containing 2 fields: `claims` and `header`.
+/// Decode and validate a JWT using a secret for HS and a public PEM format for RSA/EC
 ///
 /// If the token or its signature is invalid or the claims fail validation, it will return an error.
 ///
@@ -80,8 +89,27 @@ pub fn decode<T: DeserializeOwned>(
     _decode(token, DecodingKey::SecretOrPem(key), validation)
 }
 
-/// TO TEST
-pub fn decode_rsa_jwk<T: DeserializeOwned>(
+/// Decode and validate a JWT using (n, e) base64 encoded public key components for RSA
+///
+/// If the token or its signature is invalid or the claims fail validation, it will return an error.
+///
+/// ```rust
+/// use serde::{Deserialize, Serialize};
+/// use jsonwebtoken::{decode_rsa_components, Validation, Algorithm};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String
+/// }
+///
+/// let modulus = "some-base64-data";
+/// let exponent = "some-base64-data";
+/// let token = "a.jwt.token".to_string();
+/// // Claims is a struct that implements Deserialize
+/// let token_message = decode_rsa_components::<Claims>(&token, &modulus, &exponent, &Validation::new(Algorithm::HS256));
+/// ```
+pub fn decode_rsa_components<T: DeserializeOwned>(
     token: &str,
     modulus: &str,
     exponent: &str,
@@ -90,7 +118,7 @@ pub fn decode_rsa_jwk<T: DeserializeOwned>(
     _decode(token, DecodingKey::RsaModulusExponent { n: modulus, e: exponent }, validation)
 }
 
-/// Decode a token without any signature validation into a struct containing 2 fields: `claims` and `header`.
+/// Decode a JWT without any signature verification/validations.
 ///
 /// NOTE: Do not use this unless you know what you are doing! If the token's signature is invalid, it will *not* return an error.
 ///
@@ -118,10 +146,9 @@ pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<Token
     Ok(TokenData { header, claims: decoded_claims })
 }
 
-/// Decode a token and return the Header. This is not doing any kind of validation: it only splits
-/// on the `.` and return the base64 decoded header.
+/// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
 ///
-/// If the token has an invalid format, it will return an error.
+/// If the token has an invalid format (ie 3 parts separated by a `.`), it will return an error.
 ///
 /// ```rust
 /// use jsonwebtoken::decode_header;

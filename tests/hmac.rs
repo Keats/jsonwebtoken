@@ -1,7 +1,7 @@
 use chrono::Utc;
 use jsonwebtoken::{
-    dangerous_unsafe_decode, decode, decode_header, encode, sign, verify, Algorithm, Header,
-    Validation,
+    crypto::{sign, verify},
+    dangerous_unsafe_decode, decode, decode_header, encode, Algorithm, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
 

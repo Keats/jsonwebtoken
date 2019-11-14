@@ -1,5 +1,8 @@
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, sign, verify, Algorithm, Header, Validation};
+use jsonwebtoken::{
+    crypto::{sign, verify},
+    decode, encode, Algorithm, Header, Validation,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

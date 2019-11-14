@@ -1,8 +1,5 @@
 use crate::errors::{ErrorKind, Result};
 
-extern crate pem;
-extern crate simple_asn1;
-
 use simple_asn1::{BigUint, OID};
 
 /// Supported PEM files for EC and RSA Public and Private Keys

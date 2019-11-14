@@ -3,7 +3,7 @@ use simple_asn1::BigUint;
 
 use crate::algorithms::Algorithm;
 use crate::errors::{ErrorKind, Result};
-use crate::pem_decoder::PemEncodedKey;
+use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, b64_encode};
 
 /// Only used internally when validating RSA, to map from our enum to the Ring param structs.

@@ -7,7 +7,7 @@ use serde_json::{from_value, Value};
 use crate::algorithms::Algorithm;
 use crate::errors::{new_error, ErrorKind, Result};
 
-/// Contains the various validations that are applied after decoding a token.
+/// Contains the various validations that are applied after decoding a JWT.
 ///
 /// All time validation happen on UTC timestamps as seconds.
 ///

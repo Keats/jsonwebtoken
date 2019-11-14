@@ -3,7 +3,7 @@ use ring::{hmac, signature};
 
 use crate::algorithms::Algorithm;
 use crate::errors::Result;
-use crate::pem_decoder::PemEncodedKey;
+use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, b64_encode};
 
 pub(crate) mod ecdsa;
@@ -19,7 +19,8 @@ pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> Resu
 /// Take the payload of a JWT, sign it using the algorithm given and return
 /// the base64 url safe encoded of the result.
 ///
-/// Only use this function if you want to do something other than JWT.
+/// If you just want to encode a JWT, use `encode` instead.
+///
 /// `key` is the secret for HMAC and a pem encoded string otherwise
 pub fn sign(message: &str, key: &[u8], algorithm: Algorithm) -> Result<String> {
     match algorithm {
@@ -57,7 +58,7 @@ fn verify_ring(
 /// Compares the signature given with a re-computed signature for HMAC or using the public key
 /// for RSA/EC.
 ///
-/// Only use this function if you want to do something other than JWT.
+/// If you just want to decode a JWT, use `decode` instead.
 ///
 /// `signature` is the signature part of a jwt (text after the second '.')
 ///
@@ -109,5 +110,10 @@ pub fn verify_rsa_components(
     alg: Algorithm,
 ) -> Result<bool> {
     let signature_bytes = b64_decode(signature)?;
-    rsa::verify_from_components(rsa::alg_to_rsa_parameters(alg), &signature_bytes, message, components)
+    rsa::verify_from_components(
+        rsa::alg_to_rsa_parameters(alg),
+        &signature_bytes,
+        message,
+        components,
+    )
 }

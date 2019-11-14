@@ -2,43 +2,39 @@ use crate::errors::{ErrorKind, Result};
 use pem::Pem;
 use simple_asn1::{ASN1Block, BigInt, BigUint, OID};
 
-extern crate base64;
-extern crate pem;
-extern crate simple_asn1;
-
-pub fn encode_rsa_public_pkcs1_pem(modulus: &[u8], exponent: &[u8]) -> Result<String> {
+pub(crate) fn encode_rsa_public_pkcs1_pem(modulus: &[u8], exponent: &[u8]) -> Result<String> {
     Ok(pem::encode(&Pem {
         contents: encode_rsa_public_pkcs1_der(modulus, exponent)?,
         tag: "RSA PUBLIC KEY".to_string(),
     }))
 }
 
-pub fn encode_rsa_public_pkcs1_der(modulus: &[u8], exponent: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn encode_rsa_public_pkcs1_der(modulus: &[u8], exponent: &[u8]) -> Result<Vec<u8>> {
     match simple_asn1::to_der(&encode_rsa_public_pksc1_asn1(modulus, exponent)) {
         Ok(bytes) => Ok(bytes),
         Err(_) => Err(ErrorKind::InvalidRsaKey.into()),
     }
 }
 
-pub fn encode_rsa_public_pkcs8_pem(modulus: &[u8], exponent: &[u8]) -> Result<String> {
+pub(crate) fn encode_rsa_public_pkcs8_pem(modulus: &[u8], exponent: &[u8]) -> Result<String> {
     Ok(pem::encode(&Pem {
         contents: encode_rsa_public_pkcs8_der(modulus, exponent)?,
         tag: "PUBLIC KEY".to_string(),
     }))
 }
 
-pub fn encode_rsa_public_pkcs8_der(modulus: &[u8], exponent: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn encode_rsa_public_pkcs8_der(modulus: &[u8], exponent: &[u8]) -> Result<Vec<u8>> {
     match simple_asn1::to_der(&encode_rsa_public_pksc8_asn1(modulus, exponent)?) {
         Ok(bytes) => Ok(bytes),
         Err(_) => Err(ErrorKind::InvalidRsaKey.into()),
     }
 }
 
-pub fn encode_ec_public_pem(x: &[u8]) -> Result<String> {
+pub(crate) fn encode_ec_public_pem(x: &[u8]) -> Result<String> {
     Ok(pem::encode(&Pem { contents: encode_ec_public_der(x)?, tag: "PUBLIC KEY".to_string() }))
 }
 
-pub fn encode_ec_public_der(x: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn encode_ec_public_der(x: &[u8]) -> Result<Vec<u8>> {
     match simple_asn1::to_der(&encode_ec_public_asn1(x)) {
         Ok(bytes) => Ok(bytes),
         Err(_) => Err(ErrorKind::InvalidEcdsaKey.into()),
