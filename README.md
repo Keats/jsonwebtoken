@@ -158,3 +158,5 @@ let mut validation = Validation::default();
 validation.set_audience(&"Me"); // string
 validation.set_audience(&["Me", "You"]); // array of strings
 ```
+
+Look at `examples/validation.rs` for a full working example.
