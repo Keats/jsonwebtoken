@@ -1,0 +1,32 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [pinned, stable, nightly]
+        include:
+        - build: pinned
+          os: ubuntu-18.04
+          rust: 1.34.0
+        - build: stable
+          os: ubuntu-18.04
+          rust: stable
+        - build: nightly
+          os: ubuntu-18.04
+          rust: nightly
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Rust
+      uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: ${{ matrix.rust }}
+
+    - name: Build System Info
+      run: rustc --version
+
+    - name: Run tests
+      run: cargo test
