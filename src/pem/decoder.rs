@@ -13,7 +13,9 @@ enum PemType {
 
 #[derive(Debug, PartialEq)]
 enum Standard {
+    // Only for RSA
     Pkcs1,
+    // RSA/EC
     Pkcs8,
 }
 

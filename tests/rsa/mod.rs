@@ -89,3 +89,22 @@ fn fails_with_non_pkcs8_key_format() {
     let _encrypted =
         sign("hello world", include_bytes!("private_rsa_key_pkcs1.pem"), Algorithm::ES256).unwrap();
 }
+
+// https://jwt.io/ is often used for examples so ensure their example works with jsonwebtoken
+#[test]
+fn roundtrip_with_jwtio_example_jey() {
+    let privkey_pem = include_bytes!("private_jwtio.pem");
+    let pubkey_pem = include_bytes!("public_jwtio.pem");
+
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: Utc::now().timestamp() + 10000,
+    };
+
+    for &alg in RSA_ALGORITHMS {
+        let token = encode(&Header::new(alg), &my_claims, privkey_pem).unwrap();
+        let token_data = decode::<Claims>(&token, pubkey_pem, &Validation::new(alg)).unwrap();
+        assert_eq!(my_claims, token_data.claims);
+    }
+}

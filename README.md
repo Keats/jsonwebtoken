@@ -132,6 +132,14 @@ You can use openssl for that:
 openssl rsa -inform DER -outform PEM -in mykey.der -out mykey.pem
 ```
 
+### Convert SEC1 private key to PKCS8
+`jsonwebtoken` currently only supports PKCS8 format for private EC keys. If your key has `BEGIN EC PRIVATE KEY` at the top,
+this is a SEC1 type and can be converted to PKCS8 like so:
+
+```bash
+openssl pkcs8 -topk8 -nocrypt -in sec1.pem -out pkcs8.pem
+```
+
 
 ## Validation
 This library validates automatically the `exp` claim and `nbf` is validated if present. You can also validate the `sub`, `iss` and `aud` but
