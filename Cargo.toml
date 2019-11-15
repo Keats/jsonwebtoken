@@ -1,13 +1,13 @@
 [package]
 name = "jsonwebtoken"
-version = "7.0.0"
+version = "7.0.0-alpha.1"
 authors = ["Vincent Prouillet <hello@vincentprouillet.com>"]
 license = "MIT"
 readme = "README.md"
 description = "Create and decode JWTs in a strongly typed way."
 homepage = "https://github.com/Keats/jsonwebtoken"
 repository = "https://github.com/Keats/jsonwebtoken"
-keywords = ["jwt", "web", "api", "token", "json", "jwk"]
+keywords = ["jwt", "web", "api", "token", "jwk"]
 edition = "2018"
 
 [dependencies]

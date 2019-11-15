@@ -4,7 +4,7 @@
 
 [API documentation on docs.rs](https://docs.rs/jsonwebtoken/)
 
-See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more information on what are JSON Web Tokens.
+See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more information on what JSON Web Tokens are.
 
 ## Installation
 Add the following to Cargo.toml:
