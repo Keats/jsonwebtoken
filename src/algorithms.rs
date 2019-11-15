@@ -1,7 +1,8 @@
-use crate::errors::{new_error, Error, ErrorKind, Result};
+use crate::errors::{Error, ErrorKind, Result};
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-/// The algorithms supported for signing/verifying
+/// The algorithms supported for signing/verifying JWTs
 #[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
     /// HMAC using SHA-256
@@ -52,7 +53,26 @@ impl FromStr for Algorithm {
             "PS384" => Ok(Algorithm::PS384),
             "PS512" => Ok(Algorithm::PS512),
             "RS512" => Ok(Algorithm::RS512),
-            _ => Err(new_error(ErrorKind::InvalidAlgorithmName)),
+            _ => Err(ErrorKind::InvalidAlgorithmName.into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generate_algorithm_enum_from_str() {
+        assert!(Algorithm::from_str("HS256").is_ok());
+        assert!(Algorithm::from_str("HS384").is_ok());
+        assert!(Algorithm::from_str("HS512").is_ok());
+        assert!(Algorithm::from_str("RS256").is_ok());
+        assert!(Algorithm::from_str("RS384").is_ok());
+        assert!(Algorithm::from_str("RS512").is_ok());
+        assert!(Algorithm::from_str("PS256").is_ok());
+        assert!(Algorithm::from_str("PS384").is_ok());
+        assert!(Algorithm::from_str("PS512").is_ok());
+        assert!(Algorithm::from_str("").is_err());
     }
 }

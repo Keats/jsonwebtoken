@@ -4,10 +4,10 @@
 
 - Add support for PS256, PS384 and PS512
 - Add support for verifying with modulus/exponent components for RSA
-- Change API for both sign/verify to take a `Key` enum rather than bytes
 - Update to 2018 edition
 - Changed aud field type in Validation to `Option<HashSet<String>>`.  Audience 
   validation now tests for "any-of-these" audience membership.
+- Add support for keys in PEM format
 
 ## 6.0.1 (2019-05-10)
 

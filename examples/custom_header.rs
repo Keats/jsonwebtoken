@@ -1,9 +1,7 @@
-extern crate jsonwebtoken as jwt;
-#[macro_use]
-extern crate serde_derive;
+use serde::{Deserialize, Serialize};
 
-use jwt::errors::ErrorKind;
-use jwt::{decode, encode, Algorithm, Header, Key, Validation};
+use jsonwebtoken::errors::ErrorKind;
+use jsonwebtoken::{decode, encode, Algorithm, Header, Validation};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -21,20 +19,19 @@ fn main() {
     header.kid = Some("signing_key".to_owned());
     header.alg = Algorithm::HS512;
 
-    let token = match encode(&header, &my_claims, Key::Hmac(key)) {
+    let token = match encode(&header, &my_claims, key) {
         Ok(t) => t,
         Err(_) => panic!(), // in practice you would return the error
     };
     println!("{:?}", token);
 
-    let token_data =
-        match decode::<Claims>(&token, Key::Hmac(key), &Validation::new(Algorithm::HS512)) {
-            Ok(c) => c,
-            Err(err) => match *err.kind() {
-                ErrorKind::InvalidToken => panic!(), // Example on how to handle a specific error
-                _ => panic!(),
-            },
-        };
+    let token_data = match decode::<Claims>(&token, key, &Validation::new(Algorithm::HS512)) {
+        Ok(c) => c,
+        Err(err) => match *err.kind() {
+            ErrorKind::InvalidToken => panic!(), // Example on how to handle a specific error
+            _ => panic!(),
+        },
+    };
     println!("{:?}", token_data.claims);
     println!("{:?}", token_data.header);
 }

@@ -4,25 +4,41 @@
 
 [API documentation on docs.rs](https://docs.rs/jsonwebtoken/)
 
+See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more information on what are JSON Web Tokens.
+
 ## Installation
 Add the following to Cargo.toml:
 
 ```toml
 jsonwebtoken = "7"
-serde_derive = "1"
-serde = "1"
+serde = {version = "1.0", features = ["derive"] }
 ```
+
+The minimum required Rust version is 1.36.
+
+## Algorithms
+This library currently supports the following:
+
+- HS256
+- HS384
+- HS512
+- RS256
+- RS384
+- RS512
+- PS256
+- PS384
+- PS512
+- ES256
+- ES384
+
 
 ## How to use
 Complete examples are available in the examples directory: a basic one and one with a custom header.
 
 In terms of imports and structs:
 ```rust
-extern crate jsonwebtoken as jwt;
-#[macro_use]
-extern crate serde_derive;
-
-use jwt::{encode, decode, Header, Algorithm, Validation};
+use serde::{Serialize, Deserialize};
+use jsonwebtoken::{encode, decode, Header, Algorithm, Validation};
 
 /// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,8 +49,8 @@ struct Claims {
 }
 ```
 
-### Encoding
-The default algorithm is HS256.
+### Header
+The default algorithm is HS256, which uses a shared secret.
 
 ```rust
 let token = encode(&Header::default(), &my_claims, "secret".as_ref())?;
@@ -45,38 +61,92 @@ All the parameters from the RFC are supported but the default header only has `t
 If you want to set the `kid` parameter or change the algorithm for example:
 
 ```rust
-let mut header = Header::default();
+let mut header = Header::new(Algorithm::HS512);
 header.kid = Some("blabla".to_owned());
-header.alg = Algorithm::HS512;
 let token = encode(&header, &my_claims, "secret".as_ref())?;
 ```
 Look at `examples/custom_header.rs` for a full working example.
 
-### Decoding
+### Encoding
+
 ```rust
+// HS256
+let token = encode(&Header::default(), &my_claims, "secret".as_ref())?;
+// RSA
+let token = encode(&Header::new(Algorithm::RS256), &my_claims, include_str!("privkey.pem"))?;
+```
+Encoding a JWT takes 3 parameters:
+
+- a header: the `Header` struct
+- some claims: your own struct
+- a key/secret
+
+When using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
+RSA/EC, the key should always be the content of the private key in the PEM format.
+
+### Decoding
+
+```rust
+// `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
 let token = decode::<Claims>(&token, "secret".as_ref(), &Validation::default())?;
-// token is a struct with 2 params: header and claims
 ```
 `decode` can error for a variety of reasons:
 
 - the token or its signature is invalid
-- error while decoding base64 or the result of decoding base64 is not valid UTF-8
+- the token had invalid base64
 - validation of at least one reserved claim failed
 
-In some cases, for example if you don't know the algorithm used, you will want to only decode the header:
+As with encoding, when using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
+RSA/EC, the key should always be the content of the public key in the PEM format.
+
+In some cases, for example if you don't know the algorithm used or need to grab the `kid`, you can choose to decode only the header:
 
 ```rust
 let header = decode_header(&token)?;
 ```
 
-This does not perform any validation on the token.
+This does not perform any signature verification or validate the token claims.
 
-#### Validation
-This library validates automatically the `exp` claim. `nbf` is also validated if present. You can also validate the `sub`, `iss` and `aud` but
+You can also decode a token using the public key components of a RSA key in base64 format. 
+The main use-case is for JWK where your public key is in a JSON format like so:
+
+```json
+{
+   "kty":"RSA",
+   "e":"AQAB",
+   "kid":"6a7a119f-0876-4f7e-8d0f-bf3ea1391dd8",
+   "n":"yRE6rHuNR0QbHO3H3Kt2pOKGVhQqGZXInOduQNxXzuKlvQTLUTv4l4sggh5_CYYi_cvI-SXVT9kPWSKXxJXBXd_4LkvcPuUakBoAkfh-eiFVMh2VrUyWyj3MFl0HTVF9KwRXLAcwkREiS3npThHRyIxuy0ZMeZfxVL5arMhw1SRELB8HoGfG_AtH89BIE9jDBHZ9dLelK9a184zAf8LwoPLxvJb3Il5nncqPcSfKDDodMFBIMc4lQzDKL5gvmiXLXB1AGLm8KBjfE8s3L5xqi-yUod-j8MtvIj812dkS4QMiRVN_by2h3ZY8LYVGrqZXZTcgn2ujn8uKjXLZVD5TdQ"
+}
+```
+
+```rust
+// `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
+let token = decode_rsa_components::<Claims>(&token, jwk["n"], jwk["e"], &Validation::new(Algorithm::RS256))?;
+```
+
+### Converting .der to .pem
+
+You can use openssl for that:
+
+```bash
+openssl rsa -inform DER -outform PEM -in mykey.der -out mykey.pem
+```
+
+### Convert SEC1 private key to PKCS8
+`jsonwebtoken` currently only supports PKCS8 format for private EC keys. If your key has `BEGIN EC PRIVATE KEY` at the top,
+this is a SEC1 type and can be converted to PKCS8 like so:
+
+```bash
+openssl pkcs8 -topk8 -nocrypt -in sec1.pem -out pkcs8.pem
+```
+
+
+## Validation
+This library validates automatically the `exp` claim and `nbf` is validated if present. You can also validate the `sub`, `iss` and `aud` but
 those require setting the expected value in the `Validation` struct.
 
 Since validating time fields is always a bit tricky due to clock skew, 
-you can add some leeway to the `iat`, `exp` and `nbf` validation by setting a `leeway` parameter.
+you can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` field.
 
 Last but not least, you will need to set the algorithm(s) allowed for this token if you are not using `HS256`.
 
@@ -97,33 +167,4 @@ validation.set_audience(&"Me"); // string
 validation.set_audience(&["Me", "You"]); // array of strings
 ```
 
-## Algorithms
-This library currently supports the following:
-
-- HS256
-- HS384
-- HS512
-- RS256
-- RS384
-- RS512
-- PS256
-- PS384
-- PS512
-- ES256
-- ES384
-
-### RSA
-`jsonwebtoken` can only read DER encoded keys currently. If you have openssl installed,
-you can run the following commands to obtain the DER keys from PKCS#1 (ie with `BEGIN RSA PUBLIC KEY`) .pem.
-If you have a PKCS#8 pem file (ie starting with `BEGIN PUBLIC KEY`), you will need to first convert it to PKCS#1:
-`openssl rsa -pubin -in <filename> -RSAPublicKey_out -out <filename>`.
-
-```bash
-// private key
-$ openssl rsa -in private_rsa_key.pem -outform DER -out private_rsa_key.der
-// public key
-$ openssl rsa -in private_rsa_key.der -inform DER -RSAPublicKey_out -outform DER -out public_key.der
-```
-
-If you are getting an error with your public key, make sure you get it by using the command above to ensure
-it is in the right format.
+Look at `examples/validation.rs` for a full working example.

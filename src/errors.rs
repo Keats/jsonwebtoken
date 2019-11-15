@@ -45,7 +45,7 @@ pub enum ErrorKind {
     /// When a key is provided with an invalid format
     InvalidKeyFormat,
 
-    // validation error
+    // Validation errors
     /// When a token’s `exp` claim indicates that it has expired
     ExpiredSignature,
     /// When a token’s `iss` claim does not match the expected issuer
@@ -91,11 +91,13 @@ impl StdError for Error {
             ErrorKind::InvalidSubject => "invalid subject",
             ErrorKind::ImmatureSignature => "immature signature",
             ErrorKind::InvalidAlgorithm => "algorithms don't match",
+            ErrorKind::InvalidAlgorithmName => "not a known algorithm",
+            ErrorKind::InvalidKeyFormat => "invalid key format",
             ErrorKind::Base64(ref err) => err.description(),
             ErrorKind::Json(ref err) => err.description(),
             ErrorKind::Utf8(ref err) => err.description(),
             ErrorKind::Crypto(ref err) => err.description(),
-            _ => unreachable!(),
+            ErrorKind::__Nonexhaustive => "unknown error",
         }
     }
 
@@ -111,11 +113,13 @@ impl StdError for Error {
             ErrorKind::InvalidSubject => None,
             ErrorKind::ImmatureSignature => None,
             ErrorKind::InvalidAlgorithm => None,
+            ErrorKind::InvalidAlgorithmName => None,
+            ErrorKind::InvalidKeyFormat => None,
             ErrorKind::Base64(ref err) => Some(err),
             ErrorKind::Json(ref err) => Some(err),
             ErrorKind::Utf8(ref err) => Some(err),
             ErrorKind::Crypto(ref err) => Some(err),
-            _ => unreachable!(),
+            ErrorKind::__Nonexhaustive => None,
         }
     }
 }
@@ -123,21 +127,23 @@ impl StdError for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self.0 {
-            ErrorKind::InvalidToken => write!(f, "invalid token"),
-            ErrorKind::InvalidSignature => write!(f, "invalid signature"),
-            ErrorKind::InvalidEcdsaKey => write!(f, "invalid ECDSA key"),
-            ErrorKind::InvalidRsaKey => write!(f, "invalid RSA key"),
-            ErrorKind::ExpiredSignature => write!(f, "expired signature"),
-            ErrorKind::InvalidIssuer => write!(f, "invalid issuer"),
-            ErrorKind::InvalidAudience => write!(f, "invalid audience"),
-            ErrorKind::InvalidSubject => write!(f, "invalid subject"),
-            ErrorKind::ImmatureSignature => write!(f, "immature signature"),
-            ErrorKind::InvalidAlgorithm => write!(f, "algorithms don't match"),
-            ErrorKind::Base64(ref err) => write!(f, "base64 error: {}", err),
+            ErrorKind::InvalidToken
+            | ErrorKind::InvalidSignature
+            | ErrorKind::InvalidEcdsaKey
+            | ErrorKind::InvalidRsaKey
+            | ErrorKind::ExpiredSignature
+            | ErrorKind::InvalidIssuer
+            | ErrorKind::InvalidAudience
+            | ErrorKind::InvalidSubject
+            | ErrorKind::ImmatureSignature
+            | ErrorKind::InvalidAlgorithm
+            | ErrorKind::InvalidKeyFormat
+            | ErrorKind::InvalidAlgorithmName => write!(f, "{}", self.description()),
             ErrorKind::Json(ref err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Crypto(ref err) => write!(f, "Crypto error: {}", err),
-            _ => unreachable!(),
+            ErrorKind::Base64(ref err) => write!(f, "Base64 error: {}", err),
+            ErrorKind::__Nonexhaustive => write!(f, "Unknown error"),
         }
     }
 }
