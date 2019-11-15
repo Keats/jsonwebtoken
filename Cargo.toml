@@ -24,4 +24,4 @@ simple_asn1 = "0.4"
 chrono = "0.4"
 
 [badges]
-maintenance = { status = "passively-developed" }
+maintenance = { status = "passively-maintained" }
