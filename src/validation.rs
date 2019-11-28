@@ -147,10 +147,20 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if let Some(ref correct_aud) = options.aud {
         if let Some(aud) = claims.get("aud") {
-            let provided_aud: HashSet<String> = from_value(aud.clone())?;
-            if provided_aud.intersection(correct_aud).count() == 0 {
-                return Err(new_error(ErrorKind::InvalidAudience));
-            }
+            match aud {
+                Value::String(aud_found) => {
+                    if !correct_aud.contains(aud_found) {
+                        return Err(new_error(ErrorKind::InvalidAudience));
+                    }
+                }
+                Value::Array(_) => {
+                    let provided_aud: HashSet<String> = from_value(aud.clone())?;
+                    if provided_aud.intersection(correct_aud).count() == 0 {
+                        return Err(new_error(ErrorKind::InvalidAudience));
+                    }
+                }
+                _ => return Err(new_error(ErrorKind::InvalidAudience))
+            };
         } else {
             return Err(new_error(ErrorKind::InvalidAudience));
         }
@@ -431,5 +441,25 @@ mod tests {
                 assert!(false)
             }
         };
+    }
+
+    // https://github.com/Keats/jsonwebtoken/issues/110
+    #[test]
+    fn aud_use_validation_struct() {
+        let mut claims = Map::new();
+        claims.insert("aud".to_string(), to_value("my-googleclientid1234.apps.googleusercontent.com").unwrap());
+
+        let aud = "my-googleclientid1234.apps.googleusercontent.com".to_string();
+        let mut aud_hashset = std::collections::HashSet::new();
+        aud_hashset.insert(aud);
+
+        let validation = Validation {
+            aud: Some(aud_hashset),
+            validate_exp: false,
+            ..Validation::default()
+        };
+        let res = validate(&claims, &validation);
+        println!("{:?}", res);
+        assert!(res.is_ok());
     }
 }
