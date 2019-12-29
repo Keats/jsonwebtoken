@@ -1,7 +1,7 @@
 use chrono::Utc;
 use jsonwebtoken::{
     crypto::{sign, verify},
-    decode, decode_rsa_components, encode, Algorithm, EncodingKey, Header, Validation,
+    decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +29,9 @@ fn round_trip_sign_verification_pem_pkcs1() {
     for &alg in RSA_ALGORITHMS {
         let encrypted =
             sign("hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
-        let is_valid = verify(&encrypted, "hello world", pubkey_pem, alg).unwrap();
+        let is_valid =
+            verify(&encrypted, "hello world", &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(), alg)
+                .unwrap();
         assert!(is_valid);
     }
 }
@@ -42,7 +44,24 @@ fn round_trip_sign_verification_pem_pkcs8() {
     for &alg in RSA_ALGORITHMS {
         let encrypted =
             sign("hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
-        let is_valid = verify(&encrypted, "hello world", pubkey_pem, alg).unwrap();
+        let is_valid =
+            verify(&encrypted, "hello world", &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(), alg)
+                .unwrap();
+        assert!(is_valid);
+    }
+}
+
+#[test]
+fn round_trip_sign_verification_der() {
+    let privkey_der = include_bytes!("private_rsa_key.der");
+    let pubkey_der = include_bytes!("public_rsa_key.der");
+
+    for &alg in RSA_ALGORITHMS {
+        let encrypted =
+            sign("hello world", &EncodingKey::from_der(privkey_der), alg).unwrap();
+        let is_valid =
+            verify(&encrypted, "hello world", &DecodingKey::from_der(pubkey_der), alg)
+                .unwrap();
         assert!(is_valid);
     }
 }
@@ -54,15 +73,16 @@ fn round_trip_claim() {
         company: "ACME".to_string(),
         exp: Utc::now().timestamp() + 10000,
     };
-    let privkey = include_bytes!("private_rsa_key_pkcs1.pem");
+    let privkey_pem = include_bytes!("private_rsa_key_pkcs1.pem");
+    let pubkey_pem = include_bytes!("public_rsa_key_pkcs1.pem");
 
     for &alg in RSA_ALGORITHMS {
         let token =
-            encode(&Header::new(alg), &my_claims, &EncodingKey::from_rsa_pem(privkey).unwrap())
+            encode(&Header::new(alg), &my_claims, &EncodingKey::from_rsa_pem(privkey_pem).unwrap())
                 .unwrap();
         let token_data = decode::<Claims>(
             &token,
-            include_bytes!("public_rsa_key_pkcs1.pem"),
+            &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
             &Validation::new(alg),
         )
         .unwrap();
@@ -88,7 +108,11 @@ fn rsa_modulus_exponent() {
         &EncodingKey::from_rsa_pem(privkey.as_ref()).unwrap(),
     )
     .unwrap();
-    let res = decode_rsa_components::<Claims>(&encrypted, n, e, &Validation::new(Algorithm::RS256));
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_rsa_components(n, e),
+        &Validation::new(Algorithm::RS256),
+    );
     assert!(res.is_ok());
 }
 
@@ -108,7 +132,12 @@ fn roundtrip_with_jwtio_example_jey() {
         let token =
             encode(&Header::new(alg), &my_claims, &EncodingKey::from_rsa_pem(privkey_pem).unwrap())
                 .unwrap();
-        let token_data = decode::<Claims>(&token, pubkey_pem, &Validation::new(alg)).unwrap();
+        let token_data = decode::<Claims>(
+            &token,
+            &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
+            &Validation::new(alg),
+        )
+        .unwrap();
         assert_eq!(my_claims, token_data.claims);
     }
 }

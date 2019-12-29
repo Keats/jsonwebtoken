@@ -50,12 +50,14 @@ pub(crate) fn sign(
     Ok(b64_encode(&signature))
 }
 
+/// Checks that a signature is valid based on the (n, e) RSA pubkey components
 pub(crate) fn verify_from_components(
     alg: &'static signature::RsaParameters,
-    signature_bytes: &[u8],
+    signature: &str,
     message: &str,
     components: (&str, &str),
 ) -> Result<bool> {
+    let signature_bytes = b64_decode(signature)?;
     let n = BigUint::from_bytes_be(&b64_decode(components.0)?).to_bytes_be();
     let e = BigUint::from_bytes_be(&b64_decode(components.1)?).to_bytes_be();
     let pubkey = signature::RsaPublicKeyComponents { n, e };

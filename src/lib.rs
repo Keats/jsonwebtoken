@@ -16,9 +16,7 @@ mod serialization;
 mod validation;
 
 pub use algorithms::Algorithm;
-pub use decoding::{
-    dangerous_unsafe_decode, decode, decode_header, decode_rsa_components, TokenData,
-};
+pub use decoding::{dangerous_unsafe_decode, decode, decode_header, DecodingKey, TokenData};
 pub use encoding::{encode, EncodingKey};
 pub use header::Header;
 pub use validation::Validation;

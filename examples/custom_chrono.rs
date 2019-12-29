@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use jsonwebtoken::{EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 const SECRET: &str = "some-secret";
@@ -57,8 +57,12 @@ mod jwt_numeric_date {
 
             assert_eq!(&token, EXPECTED_TOKEN);
 
-            let decoded = decode::<Claims>(&token, SECRET.as_ref(), &Validation::default())
-                .expect("Failed to decode token");
+            let decoded = decode::<Claims>(
+                &token,
+                &DecodingKey::from_secret(SECRET.as_ref()),
+                &Validation::default(),
+            )
+            .expect("Failed to decode token");
 
             assert_eq!(decoded.claims, claims);
         }
@@ -91,8 +95,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("serialized token: {}", &token);
 
-    let token_data =
-        jsonwebtoken::decode::<Claims>(&token, SECRET.as_ref(), &Validation::default())?;
+    let token_data = jsonwebtoken::decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(SECRET.as_ref()),
+        &Validation::default(),
+    )?;
 
     println!("token data:\n{:#?}", &token_data);
     Ok(())

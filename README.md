@@ -38,7 +38,7 @@ Complete examples are available in the examples directory: a basic one and one w
 In terms of imports and structs:
 ```rust
 use serde::{Serialize, Deserialize};
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey};
+use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 
 /// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
 #[derive(Debug, Serialize, Deserialize)]
@@ -73,7 +73,7 @@ Look at `examples/custom_header.rs` for a full working example.
 // HS256
 let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
 // RSA
-let token = encode(&Header::new(Algorithm::RS256), &my_claims, include_str!("privkey.pem"))?;
+let token = encode(&Header::new(Algorithm::RS256), &my_claims, &EncodingKey::from_rsa_pem(include_bytes!("privkey.pem"))?)?;
 ```
 Encoding a JWT takes 3 parameters:
 
@@ -82,13 +82,13 @@ Encoding a JWT takes 3 parameters:
 - a key/secret
 
 When using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
-RSA/EC, the key should always be the content of the private key in the PEM format.
+RSA/EC, the key should always be the content of the private key in the PEM or DER format.
 
 ### Decoding
 
 ```rust
 // `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
-let token = decode::<Claims>(&token, "secret".as_ref(), &Validation::default())?;
+let token = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::default())?;
 ```
 `decode` can error for a variety of reasons:
 
@@ -97,7 +97,7 @@ let token = decode::<Claims>(&token, "secret".as_ref(), &Validation::default())?
 - validation of at least one reserved claim failed
 
 As with encoding, when using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
-RSA/EC, the key should always be the content of the public key in the PEM format.
+RSA/EC, the key should always be the content of the public key in the PEM or DER format.
 
 In some cases, for example if you don't know the algorithm used or need to grab the `kid`, you can choose to decode only the header:
 
@@ -121,15 +121,7 @@ The main use-case is for JWK where your public key is in a JSON format like so:
 
 ```rust
 // `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
-let token = decode_rsa_components::<Claims>(&token, jwk["n"], jwk["e"], &Validation::new(Algorithm::RS256))?;
-```
-
-### Converting .der to .pem
-
-You can use openssl for that:
-
-```bash
-openssl rsa -inform DER -outform PEM -in mykey.der -out mykey.pem
+let token = decode::<Claims>(&token, &EncodingKey::from_rsa_components(jwk["n"], jwk["e"]), &Validation::new(Algorithm::RS256))?;
 ```
 
 ### Convert SEC1 private key to PKCS8
@@ -145,7 +137,7 @@ openssl pkcs8 -topk8 -nocrypt -in sec1.pem -out pkcs8.pem
 This library validates automatically the `exp` claim and `nbf` is validated if present. You can also validate the `sub`, `iss` and `aud` but
 those require setting the expected value in the `Validation` struct.
 
-Since validating time fields is always a bit tricky due to clock skew, 
+Since validating time fields is always a bit tricky due to clock skew,
 you can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` field.
 
 Last but not least, you will need to set the algorithm(s) allowed for this token if you are not using `HS256`.

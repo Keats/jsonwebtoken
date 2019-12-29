@@ -9,6 +9,7 @@ use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::b64_encode_part;
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
+/// This key can be re-used so make sure you only initialize it once if you can for better performance
 #[derive(Debug, Clone, PartialEq)]
 pub struct EncodingKey<'a> {
     content: Cow<'a, [u8]>,
@@ -20,8 +21,8 @@ impl<'a> EncodingKey<'a> {
         EncodingKey { content: Cow::Borrowed(secret) }
     }
 
-    /// If you are loading a RSA key from a .pem file
-    /// This errors if the key is not a valid RSA key
+    /// If you are loading a RSA key from a .pem file.
+    /// This errors if the key is not a valid RSA key.
     pub fn from_rsa_pem(key: &'a [u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
@@ -42,7 +43,7 @@ impl<'a> EncodingKey<'a> {
     }
 
     /// Access the key, normal users do not need to use that.
-    pub fn inner(&'a self) -> &'a [u8] {
+    pub(crate) fn inner(&'a self) -> &'a [u8] {
         &self.content
     }
 }

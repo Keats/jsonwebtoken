@@ -1,7 +1,7 @@
 use chrono::Utc;
 use jsonwebtoken::{
     crypto::{sign, verify},
-    decode, encode, Algorithm, EncodingKey, Header, Validation,
+    decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -12,30 +12,37 @@ pub struct Claims {
     exp: i64,
 }
 
-// TODO: remove completely?
-//#[test]
-//fn round_trip_sign_verification_pk8() {
-//    let privkey = include_bytes!("private_ecdsa_key.pk8");
-//    let encrypted = sign("hello world", privkey, Algorithm::ES256).unwrap();
-//    let pubkey = include_bytes!("public_ecdsa_key.pk8");
-//    let is_valid = verify(&encrypted, "hello world", pubkey, Algorithm::ES256).unwrap();
-//    assert!(is_valid);
-//}
+#[test]
+fn round_trip_sign_verification_pk8() {
+    let privkey = include_bytes!("private_ecdsa_key.pk8");
+    let pubkey = include_bytes!("public_ecdsa_key.pk8");
+
+    let encrypted = sign("hello world", &EncodingKey::from_der(privkey), Algorithm::ES256).unwrap();
+    let is_valid = verify(&encrypted, "hello world", &DecodingKey::from_der(pubkey), Algorithm::ES256).unwrap();
+    assert!(is_valid);
+}
 
 #[test]
 fn round_trip_sign_verification_pem() {
-    let privkey = include_bytes!("private_ecdsa_key.pem");
-    let pubkey = include_bytes!("public_ecdsa_key.pem");
+    let privkey_pem = include_bytes!("private_ecdsa_key.pem");
+    let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
     let encrypted =
-        sign("hello world", &EncodingKey::from_ec_pem(privkey).unwrap(), Algorithm::ES256).unwrap();
-    let is_valid = verify(&encrypted, "hello world", pubkey, Algorithm::ES256).unwrap();
+        sign("hello world", &EncodingKey::from_ec_pem(privkey_pem).unwrap(), Algorithm::ES256)
+            .unwrap();
+    let is_valid = verify(
+        &encrypted,
+        "hello world",
+        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+        Algorithm::ES256,
+    )
+    .unwrap();
     assert!(is_valid);
 }
 
 #[test]
 fn round_trip_claim() {
-    let privkey = include_bytes!("private_ecdsa_key.pem");
-    let pubkey = include_bytes!("public_ecdsa_key.pem");
+    let privkey_pem = include_bytes!("private_ecdsa_key.pem");
+    let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
@@ -44,10 +51,15 @@ fn round_trip_claim() {
     let token = encode(
         &Header::new(Algorithm::ES256),
         &my_claims,
-        &EncodingKey::from_ec_pem(privkey).unwrap(),
+        &EncodingKey::from_ec_pem(privkey_pem).unwrap(),
     )
     .unwrap();
-    let token_data = decode::<Claims>(&token, pubkey, &Validation::new(Algorithm::ES256)).unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+        &Validation::new(Algorithm::ES256),
+    )
+    .unwrap();
     assert_eq!(my_claims, token_data.claims);
 }
 
@@ -55,8 +67,8 @@ fn round_trip_claim() {
 #[test]
 fn roundtrip_with_jwtio_example() {
     // We currently do not support SEC1 so we use the converted PKCS8 formatted
-    let privkey = include_bytes!("private_jwtio_pkcs8.pem");
-    let pubkey = include_bytes!("public_jwtio.pem");
+    let privkey_pem = include_bytes!("private_jwtio_pkcs8.pem");
+    let pubkey_pem = include_bytes!("public_jwtio.pem");
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
@@ -65,9 +77,14 @@ fn roundtrip_with_jwtio_example() {
     let token = encode(
         &Header::new(Algorithm::ES384),
         &my_claims,
-        &EncodingKey::from_ec_pem(privkey).unwrap(),
+        &EncodingKey::from_ec_pem(privkey_pem).unwrap(),
     )
     .unwrap();
-    let token_data = decode::<Claims>(&token, pubkey, &Validation::new(Algorithm::ES384)).unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+        &Validation::new(Algorithm::ES384),
+    )
+    .unwrap();
     assert_eq!(my_claims, token_data.claims);
 }

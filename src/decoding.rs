@@ -1,8 +1,11 @@
+use std::borrow::Cow;
+
 use serde::de::DeserializeOwned;
 
-use crate::crypto::{verify, verify_rsa_components};
+use crate::crypto::verify;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
+use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::from_jwt_part_claims;
 use crate::validation::{validate, Validation};
 
@@ -27,15 +30,78 @@ macro_rules! expect_two {
     }};
 }
 
-/// Internal way to differentiate between public key types
-enum DecodingKey<'a> {
-    SecretOrPem(&'a [u8]),
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum DecodingKeyKind<'a> {
+    SecretOrDer(Cow<'a, [u8]>),
     RsaModulusExponent { n: &'a str, e: &'a str },
 }
 
-fn _decode<T: DeserializeOwned>(
+/// All the different kind of keys we can use to decode a JWT
+/// This key can be re-used so make sure you only initialize it once if you can for better performance
+#[derive(Debug, Clone, PartialEq)]
+pub struct DecodingKey<'a> {
+    pub(crate) kind: DecodingKeyKind<'a>,
+}
+
+impl<'a> DecodingKey<'a> {
+    /// If you're using HMAC, use this.
+    pub fn from_secret(secret: &'a [u8]) -> Self {
+        DecodingKey { kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(secret)) }
+    }
+
+    /// If you are loading a public RSA key in a PEM format, use this.
+    pub fn from_rsa_pem(key: &'a [u8]) -> Result<Self> {
+        let pem_key = PemEncodedKey::new(key)?;
+        let content = pem_key.as_rsa_key()?;
+        Ok(DecodingKey { kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())) })
+    }
+
+    /// If you have (n, e) RSA public key components, use this.
+    pub fn from_rsa_components(modulus: &'a str, exponent: &'a str) -> Self {
+        DecodingKey { kind: DecodingKeyKind::RsaModulusExponent { n: modulus, e: exponent } }
+    }
+
+    /// If you have a ECDSA public key in PEM format, use this.
+    pub fn from_ec_pem(key: &'a [u8]) -> Result<Self> {
+        let pem_key = PemEncodedKey::new(key)?;
+        let content = pem_key.as_ec_public_key()?;
+        Ok(DecodingKey { kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())) })
+    }
+
+    /// If you know what you're doing and have the DER encoded public key, use this.
+    pub fn from_der(der: &'a [u8]) -> Self {
+        DecodingKey { kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)) }
+    }
+
+    pub(crate) fn as_bytes(&self) -> &[u8] {
+        match &self.kind {
+            DecodingKeyKind::SecretOrDer(b) => &b,
+            DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
+        }
+    }
+}
+
+/// Decode and validate a JWT
+///
+/// If the token or its signature is invalid or the claims fail validation, it will return an error.
+///
+/// ```rust
+/// use serde::{Deserialize, Serialize};
+/// use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String
+/// }
+///
+/// let token = "a.jwt.token".to_string();
+/// // Claims is a struct that implements Deserialize
+/// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
+/// ```
+pub fn decode<T: DeserializeOwned>(
     token: &str,
-    key: DecodingKey,
+    key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
     let (signature, message) = expect_two!(token.rsplitn(2, '.'));
@@ -46,14 +112,7 @@ fn _decode<T: DeserializeOwned>(
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    let is_valid = match key {
-        DecodingKey::SecretOrPem(k) => verify(signature, message, k, header.alg),
-        DecodingKey::RsaModulusExponent { n, e } => {
-            verify_rsa_components(signature, message, (n, e), header.alg)
-        }
-    }?;
-
-    if !is_valid {
+    if !verify(signature, message, key, header.alg)? {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
@@ -61,61 +120,6 @@ fn _decode<T: DeserializeOwned>(
     validate(&claims_map, validation)?;
 
     Ok(TokenData { header, claims: decoded_claims })
-}
-
-/// Decode and validate a JWT using a secret for HS and a public PEM format for RSA/EC
-///
-/// If the token or its signature is invalid or the claims fail validation, it will return an error.
-///
-/// ```rust
-/// use serde::{Deserialize, Serialize};
-/// use jsonwebtoken::{decode, Validation, Algorithm};
-///
-/// #[derive(Debug, Serialize, Deserialize)]
-/// struct Claims {
-///    sub: String,
-///    company: String
-/// }
-///
-/// let token = "a.jwt.token".to_string();
-/// // Claims is a struct that implements Deserialize
-/// let token_message = decode::<Claims>(&token, "secret".as_ref(), &Validation::new(Algorithm::HS256));
-/// ```
-pub fn decode<T: DeserializeOwned>(
-    token: &str,
-    key: &[u8],
-    validation: &Validation,
-) -> Result<TokenData<T>> {
-    _decode(token, DecodingKey::SecretOrPem(key), validation)
-}
-
-/// Decode and validate a JWT using (n, e) base64 encoded public key components for RSA
-///
-/// If the token or its signature is invalid or the claims fail validation, it will return an error.
-///
-/// ```rust
-/// use serde::{Deserialize, Serialize};
-/// use jsonwebtoken::{decode_rsa_components, Validation, Algorithm};
-///
-/// #[derive(Debug, Serialize, Deserialize)]
-/// struct Claims {
-///    sub: String,
-///    company: String
-/// }
-///
-/// let modulus = "some-base64-data";
-/// let exponent = "some-base64-data";
-/// let token = "a.jwt.token".to_string();
-/// // Claims is a struct that implements Deserialize
-/// let token_message = decode_rsa_components::<Claims>(&token, &modulus, &exponent, &Validation::new(Algorithm::HS256));
-/// ```
-pub fn decode_rsa_components<T: DeserializeOwned>(
-    token: &str,
-    modulus: &str,
-    exponent: &str,
-    validation: &Validation,
-) -> Result<TokenData<T>> {
-    _decode(token, DecodingKey::RsaModulusExponent { n: modulus, e: exponent }, validation)
 }
 
 /// Decode a JWT without any signature verification/validations.
