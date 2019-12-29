@@ -1,7 +1,8 @@
 use chrono::Utc;
 use jsonwebtoken::{
     crypto::{sign, verify},
-    dangerous_unsafe_decode, decode, decode_header, encode, Algorithm, Header, Validation,
+    dangerous_unsafe_decode, decode, decode_header, encode, Algorithm, EncodingKey, Header,
+    Validation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +15,8 @@ pub struct Claims {
 
 #[test]
 fn sign_hs256() {
-    let result = sign("hello world", b"secret", Algorithm::HS256).unwrap();
+    let result =
+        sign("hello world", &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
     let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
     assert_eq!(result, expected);
 }
@@ -35,7 +37,7 @@ fn encode_with_custom_header() {
     };
     let mut header = Header::default();
     header.kid = Some("kid".to_string());
-    let token = encode(&header, &my_claims, b"secret").unwrap();
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let token_data = decode::<Claims>(&token, b"secret", &Validation::default()).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
@@ -48,7 +50,8 @@ fn round_trip_claim() {
         company: "ACME".to_string(),
         exp: Utc::now().timestamp() + 10000,
     };
-    let token = encode(&Header::default(), &my_claims, b"secret").unwrap();
+    let token =
+        encode(&Header::default(), &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let token_data = decode::<Claims>(&token, b"secret", &Validation::default()).unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());

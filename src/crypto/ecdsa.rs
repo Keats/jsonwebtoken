@@ -2,7 +2,6 @@ use ring::{rand, signature};
 
 use crate::algorithms::Algorithm;
 use crate::errors::Result;
-use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::b64_encode;
 
 /// Only used internally when validating EC, to map from our enum to the Ring EcdsaVerificationAlgorithm structs.
@@ -26,13 +25,13 @@ pub(crate) fn alg_to_ec_signing(alg: Algorithm) -> &'static signature::EcdsaSign
 }
 
 /// The actual ECDSA signing + encoding
+/// The key needs to be in PKCS8 format
 pub fn sign(
     alg: &'static signature::EcdsaSigningAlgorithm,
     key: &[u8],
     message: &str,
 ) -> Result<String> {
-    let pem_key = PemEncodedKey::new(key)?;
-    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, pem_key.as_ec_private_key()?)?;
+    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key)?;
     let rng = rand::SystemRandom::new();
     let out = signing_key.sign(&rng, message.as_bytes())?;
     Ok(b64_encode(out.as_ref()))

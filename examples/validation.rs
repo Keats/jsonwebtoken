@@ -1,5 +1,5 @@
 use jsonwebtoken::errors::ErrorKind;
-use jsonwebtoken::{decode, encode, Header, Validation};
+use jsonwebtoken::{decode, encode, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -10,10 +10,10 @@ struct Claims {
 }
 
 fn main() {
+    let key = b"secret";
     let my_claims =
         Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 10000000000 };
-    let key = b"secret";
-    let token = match encode(&Header::default(), &my_claims, key) {
+    let token = match encode(&Header::default(), &my_claims, &EncodingKey::from_secret(key)) {
         Ok(t) => t,
         Err(_) => panic!(), // in practice you would return the error
     };

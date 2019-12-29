@@ -38,7 +38,7 @@ Complete examples are available in the examples directory: a basic one and one w
 In terms of imports and structs:
 ```rust
 use serde::{Serialize, Deserialize};
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation};
+use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey};
 
 /// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
 #[derive(Debug, Serialize, Deserialize)]
@@ -53,7 +53,7 @@ struct Claims {
 The default algorithm is HS256, which uses a shared secret.
 
 ```rust
-let token = encode(&Header::default(), &my_claims, "secret".as_ref())?;
+let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
 ```
 
 #### Custom headers & changing algorithm
@@ -63,7 +63,7 @@ If you want to set the `kid` parameter or change the algorithm for example:
 ```rust
 let mut header = Header::new(Algorithm::HS512);
 header.kid = Some("blabla".to_owned());
-let token = encode(&header, &my_claims, "secret".as_ref())?;
+let token = encode(&header, &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
 ```
 Look at `examples/custom_header.rs` for a full working example.
 
@@ -71,7 +71,7 @@ Look at `examples/custom_header.rs` for a full working example.
 
 ```rust
 // HS256
-let token = encode(&Header::default(), &my_claims, "secret".as_ref())?;
+let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
 // RSA
 let token = encode(&Header::new(Algorithm::RS256), &my_claims, include_str!("privkey.pem"))?;
 ```

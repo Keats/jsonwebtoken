@@ -1,7 +1,7 @@
 use chrono::Utc;
 use jsonwebtoken::{
     crypto::{sign, verify},
-    decode, encode, Algorithm, Header, Validation,
+    decode, encode, Algorithm, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +26,8 @@ pub struct Claims {
 fn round_trip_sign_verification_pem() {
     let privkey = include_bytes!("private_ecdsa_key.pem");
     let pubkey = include_bytes!("public_ecdsa_key.pem");
-    let encrypted = sign("hello world", privkey, Algorithm::ES256).unwrap();
+    let encrypted =
+        sign("hello world", &EncodingKey::from_ec_pem(privkey).unwrap(), Algorithm::ES256).unwrap();
     let is_valid = verify(&encrypted, "hello world", pubkey, Algorithm::ES256).unwrap();
     assert!(is_valid);
 }
@@ -40,7 +41,12 @@ fn round_trip_claim() {
         company: "ACME".to_string(),
         exp: Utc::now().timestamp() + 10000,
     };
-    let token = encode(&Header::new(Algorithm::ES256), &my_claims, privkey).unwrap();
+    let token = encode(
+        &Header::new(Algorithm::ES256),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey).unwrap(),
+    )
+    .unwrap();
     let token_data = decode::<Claims>(&token, pubkey, &Validation::new(Algorithm::ES256)).unwrap();
     assert_eq!(my_claims, token_data.claims);
 }
@@ -56,7 +62,12 @@ fn roundtrip_with_jwtio_example() {
         company: "ACME".to_string(),
         exp: Utc::now().timestamp() + 10000,
     };
-    let token = encode(&Header::new(Algorithm::ES384), &my_claims, privkey).unwrap();
+    let token = encode(
+        &Header::new(Algorithm::ES384),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey).unwrap(),
+    )
+    .unwrap();
     let token_data = decode::<Claims>(&token, pubkey, &Validation::new(Algorithm::ES384)).unwrap();
     assert_eq!(my_claims, token_data.claims);
 }

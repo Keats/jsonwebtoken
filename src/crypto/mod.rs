@@ -2,6 +2,7 @@ use ring::constant_time::verify_slices_are_equal;
 use ring::{hmac, signature};
 
 use crate::algorithms::Algorithm;
+use crate::encoding::EncodingKey;
 use crate::errors::Result;
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, b64_encode};
@@ -20,16 +21,14 @@ pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> Resu
 /// the base64 url safe encoded of the result.
 ///
 /// If you just want to encode a JWT, use `encode` instead.
-///
-/// `key` is the secret for HMAC and a pem encoded string otherwise
-pub fn sign(message: &str, key: &[u8], algorithm: Algorithm) -> Result<String> {
+pub fn sign(message: &str, key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
     match algorithm {
-        Algorithm::HS256 => sign_hmac(hmac::HMAC_SHA256, key, message),
-        Algorithm::HS384 => sign_hmac(hmac::HMAC_SHA384, key, message),
-        Algorithm::HS512 => sign_hmac(hmac::HMAC_SHA512, key, message),
+        Algorithm::HS256 => sign_hmac(hmac::HMAC_SHA256, key.inner(), message),
+        Algorithm::HS384 => sign_hmac(hmac::HMAC_SHA384, key.inner(), message),
+        Algorithm::HS512 => sign_hmac(hmac::HMAC_SHA512, key.inner(), message),
 
         Algorithm::ES256 | Algorithm::ES384 => {
-            ecdsa::sign(ecdsa::alg_to_ec_signing(algorithm), key, message)
+            ecdsa::sign(ecdsa::alg_to_ec_signing(algorithm), key.inner(), message)
         }
 
         Algorithm::RS256
@@ -37,7 +36,7 @@ pub fn sign(message: &str, key: &[u8], algorithm: Algorithm) -> Result<String> {
         | Algorithm::RS512
         | Algorithm::PS256
         | Algorithm::PS384
-        | Algorithm::PS512 => rsa::sign(rsa::alg_to_rsa_signing(algorithm), key, message),
+        | Algorithm::PS512 => rsa::sign(rsa::alg_to_rsa_signing(algorithm), key.inner(), message),
     }
 }
 
@@ -69,7 +68,7 @@ pub fn verify(signature: &str, message: &str, key: &[u8], algorithm: Algorithm) 
     match algorithm {
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             // we just re-sign the message with the key and compare if they are equal
-            let signed = sign(message, key, algorithm)?;
+            let signed = sign(message, &EncodingKey::from_secret(key), algorithm)?;
             Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
         }
         Algorithm::ES256 | Algorithm::ES384 => {
