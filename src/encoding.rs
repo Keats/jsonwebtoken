@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use serde::ser::Serialize;
 
 use crate::crypto;
@@ -11,39 +9,38 @@ use crate::serialization::b64_encode_part;
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance
 #[derive(Debug, Clone, PartialEq)]
-pub struct EncodingKey<'a> {
-    content: Cow<'a, [u8]>,
+pub struct EncodingKey {
+    content: Vec<u8>,
 }
 
-impl<'a> EncodingKey<'a> {
+impl EncodingKey {
     /// If you're using HMAC, use that.
-    pub fn from_secret(secret: &'a [u8]) -> Self {
-        EncodingKey { content: Cow::Borrowed(secret) }
+    pub fn from_secret(secret: &[u8]) -> Self {
+        EncodingKey { content: secret.to_vec() }
     }
 
     /// If you are loading a RSA key from a .pem file.
     /// This errors if the key is not a valid RSA key.
-    pub fn from_rsa_pem(key: &'a [u8]) -> Result<Self> {
+    pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
-        Ok(EncodingKey { content: Cow::Owned(content.to_vec()) })
+        Ok(EncodingKey { content: content.to_vec() })
     }
 
     /// If you are loading a ECDSA key from a .pem file
     /// This errors if the key is not a valid private EC key
-    pub fn from_ec_pem(key: &'a [u8]) -> Result<Self> {
+    pub fn from_ec_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ec_private_key()?;
-        Ok(EncodingKey { content: Cow::Owned(content.to_vec()) })
+        Ok(EncodingKey { content: content.to_vec() })
     }
 
     /// If you know what you're doing and have the DER-encoded key, for RSA or ECDSA
-    pub fn from_der(der: &'a [u8]) -> Self {
-        EncodingKey { content: Cow::Borrowed(der) }
+    pub fn from_der(der: &[u8]) -> Self {
+        EncodingKey { content: der.to_vec() }
     }
 
-    /// Access the key, normal users do not need to use that.
-    pub(crate) fn inner(&'a self) -> &'a [u8] {
+    pub(crate) fn inner(&self) -> &[u8] {
         &self.content
     }
 }
