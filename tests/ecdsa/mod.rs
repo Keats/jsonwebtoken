@@ -17,8 +17,11 @@ fn round_trip_sign_verification_pk8() {
     let privkey = include_bytes!("private_ecdsa_key.pk8");
     let pubkey = include_bytes!("public_ecdsa_key.pk8");
 
-    let encrypted = sign("hello world", &EncodingKey::from_der(privkey), Algorithm::ES256).unwrap();
-    let is_valid = verify(&encrypted, "hello world", &DecodingKey::from_der(pubkey), Algorithm::ES256).unwrap();
+    let encrypted =
+        sign("hello world", &EncodingKey::from_ec_der(privkey), Algorithm::ES256).unwrap();
+    let is_valid =
+        verify(&encrypted, "hello world", &DecodingKey::from_ec_der(pubkey), Algorithm::ES256)
+            .unwrap();
     assert!(is_valid);
 }
 

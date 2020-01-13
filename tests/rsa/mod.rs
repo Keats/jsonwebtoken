@@ -57,11 +57,9 @@ fn round_trip_sign_verification_der() {
     let pubkey_der = include_bytes!("public_rsa_key.der");
 
     for &alg in RSA_ALGORITHMS {
-        let encrypted =
-            sign("hello world", &EncodingKey::from_der(privkey_der), alg).unwrap();
+        let encrypted = sign("hello world", &EncodingKey::from_rsa_der(privkey_der), alg).unwrap();
         let is_valid =
-            verify(&encrypted, "hello world", &DecodingKey::from_der(pubkey_der), alg)
-                .unwrap();
+            verify(&encrypted, "hello world", &DecodingKey::from_rsa_der(pubkey_der), alg).unwrap();
         assert!(is_valid);
     }
 }

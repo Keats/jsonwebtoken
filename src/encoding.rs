@@ -1,7 +1,8 @@
 use serde::ser::Serialize;
 
+use crate::algorithms::AlgorithmFamily;
 use crate::crypto;
-use crate::errors::Result;
+use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::b64_encode_part;
@@ -10,13 +11,20 @@ use crate::serialization::b64_encode_part;
 /// This key can be re-used so make sure you only initialize it once if you can for better performance
 #[derive(Debug, Clone, PartialEq)]
 pub struct EncodingKey {
+    pub(crate) family: AlgorithmFamily,
     content: Vec<u8>,
 }
 
 impl EncodingKey {
-    /// If you're using HMAC, use that.
+    /// If you're using a HMAC secret that is not base64, use that.
     pub fn from_secret(secret: &[u8]) -> Self {
-        EncodingKey { content: secret.to_vec() }
+        EncodingKey { family: AlgorithmFamily::Hmac, content: secret.to_vec() }
+    }
+
+    /// If you have a base64 HMAC secret, use that.
+    pub fn from_base64_secret(secret: &str) -> Result<Self> {
+        let out = base64::decode(&secret)?;
+        Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
     }
 
     /// If you are loading a RSA key from a .pem file.
@@ -24,7 +32,7 @@ impl EncodingKey {
     pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
-        Ok(EncodingKey { content: content.to_vec() })
+        Ok(EncodingKey { family: AlgorithmFamily::Rsa, content: content.to_vec() })
     }
 
     /// If you are loading a ECDSA key from a .pem file
@@ -32,12 +40,17 @@ impl EncodingKey {
     pub fn from_ec_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ec_private_key()?;
-        Ok(EncodingKey { content: content.to_vec() })
+        Ok(EncodingKey { family: AlgorithmFamily::Ec, content: content.to_vec() })
     }
 
-    /// If you know what you're doing and have the DER-encoded key, for RSA or ECDSA
-    pub fn from_der(der: &[u8]) -> Self {
-        EncodingKey { content: der.to_vec() }
+    /// If you know what you're doing and have the DER-encoded key, for RSA only
+    pub fn from_rsa_der(der: &[u8]) -> Self {
+        EncodingKey { family: AlgorithmFamily::Rsa, content: der.to_vec() }
+    }
+
+    /// If you know what you're doing and have the DER-encoded key, for ECDSA
+    pub fn from_ec_der(der: &[u8]) -> Self {
+        EncodingKey { family: AlgorithmFamily::Ec, content: der.to_vec() }
     }
 
     pub(crate) fn inner(&self) -> &[u8] {
@@ -68,6 +81,9 @@ impl EncodingKey {
 /// let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())).unwrap();
 /// ```
 pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> Result<String> {
+    if key.family != header.alg.family() {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
     let encoded_header = b64_encode_part(&header)?;
     let encoded_claims = b64_encode_part(&claims)?;
     let message = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");

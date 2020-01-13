@@ -103,6 +103,18 @@ fn decode_token_wrong_algorithm() {
 }
 
 #[test]
+#[should_panic(expected = "InvalidAlgorithm")]
+fn encode_wrong_alg_family() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: Utc::now().timestamp() + 10000,
+    };
+    let claims = encode(&Header::default(), &my_claims, &EncodingKey::from_rsa_der(b"secret"));
+    claims.unwrap();
+}
+
+#[test]
 fn decode_token_with_bytes_secret() {
     let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
     let claims =
