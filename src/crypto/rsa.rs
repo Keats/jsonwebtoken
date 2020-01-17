@@ -3,7 +3,6 @@ use simple_asn1::BigUint;
 
 use crate::algorithms::Algorithm;
 use crate::errors::{ErrorKind, Result};
-use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, b64_encode};
 
 /// Only used internally when validating RSA, to map from our enum to the Ring param structs.
@@ -33,15 +32,14 @@ pub(crate) fn alg_to_rsa_signing(alg: Algorithm) -> &'static dyn signature::RsaE
 }
 
 /// The actual RSA signing + encoding
+/// The key needs to be in PKCS8 format
 /// Taken from Ring doc https://briansmith.org/rustdoc/ring/signature/index.html
 pub(crate) fn sign(
     alg: &'static dyn signature::RsaEncoding,
     key: &[u8],
     message: &str,
 ) -> Result<String> {
-    let pem_key = PemEncodedKey::new(key)?;
-    let key_pair = signature::RsaKeyPair::from_der(pem_key.as_rsa_key()?)
-        .map_err(|_| ErrorKind::InvalidRsaKey)?;
+    let key_pair = signature::RsaKeyPair::from_der(key).map_err(|_| ErrorKind::InvalidRsaKey)?;
 
     let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
@@ -52,12 +50,14 @@ pub(crate) fn sign(
     Ok(b64_encode(&signature))
 }
 
+/// Checks that a signature is valid based on the (n, e) RSA pubkey components
 pub(crate) fn verify_from_components(
     alg: &'static signature::RsaParameters,
-    signature_bytes: &[u8],
+    signature: &str,
     message: &str,
     components: (&str, &str),
 ) -> Result<bool> {
+    let signature_bytes = b64_decode(signature)?;
     let n = BigUint::from_bytes_be(&b64_decode(components.0)?).to_bytes_be();
     let e = BigUint::from_bytes_be(&b64_decode(components.1)?).to_bytes_be();
     let pubkey = signature::RsaPublicKeyComponents { n, e };

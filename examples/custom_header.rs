@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use jsonwebtoken::errors::ErrorKind;
-use jsonwebtoken::{decode, encode, Algorithm, Header, Validation};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -19,13 +19,17 @@ fn main() {
     header.kid = Some("signing_key".to_owned());
     header.alg = Algorithm::HS512;
 
-    let token = match encode(&header, &my_claims, key) {
+    let token = match encode(&header, &my_claims, &EncodingKey::from_secret(key)) {
         Ok(t) => t,
         Err(_) => panic!(), // in practice you would return the error
     };
     println!("{:?}", token);
 
-    let token_data = match decode::<Claims>(&token, key, &Validation::new(Algorithm::HS512)) {
+    let token_data = match decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(key),
+        &Validation::new(Algorithm::HS512),
+    ) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
             ErrorKind::InvalidToken => panic!(), // Example on how to handle a specific error

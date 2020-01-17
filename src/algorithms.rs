@@ -2,6 +2,13 @@ use crate::errors::{Error, ErrorKind, Result};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
+pub(crate) enum AlgorithmFamily {
+    Hmac,
+    Rsa,
+    Ec,
+}
+
 /// The algorithms supported for signing/verifying JWTs
 #[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
@@ -54,6 +61,21 @@ impl FromStr for Algorithm {
             "PS512" => Ok(Algorithm::PS512),
             "RS512" => Ok(Algorithm::RS512),
             _ => Err(ErrorKind::InvalidAlgorithmName.into()),
+        }
+    }
+}
+
+impl Algorithm {
+    pub(crate) fn family(self) -> AlgorithmFamily {
+        match self {
+            Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => AlgorithmFamily::Hmac,
+            Algorithm::RS256
+            | Algorithm::RS384
+            | Algorithm::RS512
+            | Algorithm::PS256
+            | Algorithm::PS384
+            | Algorithm::PS512 => AlgorithmFamily::Rsa,
+            Algorithm::ES256 | Algorithm::ES384 => AlgorithmFamily::Ec,
         }
     }
 }

@@ -159,7 +159,7 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
                         return Err(new_error(ErrorKind::InvalidAudience));
                     }
                 }
-                _ => return Err(new_error(ErrorKind::InvalidAudience))
+                _ => return Err(new_error(ErrorKind::InvalidAudience)),
             };
         } else {
             return Err(new_error(ErrorKind::InvalidAudience));
@@ -447,17 +447,17 @@ mod tests {
     #[test]
     fn aud_use_validation_struct() {
         let mut claims = Map::new();
-        claims.insert("aud".to_string(), to_value("my-googleclientid1234.apps.googleusercontent.com").unwrap());
+        claims.insert(
+            "aud".to_string(),
+            to_value("my-googleclientid1234.apps.googleusercontent.com").unwrap(),
+        );
 
         let aud = "my-googleclientid1234.apps.googleusercontent.com".to_string();
         let mut aud_hashset = std::collections::HashSet::new();
         aud_hashset.insert(aud);
 
-        let validation = Validation {
-            aud: Some(aud_hashset),
-            validate_exp: false,
-            ..Validation::default()
-        };
+        let validation =
+            Validation { aud: Some(aud_hashset), validate_exp: false, ..Validation::default() };
         let res = validate(&claims, &validation);
         println!("{:?}", res);
         assert!(res.is_ok());
