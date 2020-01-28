@@ -80,28 +80,6 @@ pub enum ErrorKind {
 }
 
 impl StdError for Error {
-    fn description(&self) -> &str {
-        match *self.0 {
-            ErrorKind::InvalidToken => "invalid token",
-            ErrorKind::InvalidSignature => "invalid signature",
-            ErrorKind::InvalidEcdsaKey => "invalid ECDSA key",
-            ErrorKind::InvalidRsaKey => "invalid RSA key",
-            ErrorKind::ExpiredSignature => "expired signature",
-            ErrorKind::InvalidIssuer => "invalid issuer",
-            ErrorKind::InvalidAudience => "invalid audience",
-            ErrorKind::InvalidSubject => "invalid subject",
-            ErrorKind::ImmatureSignature => "immature signature",
-            ErrorKind::InvalidAlgorithm => "algorithms don't match",
-            ErrorKind::InvalidAlgorithmName => "not a known algorithm",
-            ErrorKind::InvalidKeyFormat => "invalid key format",
-            ErrorKind::Base64(ref err) => err.description(),
-            ErrorKind::Json(ref err) => err.description(),
-            ErrorKind::Utf8(ref err) => err.description(),
-            ErrorKind::Crypto(ref err) => err.description(),
-            ErrorKind::__Nonexhaustive => "unknown error",
-        }
-    }
-
     fn cause(&self) -> Option<&dyn StdError> {
         match *self.0 {
             ErrorKind::InvalidToken => None,
@@ -139,7 +117,7 @@ impl fmt::Display for Error {
             | ErrorKind::ImmatureSignature
             | ErrorKind::InvalidAlgorithm
             | ErrorKind::InvalidKeyFormat
-            | ErrorKind::InvalidAlgorithmName => write!(f, "{}", self.description()),
+            | ErrorKind::InvalidAlgorithmName => write!(f, "{}", self),
             ErrorKind::Json(ref err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Crypto(ref err) => write!(f, "Crypto error: {}", err),
