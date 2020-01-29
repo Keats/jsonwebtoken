@@ -84,6 +84,9 @@ Encoding a JWT takes 3 parameters:
 When using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
 RSA/EC, the key should always be the content of the private key in the PEM or DER format.
 
+If your key is in PEM format, it is better performance wise to generate the `EncodingKey` once in a `lazy_static` or
+something similar and reuse it.
+
 ### Decoding
 
 ```rust
@@ -121,8 +124,11 @@ The main use-case is for JWK where your public key is in a JSON format like so:
 
 ```rust
 // `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
-let token = decode::<Claims>(&token, &EncodingKey::from_rsa_components(jwk["n"], jwk["e"]), &Validation::new(Algorithm::RS256))?;
+let token = decode::<Claims>(&token, &DecodingKey::from_rsa_components(jwk["n"], jwk["e"]), &Validation::new(Algorithm::RS256))?;
 ```
+
+If your key is in PEM format, it is better performance wise to generate the `DecodingKey` once in a `lazy_static` or
+something similar and reuse it.
 
 ### Convert SEC1 private key to PKCS8
 `jsonwebtoken` currently only supports PKCS8 format for private EC keys. If your key has `BEGIN EC PRIVATE KEY` at the top,
