@@ -1,14 +1,15 @@
-use chrono::Utc;
-use serde::ser::Serialize;
+use std::collections::HashSet;
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use serde_json::map::Map;
-use serde_json::{from_value, to_value, Value};
+use serde_json::{from_value, Value};
 
-use crypto::Algorithm;
-use errors::{new_error, ErrorKind, Result};
+use crate::algorithms::Algorithm;
+use crate::errors::{new_error, ErrorKind, Result};
 
-/// Contains the various validations that are applied after decoding a token.
+/// Contains the various validations that are applied after decoding a JWT.
 ///
-/// All time validation happen on UTC timestamps.
+/// All time validation happen on UTC timestamps as seconds.
 ///
 /// ```rust
 /// use jsonwebtoken::Validation;
@@ -21,7 +22,7 @@ use errors::{new_error, ErrorKind, Result};
 ///
 /// // Setting audience
 /// let mut validation = Validation::default();
-/// validation.set_audience(&"Me"); // string
+/// validation.set_audience(&["Me"]); // a single string
 /// validation.set_audience(&["Me", "You"]); // array of strings
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -30,7 +31,7 @@ pub struct Validation {
     /// account for clock skew.
     ///
     /// Defaults to `0`.
-    pub leeway: i64,
+    pub leeway: u64,
     /// Whether to validate the `exp` field.
     ///
     /// It will return an error if the time in the `exp` field is past.
@@ -43,13 +44,11 @@ pub struct Validation {
     ///
     /// Defaults to `false`.
     pub validate_nbf: bool,
-    /// If it contains a value, the validation will check that the `aud` field is the same as the
-    /// one provided and will error otherwise.
-    /// Since `aud` can be either a String or a Vec<String> in the JWT spec, you will need to use
-    /// the [set_audience](struct.Validation.html#method.set_audience) method to set it.
+    /// If it contains a value, the validation will check that the `aud` field is a member of the
+    /// audience provided and will error otherwise.
     ///
     /// Defaults to `None`.
-    pub aud: Option<Value>,
+    pub aud: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `iss` field is the same as the
     /// one provided and will error otherwise.
     ///
@@ -75,10 +74,9 @@ impl Validation {
         validation
     }
 
-    /// Since `aud` can be either a String or an array of String in the JWT spec, this method will take
-    /// care of serializing the value.
-    pub fn set_audience<T: Serialize>(&mut self, audience: &T) {
-        self.aud = Some(to_value(audience).unwrap());
+    /// `aud` is a collection of one or more acceptable audience members
+    pub fn set_audience<T: ToString>(&mut self, items: &[T]) {
+        self.aud = Some(items.iter().map(|x| x.to_string()).collect())
     }
 }
 
@@ -99,12 +97,17 @@ impl Default for Validation {
     }
 }
 
+fn get_current_timestamp() -> u64 {
+    let start = SystemTime::now();
+    start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs()
+}
+
 pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()> {
-    let now = Utc::now().timestamp();
+    let now = get_current_timestamp();
 
     if options.validate_exp {
         if let Some(exp) = claims.get("exp") {
-            if from_value::<i64>(exp.clone())? < now - options.leeway {
+            if from_value::<u64>(exp.clone())? < now - options.leeway {
                 return Err(new_error(ErrorKind::ExpiredSignature));
             }
         } else {
@@ -114,7 +117,7 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if options.validate_nbf {
         if let Some(nbf) = claims.get("nbf") {
-            if from_value::<i64>(nbf.clone())? > now + options.leeway {
+            if from_value::<u64>(nbf.clone())? > now + options.leeway {
                 return Err(new_error(ErrorKind::ImmatureSignature));
             }
         } else {
@@ -144,9 +147,20 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if let Some(ref correct_aud) = options.aud {
         if let Some(aud) = claims.get("aud") {
-            if aud != correct_aud {
-                return Err(new_error(ErrorKind::InvalidAudience));
-            }
+            match aud {
+                Value::String(aud_found) => {
+                    if !correct_aud.contains(aud_found) {
+                        return Err(new_error(ErrorKind::InvalidAudience));
+                    }
+                }
+                Value::Array(_) => {
+                    let provided_aud: HashSet<String> = from_value(aud.clone())?;
+                    if provided_aud.intersection(correct_aud).count() == 0 {
+                        return Err(new_error(ErrorKind::InvalidAudience));
+                    }
+                }
+                _ => return Err(new_error(ErrorKind::InvalidAudience)),
+            };
         } else {
             return Err(new_error(ErrorKind::InvalidAudience));
         }
@@ -157,18 +171,17 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
     use serde_json::map::Map;
     use serde_json::to_value;
 
-    use super::{validate, Validation};
+    use super::{get_current_timestamp, validate, Validation};
 
-    use errors::ErrorKind;
+    use crate::errors::ErrorKind;
 
     #[test]
     fn exp_in_future_ok() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() + 10000).unwrap());
+        claims.insert("exp".to_string(), to_value(get_current_timestamp() + 10000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_ok());
     }
@@ -176,7 +189,7 @@ mod tests {
     #[test]
     fn exp_in_past_fails() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() - 100000).unwrap());
+        claims.insert("exp".to_string(), to_value(get_current_timestamp() - 100000).unwrap());
         let res = validate(&claims, &Validation::default());
         assert!(res.is_err());
 
@@ -189,7 +202,7 @@ mod tests {
     #[test]
     fn exp_in_past_but_in_leeway_ok() {
         let mut claims = Map::new();
-        claims.insert("exp".to_string(), to_value(Utc::now().timestamp() - 500).unwrap());
+        claims.insert("exp".to_string(), to_value(get_current_timestamp() - 500).unwrap());
         let validation = Validation { leeway: 1000 * 60, ..Default::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
@@ -210,7 +223,7 @@ mod tests {
     #[test]
     fn nbf_in_past_ok() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() - 10000).unwrap());
+        claims.insert("nbf".to_string(), to_value(get_current_timestamp() - 10000).unwrap());
         let validation =
             Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
         let res = validate(&claims, &validation);
@@ -220,7 +233,7 @@ mod tests {
     #[test]
     fn nbf_in_future_fails() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 100000).unwrap());
+        claims.insert("nbf".to_string(), to_value(get_current_timestamp() + 100000).unwrap());
         let validation =
             Validation { validate_exp: false, validate_nbf: true, ..Validation::default() };
         let res = validate(&claims, &validation);
@@ -235,7 +248,7 @@ mod tests {
     #[test]
     fn nbf_in_future_but_in_leeway_ok() {
         let mut claims = Map::new();
-        claims.insert("nbf".to_string(), to_value(Utc::now().timestamp() + 500).unwrap());
+        claims.insert("nbf".to_string(), to_value(get_current_timestamp() + 500).unwrap());
         let validation = Validation {
             leeway: 1000 * 60,
             validate_nbf: true,
@@ -345,9 +358,9 @@ mod tests {
     #[test]
     fn aud_string_ok() {
         let mut claims = Map::new();
-        claims.insert("aud".to_string(), to_value("Everyone").unwrap());
+        claims.insert("aud".to_string(), to_value(["Everyone"]).unwrap());
         let mut validation = Validation { validate_exp: false, ..Validation::default() };
-        validation.set_audience(&"Everyone");
+        validation.set_audience(&["Everyone"]);
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
     }
@@ -365,7 +378,7 @@ mod tests {
     #[test]
     fn aud_type_mismatch_fails() {
         let mut claims = Map::new();
-        claims.insert("aud".to_string(), to_value("Everyone").unwrap());
+        claims.insert("aud".to_string(), to_value(["Everyone"]).unwrap());
         let mut validation = Validation { validate_exp: false, ..Validation::default() };
         validation.set_audience(&["UserA", "UserB"]);
         let res = validate(&claims, &validation);
@@ -380,9 +393,9 @@ mod tests {
     #[test]
     fn aud_correct_type_not_matching_fails() {
         let mut claims = Map::new();
-        claims.insert("aud".to_string(), to_value("Everyone").unwrap());
+        claims.insert("aud".to_string(), to_value(["Everyone"]).unwrap());
         let mut validation = Validation { validate_exp: false, ..Validation::default() };
-        validation.set_audience(&"None");
+        validation.set_audience(&["None"]);
         let res = validate(&claims, &validation);
         assert!(res.is_err());
 
@@ -396,7 +409,7 @@ mod tests {
     fn aud_missing_fails() {
         let claims = Map::new();
         let mut validation = Validation { validate_exp: false, ..Validation::default() };
-        validation.set_audience(&"None");
+        validation.set_audience(&["None"]);
         let res = validate(&claims, &validation);
         assert!(res.is_err());
 
@@ -404,5 +417,49 @@ mod tests {
             &ErrorKind::InvalidAudience => (),
             _ => assert!(false),
         };
+    }
+
+    // https://github.com/Keats/jsonwebtoken/issues/51
+    #[test]
+    fn does_validation_in_right_order() {
+        let mut claims = Map::new();
+        claims.insert("exp".to_string(), to_value(get_current_timestamp() + 10000).unwrap());
+        let v = Validation {
+            leeway: 5,
+            validate_exp: true,
+            iss: Some("iss no check".to_string()),
+            sub: Some("sub no check".to_string()),
+            ..Validation::default()
+        };
+        let res = validate(&claims, &v);
+        // It errors because it needs to validate iss/sub which are missing
+        assert!(res.is_err());
+        match res.unwrap_err().kind() {
+            &ErrorKind::InvalidIssuer => (),
+            t @ _ => {
+                println!("{:?}", t);
+                assert!(false)
+            }
+        };
+    }
+
+    // https://github.com/Keats/jsonwebtoken/issues/110
+    #[test]
+    fn aud_use_validation_struct() {
+        let mut claims = Map::new();
+        claims.insert(
+            "aud".to_string(),
+            to_value("my-googleclientid1234.apps.googleusercontent.com").unwrap(),
+        );
+
+        let aud = "my-googleclientid1234.apps.googleusercontent.com".to_string();
+        let mut aud_hashset = std::collections::HashSet::new();
+        aud_hashset.insert(aud);
+
+        let validation =
+            Validation { aud: Some(aud_hashset), validate_exp: false, ..Validation::default() };
+        let res = validate(&claims, &validation);
+        println!("{:?}", res);
+        assert!(res.is_ok());
     }
 }

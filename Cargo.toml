@@ -1,19 +1,27 @@
 [package]
 name = "jsonwebtoken"
-version = "6.0.1"
-authors = ["Vincent Prouillet <prouillet.vincent@gmail.com>"]
+version = "7.0.0"
+authors = ["Vincent Prouillet <hello@vincentprouillet.com>"]
 license = "MIT"
 readme = "README.md"
-description = "Create and parse JWT in a strongly typed way."
-homepage = "https://github.com/Keats/rust-jwt"
-repository = "https://github.com/Keats/rust-jwt"
-keywords = ["jwt", "web", "api", "token", "json"]
+description = "Create and decode JWTs in a strongly typed way."
+homepage = "https://github.com/Keats/jsonwebtoken"
+repository = "https://github.com/Keats/jsonwebtoken"
+keywords = ["jwt", "web", "api", "token", "jwk"]
+edition = "2018"
 
 [dependencies]
 serde_json = "1.0"
-serde_derive = "1.0"
-serde = "1.0"
-ring = "0.14.4"
-base64 = "0.10"
-untrusted = "0.6"
+serde = {version = "1.0", features = ["derive"] }
+ring = { version = "0.16.5", features = ["std"] }
+base64 = "0.11"
+# For PEM decoding
+pem = "0.7"
+simple_asn1 = "0.4"
+
+[dev-dependencies]
+# For the custom chrono example
 chrono = "0.4"
+
+[badges]
+maintenance = { status = "passively-maintained" }

@@ -1,4 +1,8 @@
-use crypto::Algorithm;
+use serde::{Deserialize, Serialize};
+
+use crate::algorithms::Algorithm;
+use crate::errors::Result;
+use crate::serialization::b64_decode;
 
 /// A basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional.
@@ -42,7 +46,7 @@ pub struct Header {
 
 impl Header {
     /// Returns a JWT header with the algorithm given
-    pub fn new(algorithm: Algorithm) -> Header {
+    pub fn new(algorithm: Algorithm) -> Self {
         Header {
             typ: Some("JWT".to_string()),
             alg: algorithm,
@@ -52,6 +56,14 @@ impl Header {
             x5u: None,
             x5t: None,
         }
+    }
+
+    /// Converts an encoded part into the Header struct if possible
+    pub(crate) fn from_encoded(encoded_part: &str) -> Result<Self> {
+        let decoded = b64_decode(encoded_part)?;
+        let s = String::from_utf8(decoded)?;
+
+        Ok(serde_json::from_str(&s)?)
     }
 }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+# 7.0.0 (2020-01-28)
+
+- Add support for PS256, PS384 and PS512
+- Add support for verifying with modulus/exponent components for RSA
+- Update to 2018 edition
+- Changed aud field type in Validation to `Option<HashSet<String>>`.  Audience 
+  validation now tests for "any-of-these" audience membership.
+- Add support for keys in PEM format
+- Add EncodingKey/DecodingKey API to improve performance and UX
+
 ## 6.0.1 (2019-05-10)
 
 - Fix Algorithm mapping in FromStr for RSA
