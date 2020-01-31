@@ -117,7 +117,7 @@ impl fmt::Display for Error {
             | ErrorKind::ImmatureSignature
             | ErrorKind::InvalidAlgorithm
             | ErrorKind::InvalidKeyFormat
-            | ErrorKind::InvalidAlgorithmName => write!(f, "{}", self),
+            | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
             ErrorKind::Json(ref err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Crypto(ref err) => write!(f, "Crypto error: {}", err),
@@ -161,4 +161,15 @@ impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Error {
         new_error(kind)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_rendering() {
+        assert_eq!("InvalidAlgorithmName", Error::from(ErrorKind::InvalidAlgorithmName).to_string());
+    }
+
 }
