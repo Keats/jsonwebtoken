@@ -27,6 +27,11 @@ pub struct Header {
     /// Defined in [RFC7515#4.1.2](https://tools.ietf.org/html/rfc7515#section-4.1.2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jku: Option<String>,
+    /// JSON Key
+    ///
+    /// Defined in [RFC7515#4.1.3](https://tools.ietf.org/html/rfc7515#section-4.1.3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jwk: Option<String>,
     /// Key ID
     ///
     /// Defined in [RFC7515#4.1.4](https://tools.ietf.org/html/rfc7515#section-4.1.4).
@@ -52,6 +57,7 @@ impl Header {
             alg: algorithm,
             cty: None,
             jku: None,
+            jwk: None,
             kid: None,
             x5u: None,
             x5t: None,
