@@ -49,6 +49,20 @@ struct Claims {
 }
 ```
 
+### Claims
+The claims fields which can be validated. (see [validation](#validation))
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    aud: String         // Optional. Audience
+    exp: DateTime<Utc>, // Required (validate_exp defaults to true in validation). Expiration time
+    iat: DateTime<Utc>  // Optional. Issued at
+    iss: String         // Optional. Issuer
+    nbf: DateTime<Utc>  // Optional. Not Before
+    sub: String,        // Optional. Subject (whom token refers to)
+}
+```
+
 ### Header
 The default algorithm is HS256, which uses a shared secret.
 
@@ -110,7 +124,7 @@ let header = decode_header(&token)?;
 
 This does not perform any signature verification or validate the token claims.
 
-You can also decode a token using the public key components of a RSA key in base64 format. 
+You can also decode a token using the public key components of a RSA key in base64 format.
 The main use-case is for JWK where your public key is in a JSON format like so:
 
 ```json
@@ -147,6 +161,19 @@ Since validating time fields is always a bit tricky due to clock skew,
 you can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` field.
 
 Last but not least, you will need to set the algorithm(s) allowed for this token if you are not using `HS256`.
+
+```rust
+#[derive(Debug, Clone, PartialEq)]
+struct Validation {
+    pub leeway: u64,                    // Default: 0
+    pub validate_exp: bool,             // Default: true
+    pub validate_nbf: bool,             // Default: false
+    pub aud: Option<HashSet<String>>,   // Default: None
+    pub iss: Option<String>,            // Default: None
+    pub sub: Option<String>,            // Default: None
+    pub algorithms: Vec<Algorithm>,     // Default: vec![Algorithm::HS256]
+}
+```
 
 ```rust
 use jsonwebtoken::{Validation, Algorithm};
