@@ -169,7 +169,9 @@ mod tests {
 
     #[test]
     fn test_error_rendering() {
-        assert_eq!("InvalidAlgorithmName", Error::from(ErrorKind::InvalidAlgorithmName).to_string());
+        assert_eq!(
+            "InvalidAlgorithmName",
+            Error::from(ErrorKind::InvalidAlgorithmName).to_string()
+        );
     }
-
 }
