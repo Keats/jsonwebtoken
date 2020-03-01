@@ -34,7 +34,7 @@ macro_rules! expect_two {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum DecodingKeyKind<'a> {
     SecretOrDer(Cow<'a, [u8]>),
-    RsaModulusExponent { n: &'a str, e: &'a str },
+    RsaModulusExponent { n: Cow<'a, str>, e: Cow<'a, str> },
 }
 
 /// All the different kind of keys we can use to decode a JWT
@@ -77,7 +77,10 @@ impl<'a> DecodingKey<'a> {
     pub fn from_rsa_components(modulus: &'a str, exponent: &'a str) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::RsaModulusExponent { n: modulus, e: exponent },
+            kind: DecodingKeyKind::RsaModulusExponent {
+                n: Cow::Borrowed(modulus),
+                e: Cow::Borrowed(exponent),
+            },
         }
     }
 
@@ -105,6 +108,19 @@ impl<'a> DecodingKey<'a> {
             family: AlgorithmFamily::Ec,
             kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
         }
+    }
+
+    /// Convert self to `DecodingKey<'static>`.
+    pub fn into_static(self) -> DecodingKey<'static> {
+        use DecodingKeyKind::*;
+        let DecodingKey { family, kind } = self;
+        let static_kind = match kind {
+            SecretOrDer(key) => SecretOrDer(Cow::Owned(key.into_owned())),
+            RsaModulusExponent { n, e } => {
+                RsaModulusExponent { n: Cow::Owned(n.into_owned()), e: Cow::Owned(e.into_owned()) }
+            }
+        };
+        DecodingKey { family, kind: static_kind }
     }
 
     pub(crate) fn as_bytes(&self) -> &[u8] {
