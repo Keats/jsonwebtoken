@@ -1,6 +1,6 @@
 [package]
 name = "jsonwebtoken"
-version = "7.0.1"
+version = "7.1.0"
 authors = ["Vincent Prouillet <hello@vincentprouillet.com>"]
 license = "MIT"
 readme = "README.md"

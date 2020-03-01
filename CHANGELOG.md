@@ -1,5 +1,9 @@
 # Changelog
 
+# 7.1.0 (2020-03-01)
+
+- Add `into_static` to `DecodingKey` for easier re-use
+
 # 7.0.0 (2020-01-28)
 
 - Add support for PS256, PS384 and PS512
