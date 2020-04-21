@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck_macros;
+
 use chrono::prelude::*;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -40,6 +44,9 @@ mod jwt_numeric_date {
         const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gRGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.RTgha0S53MjPC2pMA4e2oMzaBxSY3DMjiYR2qFfV55A";
 
         use super::super::{Claims, SECRET};
+        use chrono::{Duration, TimeZone, Utc};
+        use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+        use quickcheck::quickcheck;
 
         #[test]
         fn round_trip() {
@@ -74,6 +81,29 @@ mod jwt_numeric_date {
                 decode::<Claims>(&overflow_token, SECRET.as_ref(), &Validation::default());
 
             assert!(decode_result.is_err());
+        }
+
+        #[quickcheck]
+        fn to_token_and_parse_equals_identity(timestamp: i64) -> bool {
+            let iat = Utc.timestamp_nanos(timestamp);
+            let exp = iat + Duration::days(1);
+            let sub = "Custom DateTime ser/de".to_string();
+
+            let claims = Claims { sub: sub.clone(), iat, exp };
+
+            let token =
+                encode(&Header::default(), &claims, &EncodingKey::from_secret(SECRET.as_ref()))
+                    .expect("Failed to encode claims");
+
+            let decoded = decode::<Claims>(
+                &token,
+                &DecodingKey::from_secret(SECRET.as_ref()),
+                &Validation::default(),
+            )
+            .expect("Failed to decode token")
+            .claims;
+
+            claims == decoded
         }
     }
 }
