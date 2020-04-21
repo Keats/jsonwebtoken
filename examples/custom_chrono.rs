@@ -77,8 +77,11 @@ mod jwt_numeric_date {
             // A token with the expiry of i64::MAX + 1
             let overflow_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gRGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjkyMjMzNzIwMzY4NTQ3NzYwMDB9.G2PKreA27U8_xOwuIeCYXacFYeR46f9FyENIZfCrvEc";
 
-            let decode_result =
-                decode::<Claims>(&overflow_token, SECRET.as_ref(), &Validation::default());
+            let decode_result = decode::<Claims>(
+                &overflow_token,
+                &DecodingKey::from_secret(SECRET.as_ref()),
+                &Validation::default(),
+            );
 
             assert!(decode_result.is_err());
         }
