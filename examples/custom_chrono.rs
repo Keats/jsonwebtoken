@@ -23,7 +23,7 @@ mod jwt_numeric_date {
     where
         S: Serializer,
     {
-        let timestamp = date.timestamp();
+        let timestamp = date.timestamp_nanos();
         serializer.serialize_i64(timestamp)
     }
 
@@ -32,9 +32,7 @@ mod jwt_numeric_date {
     where
         D: Deserializer<'de>,
     {
-        Utc.timestamp_opt(i64::deserialize(deserializer)?, 0)
-            .single() // If there are multiple or no valid DateTimes from timestamp, return None
-            .ok_or_else(|| serde::de::Error::custom("invalid Unix timestamp value"))
+        Ok(Utc.timestamp_nanos(i64::deserialize(deserializer)?))
     }
 
     #[cfg(test)]
