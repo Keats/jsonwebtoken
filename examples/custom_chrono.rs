@@ -1,7 +1,3 @@
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck_macros;
-
 use chrono::prelude::*;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -17,6 +13,19 @@ struct Claims {
     exp: DateTime<Utc>,
 }
 
+impl Claims {
+    /// If a token should always be equal to its representation after serializing and deserializing
+    /// again, this function must be used for construction. `DateTime` contains a microsecond field
+    /// but JWT timestamps are defined as UNIX timestamps (seconds). This function normalizes the
+    /// timestamps.
+    pub fn new(sub: String, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
+        // normalize the timestamps by stripping of microseconds
+        let iat = iat.date().and_hms_milli(iat.hour(), iat.minute(), iat.second(), 0);
+        let exp = exp.date().and_hms_milli(exp.hour(), exp.minute(), exp.second(), 0);
+        Self { sub, iat, exp }
+    }
+}
+
 mod jwt_numeric_date {
     //! Custom serialization of DateTime<Utc> to conform with the JWT spec (RFC 7519 section 2, "Numeric Date")
     use chrono::{DateTime, TimeZone, Utc};
@@ -27,7 +36,7 @@ mod jwt_numeric_date {
     where
         S: Serializer,
     {
-        let timestamp = date.timestamp_nanos();
+        let timestamp = date.timestamp();
         serializer.serialize_i64(timestamp)
     }
 
@@ -36,7 +45,9 @@ mod jwt_numeric_date {
     where
         D: Deserializer<'de>,
     {
-        Ok(Utc.timestamp_nanos(i64::deserialize(deserializer)?))
+        Utc.timestamp_opt(i64::deserialize(deserializer)?, 0)
+            .single() // If there are multiple or no valid DateTimes from timestamp, return None
+            .ok_or_else(|| serde::de::Error::custom("invalid Unix timestamp value"))
     }
 
     #[cfg(test)]
@@ -46,7 +57,6 @@ mod jwt_numeric_date {
         use super::super::{Claims, SECRET};
         use chrono::{Duration, TimeZone, Utc};
         use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-        use quickcheck::quickcheck;
 
         #[test]
         fn round_trip() {
@@ -54,7 +64,7 @@ mod jwt_numeric_date {
             let iat = Utc.timestamp(0, 0);
             let exp = Utc.timestamp(32503680000, 0);
 
-            let claims = Claims { sub: sub.clone(), iat, exp };
+            let claims = Claims::new(sub.clone(), iat, exp);
 
             let token =
                 encode(&Header::default(), &claims, &EncodingKey::from_secret(SECRET.as_ref()))
@@ -86,13 +96,13 @@ mod jwt_numeric_date {
             assert!(decode_result.is_err());
         }
 
-        #[quickcheck]
-        fn to_token_and_parse_equals_identity(timestamp: i64) -> bool {
-            let iat = Utc.timestamp_nanos(timestamp);
+        #[test]
+        fn to_token_and_parse_equals_identity() {
+            let iat = Utc::now();
             let exp = iat + Duration::days(1);
             let sub = "Custom DateTime ser/de".to_string();
 
-            let claims = Claims { sub: sub.clone(), iat, exp };
+            let claims = Claims::new(sub.clone(), iat, exp);
 
             let token =
                 encode(&Header::default(), &claims, &EncodingKey::from_secret(SECRET.as_ref()))
@@ -106,7 +116,7 @@ mod jwt_numeric_date {
             .expect("Failed to decode token")
             .claims;
 
-            claims == decoded
+            assert_eq!(claims, decoded);
         }
     }
 }
@@ -116,7 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let iat = Utc::now();
     let exp = iat + chrono::Duration::days(1);
 
-    let claims = Claims { sub: sub.clone(), iat, exp };
+    let claims = Claims::new(sub.clone(), iat, exp);
 
     let token = jsonwebtoken::encode(
         &Header::default(),
