@@ -7,7 +7,7 @@ use crate::crypto::verify;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 use crate::pem::decoder::PemEncodedKey;
-use crate::serialization::from_jwt_part_claims;
+use crate::serialization::{b64_decode, from_jwt_part_claims};
 use crate::validation::{validate, Validation};
 
 /// The return type of a successful call to [decode](fn.decode.html).
@@ -34,7 +34,7 @@ macro_rules! expect_two {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum DecodingKeyKind<'a> {
     SecretOrDer(Cow<'a, [u8]>),
-    RsaModulusExponent { n: Cow<'a, str>, e: Cow<'a, str> },
+    RsaModulusExponent { n: Cow<'a, [u8]>, e: Cow<'a, [u8]> },
 }
 
 /// All the different kind of keys we can use to decode a JWT
@@ -43,6 +43,18 @@ pub(crate) enum DecodingKeyKind<'a> {
 pub struct DecodingKey<'a> {
     pub(crate) family: AlgorithmFamily,
     pub(crate) kind: DecodingKeyKind<'a>,
+}
+
+impl DecodingKey<'static> {
+    /// If you have (n, e) RSA public key components encoded in Base64, use this.
+    pub fn from_rsa_components(modulus: &str, exponent: &str) -> Result<Self> {
+        let n = b64_decode(modulus)?;
+        let e = b64_decode(exponent)?;
+        Ok(DecodingKey {
+            family: AlgorithmFamily::Rsa,
+            kind: DecodingKeyKind::RsaModulusExponent { n: Cow::Owned(n), e: Cow::Owned(e) },
+        })
+    }
 }
 
 impl<'a> DecodingKey<'a> {
@@ -74,13 +86,13 @@ impl<'a> DecodingKey<'a> {
     }
 
     /// If you have (n, e) RSA public key components, use this.
-    pub fn from_rsa_components(modulus: &'a str, exponent: &'a str) -> Self {
+    pub fn from_rsa_raw_components(modulus: &'a [u8], exponent: &'a [u8]) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Rsa,
             kind: DecodingKeyKind::RsaModulusExponent {
                 n: Cow::Borrowed(modulus),
                 e: Cow::Borrowed(exponent),
-            },
+             },
         }
     }
 

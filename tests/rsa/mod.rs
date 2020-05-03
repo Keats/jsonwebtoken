@@ -99,6 +99,7 @@ fn rsa_modulus_exponent() {
     };
     let n = "yRE6rHuNR0QbHO3H3Kt2pOKGVhQqGZXInOduQNxXzuKlvQTLUTv4l4sggh5_CYYi_cvI-SXVT9kPWSKXxJXBXd_4LkvcPuUakBoAkfh-eiFVMh2VrUyWyj3MFl0HTVF9KwRXLAcwkREiS3npThHRyIxuy0ZMeZfxVL5arMhw1SRELB8HoGfG_AtH89BIE9jDBHZ9dLelK9a184zAf8LwoPLxvJb3Il5nncqPcSfKDDodMFBIMc4lQzDKL5gvmiXLXB1AGLm8KBjfE8s3L5xqi-yUod-j8MtvIj812dkS4QMiRVN_by2h3ZY8LYVGrqZXZTcgn2ujn8uKjXLZVD5TdQ";
     let e = "AQAB";
+    let key = DecodingKey::from_rsa_components(n, e).unwrap();
 
     let encrypted = encode(
         &Header::new(Algorithm::RS256),
@@ -108,7 +109,7 @@ fn rsa_modulus_exponent() {
     .unwrap();
     let res = decode::<Claims>(
         &encrypted,
-        &DecodingKey::from_rsa_components(n, e),
+        &key,
         &Validation::new(Algorithm::RS256),
     );
     assert!(res.is_ok());
