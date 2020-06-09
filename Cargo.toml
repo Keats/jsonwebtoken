@@ -1,6 +1,6 @@
 [package]
 name = "jsonwebtoken"
-version = "7.1.0"
+version = "7.1.1"
 authors = ["Vincent Prouillet <hello@vincentprouillet.com>"]
 license = "MIT"
 readme = "README.md"
@@ -16,7 +16,7 @@ serde = {version = "1.0", features = ["derive"] }
 ring = { version = "0.16.5", features = ["std"] }
 base64 = "0.12"
 # For PEM decoding
-pem = "0.7"
+pem = "0.8"
 simple_asn1 = "0.4"
 
 [dev-dependencies]
