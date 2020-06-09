@@ -1,6 +1,10 @@
 # Changelog
 
-# 7.1.0 (2020-03-01)
+## 7.1.1 (2020-06-09)
+
+- Update dependencies
+
+## 7.1.0 (2020-03-01)
 
 - Add `into_static` to `DecodingKey` for easier re-use
 
