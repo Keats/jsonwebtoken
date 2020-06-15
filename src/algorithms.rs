@@ -10,7 +10,7 @@ pub(crate) enum AlgorithmFamily {
 }
 
 /// The algorithms supported for signing/verifying JWTs
-#[derive(Debug, PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Hash, Copy, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
     /// HMAC using SHA-256
     HS256,
