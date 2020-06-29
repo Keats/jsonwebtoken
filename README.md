@@ -55,10 +55,10 @@ The claims fields which can be validated. (see [validation](#validation))
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     aud: String,         // Optional. Audience
-    exp: DateTime<Utc>,  // Required (validate_exp defaults to true in validation). Expiration time
-    iat: DateTime<Utc>,  // Optional. Issued at
+    exp: usize,          // Required (validate_exp defaults to true in validation). Expiration time
+    iat: usize,          // Optional. Issued at
     iss: String,         // Optional. Issuer
-    nbf: DateTime<Utc>,  // Optional. Not Before
+    nbf: usize,          // Optional. Not Before
     sub: String,         // Optional. Subject (whom token refers to)
 }
 ```
