@@ -206,26 +206,9 @@ pub fn dangerous_insecure_decode<T: DeserializeOwned>(token: &str) -> Result<Tok
     Ok(TokenData { header, claims: decoded_claims })
 }
 
-/// Decode a JWT without any signature verification/validations.
-///
-/// NOTE: Do not use this unless you know what you are doing! If the token's signature is invalid, it will *not* return an error.
-///
-/// ```rust
-/// use serde::{Deserialize, Serialize};
-/// use jsonwebtoken::{dangerous_unsafe_decode, Validation, Algorithm};
-///
-/// #[derive(Debug, Serialize, Deserialize)]
-/// struct Claims {
-///     sub: String,
-///     company: String
-/// }
-///
-/// let token = "a.jwt.token".to_string();
-/// // Claims is a struct that implements Deserialize
-/// let token_message = dangerous_unsafe_decode::<Claims>(&token);
-/// ```
+/// Decode a JWT without any signature verification/validations. DEPRECATED.
 #[deprecated(
-    note = "This function has been renamed to `dangerous_unsafe_decode` and will be removed in a later version."
+    note = "This function has been renamed to `dangerous_insecure_decode` and will be removed in a later version."
 )]
 pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
     dangerous_insecure_decode(token)
