@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.2.0 (2020-06-30)
+
+- Add `dangerous_insecure_decode` to replace `dangerous_unsafe_decode`, which is now deprecated
+- Add `dangerous_insecure_decode_with_validation`
+
 ## 7.1.2 (2020-06-16)
 
 - Derive `Hash` for `Header` and `Algorithm`
