@@ -206,12 +206,51 @@ pub fn dangerous_insecure_decode<T: DeserializeOwned>(token: &str) -> Result<Tok
     Ok(TokenData { header, claims: decoded_claims })
 }
 
+/// Decode and validate a JWT without any signature verification.
+///
+/// If the token is invalid or the claims fail validation, it will return an error.
+///
+/// NOTE: Do not use this unless you know what you are doing! If the token's signature is invalid, it will *not* return an error.
+///
+/// ```rust
+/// use serde::{Deserialize, Serialize};
+/// use jsonwebtoken::{dangerous_insecure_decode_with_validation, Validation, Algorithm};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String
+/// }
+///
+/// let token = "a.jwt.token";
+/// // Claims is a struct that implements Deserialize
+/// let token_message = dangerous_insecure_decode_with_validation::<Claims>(&token, &Validation::new(Algorithm::HS256));
+/// ```
+pub fn dangerous_insecure_decode_with_validation<T: DeserializeOwned>(
+    token: &str,
+    validation: &Validation,
+) -> Result<TokenData<T>> {
+    let (_, message) = expect_two!(token.rsplitn(2, '.'));
+    let (claims, header) = expect_two!(message.rsplitn(2, '.'));
+    let header = Header::from_encoded(header)?;
+
+    if !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+
+    let (decoded_claims, claims_map): (T, _) = from_jwt_part_claims(claims)?;
+    validate(&claims_map, validation)?;
+
+    Ok(TokenData { header, claims: decoded_claims })
+}
+
 /// Decode a JWT without any signature verification/validations. DEPRECATED.
 #[deprecated(
     note = "This function has been renamed to `dangerous_insecure_decode` and will be removed in a later version."
 )]
 pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
     dangerous_insecure_decode(token)
+
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).

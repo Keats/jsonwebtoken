@@ -1,4 +1,5 @@
 use chrono::Utc;
+use jsonwebtoken::dangerous_insecure_decode_with_validation;
 use jsonwebtoken::{
     crypto::{sign, verify},
     dangerous_insecure_decode, decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey,
@@ -156,5 +157,35 @@ fn dangerous_insecure_decode_token_invalid_signature() {
 fn dangerous_insecure_decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
     let claims = dangerous_insecure_decode::<Claims>(token);
+    claims.unwrap();
+}
+
+#[test]
+fn dangerous_insecure_decode_token_with_validation() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
+    let claims = dangerous_insecure_decode_with_validation::<Claims>(token, &Validation::default());
+    claims.unwrap();
+}
+
+#[test]
+#[should_panic(expected = "InvalidToken")]
+fn dangerous_insecure_decode_token_with_validation_missing_parts() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+    let claims = dangerous_insecure_decode_with_validation::<Claims>(token, &Validation::default());
+    claims.unwrap();
+}
+
+#[test]
+fn dangerous_insecure_decode_token_with_validation_invalid_signature() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.wrong";
+    let claims = dangerous_insecure_decode_with_validation::<Claims>(token, &Validation::default());
+    claims.unwrap();
+}
+
+#[test]
+#[should_panic(expected = "InvalidAlgorithm")]
+fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
+    let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
+    let claims = dangerous_insecure_decode_with_validation::<Claims>(token, &Validation::default());
     claims.unwrap();
 }

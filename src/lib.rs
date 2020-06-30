@@ -17,7 +17,7 @@ mod validation;
 
 pub use algorithms::Algorithm;
 pub use decoding::{
-    dangerous_insecure_decode, dangerous_unsafe_decode, decode, decode_header, DecodingKey,
+    dangerous_insecure_decode_with_validation, dangerous_insecure_decode, dangerous_unsafe_decode, decode, decode_header, DecodingKey,
     TokenData,
 };
 pub use encoding::{encode, EncodingKey};
