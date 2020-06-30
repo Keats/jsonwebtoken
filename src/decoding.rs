@@ -184,6 +184,34 @@ pub fn decode<T: DeserializeOwned>(
 ///
 /// ```rust
 /// use serde::{Deserialize, Serialize};
+/// use jsonwebtoken::{dangerous_insecure_decode, Validation, Algorithm};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///     sub: String,
+///     company: String
+/// }
+///
+/// let token = "a.jwt.token".to_string();
+/// // Claims is a struct that implements Deserialize
+/// let token_message = dangerous_insecure_decode::<Claims>(&token);
+/// ```
+pub fn dangerous_insecure_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
+    let (_, message) = expect_two!(token.rsplitn(2, '.'));
+    let (claims, header) = expect_two!(message.rsplitn(2, '.'));
+    let header = Header::from_encoded(header)?;
+
+    let (decoded_claims, _): (T, _) = from_jwt_part_claims(claims)?;
+
+    Ok(TokenData { header, claims: decoded_claims })
+}
+
+/// Decode a JWT without any signature verification/validations.
+///
+/// NOTE: Do not use this unless you know what you are doing! If the token's signature is invalid, it will *not* return an error.
+///
+/// ```rust
+/// use serde::{Deserialize, Serialize};
 /// use jsonwebtoken::{dangerous_unsafe_decode, Validation, Algorithm};
 ///
 /// #[derive(Debug, Serialize, Deserialize)]
@@ -196,14 +224,11 @@ pub fn decode<T: DeserializeOwned>(
 /// // Claims is a struct that implements Deserialize
 /// let token_message = dangerous_unsafe_decode::<Claims>(&token);
 /// ```
+#[deprecated(
+    note = "This function has been renamed to `dangerous_unsafe_decode` and will be removed in a later version."
+)]
 pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
-    let (_, message) = expect_two!(token.rsplitn(2, '.'));
-    let (claims, header) = expect_two!(message.rsplitn(2, '.'));
-    let header = Header::from_encoded(header)?;
-
-    let (decoded_claims, _): (T, _) = from_jwt_part_claims(claims)?;
-
-    Ok(TokenData { header, claims: decoded_claims })
+    dangerous_insecure_decode(token)
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).

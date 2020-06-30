@@ -1,7 +1,7 @@
 use chrono::Utc;
 use jsonwebtoken::{
     crypto::{sign, verify},
-    dangerous_unsafe_decode, decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey,
+    dangerous_insecure_decode, decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey,
     Header, Validation,
 };
 use serde::{Deserialize, Serialize};
@@ -131,30 +131,30 @@ fn decode_header_only() {
 }
 
 #[test]
-fn dangerous_unsafe_decode_token() {
+fn dangerous_insecure_decode_token() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
-    let claims = dangerous_unsafe_decode::<Claims>(token);
+    let claims = dangerous_insecure_decode::<Claims>(token);
     claims.unwrap();
 }
 
 #[test]
 #[should_panic(expected = "InvalidToken")]
-fn dangerous_unsafe_decode_token_missing_parts() {
+fn dangerous_insecure_decode_token_missing_parts() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-    let claims = dangerous_unsafe_decode::<Claims>(token);
+    let claims = dangerous_insecure_decode::<Claims>(token);
     claims.unwrap();
 }
 
 #[test]
-fn dangerous_unsafe_decode_token_invalid_signature() {
+fn dangerous_insecure_decode_token_invalid_signature() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.wrong";
-    let claims = dangerous_unsafe_decode::<Claims>(token);
+    let claims = dangerous_insecure_decode::<Claims>(token);
     claims.unwrap();
 }
 
 #[test]
-fn dangerous_unsafe_decode_token_wrong_algorithm() {
+fn dangerous_insecure_decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
-    let claims = dangerous_unsafe_decode::<Claims>(token);
+    let claims = dangerous_insecure_decode::<Claims>(token);
     claims.unwrap();
 }
