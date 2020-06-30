@@ -2,9 +2,6 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::result;
 
-use base64;
-use serde_json;
-
 /// A crate private constructor for `Error`.
 pub(crate) fn new_error(kind: ErrorKind) -> Error {
     Error(Box::new(kind))

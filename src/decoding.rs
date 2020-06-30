@@ -184,7 +184,7 @@ pub fn decode<T: DeserializeOwned>(
 ///
 /// ```rust
 /// use serde::{Deserialize, Serialize};
-/// use jsonwebtoken::{dangerous_unsafe_decode, Validation, Algorithm};
+/// use jsonwebtoken::{dangerous_insecure_decode, Validation, Algorithm};
 ///
 /// #[derive(Debug, Serialize, Deserialize)]
 /// struct Claims {
@@ -194,9 +194,9 @@ pub fn decode<T: DeserializeOwned>(
 ///
 /// let token = "a.jwt.token".to_string();
 /// // Claims is a struct that implements Deserialize
-/// let token_message = dangerous_unsafe_decode::<Claims>(&token);
+/// let token_message = dangerous_insecure_decode::<Claims>(&token);
 /// ```
-pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
+pub fn dangerous_insecure_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
     let (_, message) = expect_two!(token.rsplitn(2, '.'));
     let (claims, header) = expect_two!(message.rsplitn(2, '.'));
     let header = Header::from_encoded(header)?;
@@ -242,6 +242,15 @@ pub fn dangerous_insecure_decode_with_validation<T: DeserializeOwned>(
     validate(&claims_map, validation)?;
 
     Ok(TokenData { header, claims: decoded_claims })
+}
+
+/// Decode a JWT without any signature verification/validations. DEPRECATED.
+#[deprecated(
+    note = "This function has been renamed to `dangerous_insecure_decode` and will be removed in a later version."
+)]
+pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
+    dangerous_insecure_decode(token)
+
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
