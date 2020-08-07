@@ -250,7 +250,6 @@ pub fn dangerous_insecure_decode_with_validation<T: DeserializeOwned>(
 )]
 pub fn dangerous_unsafe_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
     dangerous_insecure_decode(token)
-
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
