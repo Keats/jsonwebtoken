@@ -194,8 +194,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::ExpiredSignature => (),
-            _ => assert!(false),
+            ErrorKind::ExpiredSignature => (),
+            _ => unreachable!(),
         };
     }
 
@@ -215,8 +215,8 @@ mod tests {
         let res = validate(&claims, &Validation::default());
         assert!(res.is_err());
         match res.unwrap_err().kind() {
-            &ErrorKind::ExpiredSignature => (),
-            _ => assert!(false),
+            ErrorKind::ExpiredSignature => (),
+            _ => unreachable!(),
         };
     }
 
@@ -240,8 +240,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::ImmatureSignature => (),
-            _ => assert!(false),
+            ErrorKind::ImmatureSignature => (),
+            _ => unreachable!(),
         };
     }
 
@@ -285,8 +285,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::InvalidIssuer => (),
-            _ => assert!(false),
+            ErrorKind::InvalidIssuer => (),
+            _ => unreachable!(),
         };
     }
 
@@ -302,8 +302,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::InvalidIssuer => (),
-            _ => assert!(false),
+            ErrorKind::InvalidIssuer => (),
+            _ => unreachable!(),
         };
     }
 
@@ -333,8 +333,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::InvalidSubject => (),
-            _ => assert!(false),
+            ErrorKind::InvalidSubject => (),
+            _ => unreachable!(),
         };
     }
 
@@ -350,8 +350,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::InvalidSubject => (),
-            _ => assert!(false),
+            ErrorKind::InvalidSubject => (),
+            _ => unreachable!(),
         };
     }
 
@@ -385,8 +385,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::InvalidAudience => (),
-            _ => assert!(false),
+            ErrorKind::InvalidAudience => (),
+            _ => unreachable!(),
         };
     }
 
@@ -400,8 +400,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::InvalidAudience => (),
-            _ => assert!(false),
+            ErrorKind::InvalidAudience => (),
+            _ => unreachable!(),
         };
     }
 
@@ -414,8 +414,8 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            &ErrorKind::InvalidAudience => (),
-            _ => assert!(false),
+            ErrorKind::InvalidAudience => (),
+            _ => unreachable!(),
         };
     }
 
@@ -435,11 +435,8 @@ mod tests {
         // It errors because it needs to validate iss/sub which are missing
         assert!(res.is_err());
         match res.unwrap_err().kind() {
-            &ErrorKind::InvalidIssuer => (),
-            t @ _ => {
-                println!("{:?}", t);
-                assert!(false)
-            }
+            ErrorKind::InvalidIssuer => (),
+            t => panic!("{:?}", t),
         };
     }
 
