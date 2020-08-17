@@ -126,7 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let iat = Utc::now();
     let exp = iat + chrono::Duration::days(1);
 
-    let claims = Claims::new(sub.clone(), iat, exp);
+    let claims = Claims::new(sub, iat, exp);
 
     let token = jsonwebtoken::encode(
         &Header::default(),
