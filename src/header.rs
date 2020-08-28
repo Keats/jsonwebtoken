@@ -6,7 +6,7 @@ use crate::serialization::b64_decode;
 
 /// A basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional.
-#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Header {
     /// The type of JWS: it can only be "JWT" here
     ///
@@ -42,6 +42,10 @@ pub struct Header {
     /// Defined in [RFC7515#4.1.7](https://tools.ietf.org/html/rfc7515#section-4.1.7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x5t: Option<String>,
+    /// Additional Public or Private header parameters
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(flatten)]
+    pub params: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
 impl Header {
@@ -55,6 +59,7 @@ impl Header {
             kid: None,
             x5u: None,
             x5t: None,
+            params: None,
         }
     }
 
@@ -71,5 +76,23 @@ impl Default for Header {
     /// Returns a JWT header using the default Algorithm, HS256
     fn default() -> Self {
         Header::new(Algorithm::default())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn additional_parameters() {
+        let header_json = r###"{
+            "alg": "ES256",
+            "example": 123
+        }"###;
+        let header_b64 = base64::encode_config(header_json, base64::URL_SAFE_NO_PAD);
+        let res = Header::from_encoded(&header_b64);
+        let header = res.unwrap();
+        assert_eq!(header.params.unwrap().get("example").unwrap(), 123);
     }
 }
