@@ -46,6 +46,9 @@ pub enum ErrorKind {
     InvalidAlgorithmName,
     /// When a key is provided with an invalid format
     InvalidKeyFormat,
+    /// When a JWT crit header is empty, includes a name not present as a key in the header, or
+    /// includes a name for a parameter specified in JWS (RFC 7515) or JWA (RFC 7518)
+    InvalidCriticalHeader,
 
     // Validation errors
     /// When a token’s `exp` claim indicates that it has expired
@@ -88,6 +91,7 @@ impl StdError for Error {
             ErrorKind::InvalidAlgorithm => None,
             ErrorKind::InvalidAlgorithmName => None,
             ErrorKind::InvalidKeyFormat => None,
+            ErrorKind::InvalidCriticalHeader => None,
             ErrorKind::Base64(ref err) => Some(err),
             ErrorKind::Json(ref err) => Some(err),
             ErrorKind::Utf8(ref err) => Some(err),
@@ -110,6 +114,7 @@ impl fmt::Display for Error {
             | ErrorKind::ImmatureSignature
             | ErrorKind::InvalidAlgorithm
             | ErrorKind::InvalidKeyFormat
+            | ErrorKind::InvalidCriticalHeader
             | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
             ErrorKind::Json(ref err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
