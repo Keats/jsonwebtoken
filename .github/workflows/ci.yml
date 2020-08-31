@@ -26,6 +26,22 @@ jobs:
         command: fmt
         args: -- --check
 
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --all-features -- -D warnings
+
   tests:
     name: Tests
     runs-on: ${{ matrix.os }}
@@ -35,7 +51,7 @@ jobs:
         include:
         - build: pinned
           os: ubuntu-18.04
-          rust: 1.39.0
+          rust: 1.40.0
         - build: stable
           os: ubuntu-18.04
           rust: stable

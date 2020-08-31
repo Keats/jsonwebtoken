@@ -23,6 +23,11 @@ simple_asn1 = "0.4"
 [dev-dependencies]
 # For the custom chrono example
 chrono = "0.4"
+criterion = "0.3"
+
+[[bench]]
+name = "jwt"
+harness = false
 
 [badges]
 maintenance = { status = "passively-maintained" }

@@ -27,6 +27,11 @@ impl Error {
 }
 
 /// The specific type of an error.
+///
+/// This enum may grow additional variants, the `#[non_exhaustive]`
+/// attribute makes sure clients don't count on exhaustive matching.
+/// (Otherwise, adding a new variant could break existing code.)
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum ErrorKind {
     /// When a token doesn't have a valid JWT shape
@@ -66,14 +71,6 @@ pub enum ErrorKind {
     Utf8(::std::string::FromUtf8Error),
     /// Something unspecified went wrong with crypto
     Crypto(::ring::error::Unspecified),
-
-    /// Hints that destructuring should not be exhaustive.
-    ///
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl StdError for Error {
@@ -95,7 +92,6 @@ impl StdError for Error {
             ErrorKind::Json(ref err) => Some(err),
             ErrorKind::Utf8(ref err) => Some(err),
             ErrorKind::Crypto(ref err) => Some(err),
-            ErrorKind::__Nonexhaustive => None,
         }
     }
 }
@@ -119,7 +115,6 @@ impl fmt::Display for Error {
             ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Crypto(ref err) => write!(f, "Crypto error: {}", err),
             ErrorKind::Base64(ref err) => write!(f, "Base64 error: {}", err),
-            ErrorKind::__Nonexhaustive => write!(f, "Unknown error"),
         }
     }
 }
