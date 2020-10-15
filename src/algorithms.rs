@@ -7,6 +7,7 @@ pub(crate) enum AlgorithmFamily {
     Hmac,
     Rsa,
     Ec,
+    Ed,
 }
 
 /// The algorithms supported for signing/verifying JWTs
@@ -37,6 +38,9 @@ pub enum Algorithm {
     PS384,
     /// RSASSA-PSS using SHA-512
     PS512,
+
+    /// Edwards-curve Digital Signature Algorithm (EdDSA)
+    EdDSA,
 }
 
 impl Default for Algorithm {
@@ -60,6 +64,7 @@ impl FromStr for Algorithm {
             "PS384" => Ok(Algorithm::PS384),
             "PS512" => Ok(Algorithm::PS512),
             "RS512" => Ok(Algorithm::RS512),
+            "EdDSA" => Ok(Algorithm::EdDSA),
             _ => Err(ErrorKind::InvalidAlgorithmName.into()),
         }
     }
@@ -76,6 +81,7 @@ impl Algorithm {
             | Algorithm::PS384
             | Algorithm::PS512 => AlgorithmFamily::Rsa,
             Algorithm::ES256 | Algorithm::ES384 => AlgorithmFamily::Ec,
+            Algorithm::EdDSA => AlgorithmFamily::Ed,
         }
     }
 }
