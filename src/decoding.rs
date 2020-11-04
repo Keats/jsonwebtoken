@@ -131,6 +131,43 @@ impl<'a> DecodingKey<'a> {
     }
 }
 
+/// Verify signature of a JWT, and return header object and raw payload
+///
+/// If the token or its signature is invalid, it will return an error.
+///
+/// ```rust/// 
+/// use jsonwebtoken::{verify_sig, DecodingKey, Validation, Algorithm};
+///
+///
+/// let token = "a.jwt.token".to_string();
+/// let token_message = verify_sig(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
+/// ```
+pub fn verify_sig(
+    token: &str,
+    key: &DecodingKey,
+    validation: &Validation
+) -> Result<(Header, String)> {
+    for alg in &validation.algorithms {
+        if key.family != alg.family() {
+            return Err(new_error(ErrorKind::InvalidAlgorithm));
+        }
+    }
+
+    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
+    let header = Header::from_encoded(header)?;
+
+    if !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+
+    if !verify(signature, message, key, header.alg)? {
+        return Err(new_error(ErrorKind::InvalidSignature));
+    }
+
+    Ok((header, payload.to_string()))
+}
+
 /// Decode and validate a JWT
 ///
 /// If the token or its signature is invalid or the claims fail validation, it will return an error.
@@ -154,28 +191,15 @@ pub fn decode<T: DeserializeOwned>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
-    for alg in &validation.algorithms {
-        if key.family != alg.family() {
-            return Err(new_error(ErrorKind::InvalidAlgorithm));
+    match verify_sig(token, key, validation) {
+        Err(e) => Err(e),
+        Ok((header, claims)) => {
+            let (decoded_claims, claims_map): (T, _) = from_jwt_part_claims(claims)?;
+            validate(&claims_map, validation)?;
+        
+            Ok(TokenData { header, claims: decoded_claims })        
         }
     }
-
-    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
-    let (claims, header) = expect_two!(message.rsplitn(2, '.'));
-    let header = Header::from_encoded(header)?;
-
-    if !validation.algorithms.contains(&header.alg) {
-        return Err(new_error(ErrorKind::InvalidAlgorithm));
-    }
-
-    if !verify(signature, message, key, header.alg)? {
-        return Err(new_error(ErrorKind::InvalidSignature));
-    }
-
-    let (decoded_claims, claims_map): (T, _) = from_jwt_part_claims(claims)?;
-    validate(&claims_map, validation)?;
-
-    Ok(TokenData { header, claims: decoded_claims })
 }
 
 /// Decode a JWT without any signature verification/validations.
