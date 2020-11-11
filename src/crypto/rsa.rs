@@ -8,7 +8,7 @@ use crate::serialization::{b64_decode, b64_encode};
 /// Only used internally when validating RSA, to map from our enum to the Ring param structs.
 pub(crate) fn alg_to_rsa_parameters(alg: Algorithm) -> &'static signature::RsaParameters {
     match alg {
-        Algorithm::RS256 => &signature::RSA_PKCS1_2048_8192_SHA256,
+        Algorithm::RS256 => &signature::RSA_PKCS1_1024_8192_SHA256_FOR_LEGACY_USE_ONLY,
         Algorithm::RS384 => &signature::RSA_PKCS1_2048_8192_SHA384,
         Algorithm::RS512 => &signature::RSA_PKCS1_2048_8192_SHA512,
         Algorithm::PS256 => &signature::RSA_PSS_2048_8192_SHA256,
