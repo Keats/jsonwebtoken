@@ -117,7 +117,7 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
     let encoded_header = b64_encode_part(&header)?;
     let encoded_claims = b64_encode_part(&claims)?;
     let message = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
-    let signature = crypto::sign(&*message, key, header.alg)?;
+    let signature = crypto::sign(&*message.as_bytes(), key, header.alg)?;
 
     Ok([message, signature].join("."))
 }

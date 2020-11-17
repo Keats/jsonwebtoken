@@ -16,8 +16,8 @@ pub(crate) fn alg_to_ec_verification(alg: Algorithm) -> &'static signature::EdDS
 
 /// The actual EdDSA signing + encoding
 /// The key needs to be in PKCS8 format
-pub fn sign(key: &[u8], message: &str) -> Result<String> {
+pub fn sign(key: &[u8], message: &[u8]) -> Result<String> {
     let signing_key = signature::Ed25519KeyPair::from_pkcs8_maybe_unchecked(key)?;
-    let out = signing_key.sign(message.as_bytes());
+    let out = signing_key.sign(message);
     Ok(b64_encode(out.as_ref()))
 }

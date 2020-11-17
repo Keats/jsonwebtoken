@@ -18,9 +18,9 @@ fn round_trip_sign_verification_pk8() {
     let pubkey = include_bytes!("public_ecdsa_key.pk8");
 
     let encrypted =
-        sign("hello world", &EncodingKey::from_ec_der(privkey), Algorithm::ES256).unwrap();
+        sign("hello world".as_bytes(), &EncodingKey::from_ec_der(privkey), Algorithm::ES256).unwrap();
     let is_valid =
-        verify(&encrypted, "hello world", &DecodingKey::from_ec_der(pubkey), Algorithm::ES256)
+        verify(&encrypted, "hello world".as_bytes(), &DecodingKey::from_ec_der(pubkey), Algorithm::ES256)
             .unwrap();
     assert!(is_valid);
 }
@@ -30,11 +30,11 @@ fn round_trip_sign_verification_pem() {
     let privkey_pem = include_bytes!("private_ecdsa_key.pem");
     let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
     let encrypted =
-        sign("hello world", &EncodingKey::from_ec_pem(privkey_pem).unwrap(), Algorithm::ES256)
+        sign("hello world".as_bytes(), &EncodingKey::from_ec_pem(privkey_pem).unwrap(), Algorithm::ES256)
             .unwrap();
     let is_valid = verify(
         &encrypted,
-        "hello world",
+        "hello world".as_bytes(),
         &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
         Algorithm::ES256,
     )

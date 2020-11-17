@@ -1,5 +1,10 @@
 # Changelog
 
+## 8.0.0 (unreleased)
+ 
+- Add EdDSA algorithm
+- `sign`/`verify` now takes a `&[u8]` instead of `&str` to be more flexible
+
 ## 7.2.0 (2020-06-30)
 
 - Add `dangerous_insecure_decode` to replace `dangerous_unsafe_decode`, which is now deprecated
