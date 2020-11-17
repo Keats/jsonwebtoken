@@ -42,6 +42,12 @@ pub struct Header {
     /// Defined in [RFC7515#4.1.7](https://tools.ietf.org/html/rfc7515#section-4.1.7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x5t: Option<String>,
+    /// X.509 certificate SHA-256 thumbprint
+    ///
+    /// Defined in [RFC7515#4.1.7](https://tools.ietf.org/html/rfc7515#section-4.1.8).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "x5t#S256")]
+    pub x5t_s256: Option<String>,
     /// Critical
     ///
     /// Defined in [RFC7515#4.1.11](https://tools.ietf.org/html/rfc7515#section-4.1.11).
@@ -64,6 +70,7 @@ impl Header {
             kid: None,
             x5u: None,
             x5t: None,
+            x5t_s256: None,
             crit: None,
             params: None,
         }
