@@ -29,10 +29,10 @@ pub(crate) fn alg_to_ec_signing(alg: Algorithm) -> &'static signature::EcdsaSign
 pub fn sign(
     alg: &'static signature::EcdsaSigningAlgorithm,
     key: &[u8],
-    message: &str,
+    message: &[u8],
 ) -> Result<String> {
     let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key)?;
     let rng = rand::SystemRandom::new();
-    let out = signing_key.sign(&rng, message.as_bytes())?;
+    let out = signing_key.sign(&rng, message)?;
     Ok(b64_encode(out.as_ref()))
 }
