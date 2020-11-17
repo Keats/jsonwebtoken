@@ -9,6 +9,8 @@ enum PemType {
     EcPrivate,
     RsaPublic,
     RsaPrivate,
+    EdPublic,
+    EdPrivate,
 }
 
 #[derive(Debug, PartialEq)]
@@ -22,6 +24,7 @@ enum Standard {
 #[derive(Debug, PartialEq)]
 enum Classification {
     Ec,
+    Ed,
     Rsa,
 }
 
@@ -89,6 +92,13 @@ impl PemEncodedKey {
                                         PemType::EcPublic
                                     }
                                 }
+                                Classification::Ed => {
+                                    if is_private {
+                                        PemType::EdPrivate
+                                    } else {
+                                        PemType::EdPublic
+                                    }
+                                }
                                 Classification::Rsa => {
                                     if is_private {
                                         PemType::RsaPrivate
@@ -137,6 +147,28 @@ impl PemEncodedKey {
         }
     }
 
+    /// Can only be PKCS8
+    pub fn as_ed_private_key(&self) -> Result<&[u8]> {
+        match self.standard {
+            Standard::Pkcs1 => Err(ErrorKind::InvalidKeyFormat.into()),
+            Standard::Pkcs8 => match self.pem_type {
+                PemType::EdPrivate => Ok(self.content.as_slice()),
+                _ => Err(ErrorKind::InvalidKeyFormat.into()),
+            },
+        }
+    }
+
+    /// Can only be PKCS8
+    pub fn as_ed_public_key(&self) -> Result<&[u8]> {
+        match self.standard {
+            Standard::Pkcs1 => Err(ErrorKind::InvalidKeyFormat.into()),
+            Standard::Pkcs8 => match self.pem_type {
+                PemType::EdPublic => extract_first_bitstring(&self.asn1),
+                _ => Err(ErrorKind::InvalidKeyFormat.into()),
+            },
+        }
+    }
+
     /// Can be PKCS1 or PKCS8
     pub fn as_rsa_key(&self) -> Result<&[u8]> {
         match self.standard {
@@ -176,12 +208,13 @@ fn extract_first_bitstring(asn1: &[simple_asn1::ASN1Block]) -> Result<&[u8]> {
     Err(ErrorKind::InvalidEcdsaKey.into())
 }
 
-/// Find whether this is EC or RSA
+/// Find whether this is EC, RSA, or Ed
 fn classify_pem(asn1: &[simple_asn1::ASN1Block]) -> Option<Classification> {
     // These should be constant but the macro requires
     // #![feature(const_vec_new)]
     let ec_public_key_oid = simple_asn1::oid!(1, 2, 840, 10_045, 2, 1);
     let rsa_public_key_oid = simple_asn1::oid!(1, 2, 840, 113_549, 1, 1, 1);
+    let ed25519_oid = simple_asn1::oid!(1, 3, 101, 112);
 
     for asn1_entry in asn1.iter() {
         match asn1_entry {
@@ -196,6 +229,9 @@ fn classify_pem(asn1: &[simple_asn1::ASN1Block]) -> Option<Classification> {
                 }
                 if oid == rsa_public_key_oid {
                     return Some(Classification::Rsa);
+                }
+                if oid == ed25519_oid {
+                    return Some(Classification::Ed);
                 }
             }
             _ => {}

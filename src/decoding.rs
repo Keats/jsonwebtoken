@@ -94,6 +94,16 @@ impl<'a> DecodingKey<'a> {
         })
     }
 
+    /// If you have a EdDSA public key in PEM format, use this.
+    pub fn from_ed_pem(key: &'a [u8]) -> Result<Self> {
+        let pem_key = PemEncodedKey::new(key)?;
+        let content = pem_key.as_ed_public_key()?;
+        Ok(DecodingKey {
+            family: AlgorithmFamily::Ed,
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())),
+        })
+    }
+
     /// If you know what you're doing and have a RSA DER encoded public key, use this.
     pub fn from_rsa_der(der: &'a [u8]) -> Self {
         DecodingKey {
@@ -106,6 +116,14 @@ impl<'a> DecodingKey<'a> {
     pub fn from_ec_der(der: &'a [u8]) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Ec,
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
+        }
+    }
+
+    /// If you know what you're doing and have a Ed DER encoded public key, use this.
+    pub fn from_ed_der(der: &'a [u8]) -> Self {
+        DecodingKey {
+            family: AlgorithmFamily::Ed,
             kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
         }
     }
