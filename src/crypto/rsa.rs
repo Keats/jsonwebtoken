@@ -37,15 +37,13 @@ pub(crate) fn alg_to_rsa_signing(alg: Algorithm) -> &'static dyn signature::RsaE
 pub(crate) fn sign(
     alg: &'static dyn signature::RsaEncoding,
     key: &[u8],
-    message: &str,
+    message: &[u8],
 ) -> Result<String> {
     let key_pair = signature::RsaKeyPair::from_der(key).map_err(|_| ErrorKind::InvalidRsaKey)?;
 
     let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
-    key_pair
-        .sign(alg, &rng, message.as_bytes(), &mut signature)
-        .map_err(|_| ErrorKind::InvalidRsaKey)?;
+    key_pair.sign(alg, &rng, message, &mut signature).map_err(|_| ErrorKind::InvalidRsaKey)?;
 
     Ok(b64_encode(&signature))
 }
@@ -54,13 +52,13 @@ pub(crate) fn sign(
 pub(crate) fn verify_from_components(
     alg: &'static signature::RsaParameters,
     signature: &str,
-    message: &str,
+    message: &[u8],
     components: (&str, &str),
 ) -> Result<bool> {
     let signature_bytes = b64_decode(signature)?;
     let n = BigUint::from_bytes_be(&b64_decode(components.0)?).to_bytes_be();
     let e = BigUint::from_bytes_be(&b64_decode(components.1)?).to_bytes_be();
     let pubkey = signature::RsaPublicKeyComponents { n, e };
-    let res = pubkey.verify(alg, message.as_ref(), &signature_bytes);
+    let res = pubkey.verify(alg, message, &signature_bytes);
     Ok(res.is_ok())
 }

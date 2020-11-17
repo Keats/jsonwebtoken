@@ -13,8 +13,8 @@ pub(crate) mod rsa;
 
 /// The actual HS signing + encoding
 /// Could be in its own file to match RSA/EC but it's 2 lines...
-pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> Result<String> {
-    let digest = hmac::sign(&hmac::Key::new(alg, key), message.as_bytes());
+pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &[u8]) -> Result<String> {
+    let digest = hmac::sign(&hmac::Key::new(alg, key), message);
     Ok(b64_encode(digest.as_ref()))
 }
 
@@ -23,6 +23,11 @@ pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> Resu
 ///
 /// If you just want to encode a JWT, use `encode` instead.
 pub fn sign(message: &str, key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
+    sign_bytes(message.as_bytes(), key, algorithm)
+}
+
+/// Same as sign() but for message as bytes
+pub fn sign_bytes(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
     match algorithm {
         Algorithm::HS256 => sign_hmac(hmac::HMAC_SHA256, key.inner(), message),
         Algorithm::HS384 => sign_hmac(hmac::HMAC_SHA384, key.inner(), message),
@@ -47,12 +52,12 @@ pub fn sign(message: &str, key: &EncodingKey, algorithm: Algorithm) -> Result<St
 fn verify_ring(
     alg: &'static dyn signature::VerificationAlgorithm,
     signature: &str,
-    message: &str,
+    message: &[u8],
     key: &[u8],
 ) -> Result<bool> {
     let signature_bytes = b64_decode(signature)?;
     let public_key = signature::UnparsedPublicKey::new(alg, key);
-    let res = public_key.verify(message.as_bytes(), &signature_bytes);
+    let res = public_key.verify(message, &signature_bytes);
 
     Ok(res.is_ok())
 }
@@ -71,10 +76,20 @@ pub fn verify(
     key: &DecodingKey,
     algorithm: Algorithm,
 ) -> Result<bool> {
+    Ok(verify_bytes(signature, message.as_bytes(), key, algorithm)?)
+}
+
+/// Same as verify() but for message as bytes
+pub fn verify_bytes(
+    signature: &str,
+    message: &[u8],
+    key: &DecodingKey,
+    algorithm: Algorithm,
+) -> Result<bool> {
     match algorithm {
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             // we just re-sign the message with the key and compare if they are equal
-            let signed = sign(message, &EncodingKey::from_secret(key.as_bytes()), algorithm)?;
+            let signed = sign_bytes(message, &EncodingKey::from_secret(key.as_bytes()), algorithm)?;
             Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
         }
         Algorithm::ES256 | Algorithm::ES384 => verify_ring(
