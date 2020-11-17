@@ -43,6 +43,14 @@ impl EncodingKey {
         Ok(EncodingKey { family: AlgorithmFamily::Ec, content: content.to_vec() })
     }
 
+    /// If you are loading a EdDSA key from a .pem file
+    /// This errors if the key is not a valid private Ed key
+    pub fn from_ed_pem(key: &[u8]) -> Result<Self> {
+        let pem_key = PemEncodedKey::new(key)?;
+        let content = pem_key.as_ed_private_key()?;
+        Ok(EncodingKey { family: AlgorithmFamily::Ed, content: content.to_vec() })
+    }
+
     /// If you know what you're doing and have the DER-encoded key, for RSA only
     pub fn from_rsa_der(der: &[u8]) -> Self {
         EncodingKey { family: AlgorithmFamily::Rsa, content: der.to_vec() }
@@ -51,6 +59,11 @@ impl EncodingKey {
     /// If you know what you're doing and have the DER-encoded key, for ECDSA
     pub fn from_ec_der(der: &[u8]) -> Self {
         EncodingKey { family: AlgorithmFamily::Ec, content: der.to_vec() }
+    }
+
+    /// If you know what you're doing and have the DER-encoded key, for EdDSA
+    pub fn from_ed_der(der: &[u8]) -> Self {
+        EncodingKey { family: AlgorithmFamily::Ed, content: der.to_vec() }
     }
 
     pub(crate) fn inner(&self) -> &[u8] {
