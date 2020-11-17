@@ -17,7 +17,7 @@ pub struct Claims {
 #[test]
 fn sign_hs256() {
     let result =
-        sign("hello world", &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
+        sign("hello world".as_bytes(), &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
     let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
     assert_eq!(result, expected);
 }
@@ -26,7 +26,7 @@ fn sign_hs256() {
 fn verify_hs256() {
     let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
     let valid =
-        verify(sig, "hello world", &DecodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
+        verify(sig, "hello world".as_bytes(), &DecodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
     assert!(valid);
 }
 
