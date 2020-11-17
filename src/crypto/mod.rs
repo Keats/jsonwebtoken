@@ -22,12 +22,7 @@ pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &[u8]) -> Res
 /// the base64 url safe encoded of the result.
 ///
 /// If you just want to encode a JWT, use `encode` instead.
-pub fn sign(message: &str, key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
-    sign_bytes(message.as_bytes(), key, algorithm)
-}
-
-/// Same as sign() but for message as bytes
-pub fn sign_bytes(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
+pub fn sign(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
     match algorithm {
         Algorithm::HS256 => sign_hmac(hmac::HMAC_SHA256, key.inner(), message),
         Algorithm::HS384 => sign_hmac(hmac::HMAC_SHA384, key.inner(), message),
@@ -72,16 +67,6 @@ fn verify_ring(
 /// `message` is base64(header) + "." + base64(claims)
 pub fn verify(
     signature: &str,
-    message: &str,
-    key: &DecodingKey,
-    algorithm: Algorithm,
-) -> Result<bool> {
-    Ok(verify_bytes(signature, message.as_bytes(), key, algorithm)?)
-}
-
-/// Same as verify() but for message as bytes
-pub fn verify_bytes(
-    signature: &str,
     message: &[u8],
     key: &DecodingKey,
     algorithm: Algorithm,
@@ -89,7 +74,7 @@ pub fn verify_bytes(
     match algorithm {
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             // we just re-sign the message with the key and compare if they are equal
-            let signed = sign_bytes(message, &EncodingKey::from_secret(key.as_bytes()), algorithm)?;
+            let signed = sign(message, &EncodingKey::from_secret(key.as_bytes()), algorithm)?;
             Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
         }
         Algorithm::ES256 | Algorithm::ES384 => verify_ring(

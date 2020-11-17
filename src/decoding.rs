@@ -186,7 +186,7 @@ pub fn decode<T: DeserializeOwned>(
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    if !verify(signature, message, key, header.alg)? {
+    if !verify(signature, message.as_bytes(), key, header.alg)? {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
