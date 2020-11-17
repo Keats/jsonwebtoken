@@ -8,6 +8,7 @@ use crate::errors::Result;
 use crate::serialization::{b64_decode, b64_encode};
 
 pub(crate) mod ecdsa;
+pub(crate) mod eddsa;
 pub(crate) mod rsa;
 
 /// The actual HS signing + encoding
@@ -30,6 +31,8 @@ pub fn sign(message: &str, key: &EncodingKey, algorithm: Algorithm) -> Result<St
         Algorithm::ES256 | Algorithm::ES384 => {
             ecdsa::sign(ecdsa::alg_to_ec_signing(algorithm), key.inner(), message)
         }
+
+        Algorithm::EdDSA => eddsa::sign(key.inner(), message),
 
         Algorithm::RS256
         | Algorithm::RS384
@@ -76,6 +79,12 @@ pub fn verify(
         }
         Algorithm::ES256 | Algorithm::ES384 => verify_ring(
             ecdsa::alg_to_ec_verification(algorithm),
+            signature,
+            message,
+            key.as_bytes(),
+        ),
+        Algorithm::EdDSA => verify_ring(
+            eddsa::alg_to_ec_verification(algorithm),
             signature,
             message,
             key.as_bytes(),
