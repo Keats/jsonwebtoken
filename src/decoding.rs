@@ -135,7 +135,7 @@ impl<'a> DecodingKey<'a> {
 ///
 /// If the token or its signature is invalid, it will return an error.
 ///
-/// ```rust/// 
+/// ```rust///
 /// use jsonwebtoken::{verify_sig, DecodingKey, Validation, Algorithm};
 ///
 ///
@@ -145,7 +145,7 @@ impl<'a> DecodingKey<'a> {
 pub fn verify_sig(
     token: &str,
     key: &DecodingKey,
-    validation: &Validation
+    validation: &Validation,
 ) -> Result<(Header, String)> {
     for alg in &validation.algorithms {
         if key.family != alg.family() {
@@ -196,8 +196,8 @@ pub fn decode<T: DeserializeOwned>(
         Ok((header, claims)) => {
             let (decoded_claims, claims_map): (T, _) = from_jwt_part_claims(claims)?;
             validate(&claims_map, validation)?;
-        
-            Ok(TokenData { header, claims: decoded_claims })        
+
+            Ok(TokenData { header, claims: decoded_claims })
         }
     }
 }
