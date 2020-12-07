@@ -29,6 +29,12 @@ impl EncodingKey {
 
     /// If you are loading a RSA key from a .pem file.
     /// This errors if the key is not a valid RSA key.
+    ///
+    /// # NOTE
+    ///
+    /// According to the [ring doc](https://briansmith.org/rustdoc/ring/signature/struct.RsaKeyPair.html#method.from_pkcs8),
+    /// the key should be at least 2047 bits.
+    ///
     pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
@@ -37,6 +43,17 @@ impl EncodingKey {
 
     /// If you are loading a ECDSA key from a .pem file
     /// This errors if the key is not a valid private EC key
+    ///
+    /// # NOTE
+    ///
+    /// The key should be in PKCS#8 form.
+    ///
+    /// You can generate a key with the following:
+    ///
+    /// ```sh
+    /// openssl ecparam -genkey -noout -name prime256v1 \
+    ///     | openssl pkcs8 -topk8 -nocrypt -out ec-private.pem
+    /// ```
     pub fn from_ec_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ec_private_key()?;
