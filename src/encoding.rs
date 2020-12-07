@@ -49,7 +49,7 @@ impl EncodingKey {
     /// The key should be in PKCS#8 form.
     ///
     /// You can generate a key with the following:
-    /// 
+    ///
     /// ```sh
     /// openssl ecparam -genkey -noout -name prime256v1 \
     ///     | openssl pkcs8 -topk8 -nocrypt -out ec-private.pem
