@@ -64,7 +64,7 @@ impl<'a> DecodingKey<'a> {
     }
 
     /// If you are loading a public RSA key in a PEM format, use this.
-    pub fn from_rsa_pem(key: &'a [u8]) -> Result<Self> {
+    pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
         Ok(DecodingKey {
