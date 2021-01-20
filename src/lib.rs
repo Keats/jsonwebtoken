@@ -3,7 +3,8 @@
 //! Documentation:  [stable](https://docs.rs/jsonwebtoken/)
 #![deny(missing_docs)]
 
-mod algorithms;
+/// [std::str::FromStr] and [Default] implementations for [Algorithm]
+pub mod algorithms;
 /// Lower level functions, if you want to do something other than JWTs
 pub mod crypto;
 mod decoding;
