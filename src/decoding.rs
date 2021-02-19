@@ -154,17 +154,17 @@ impl<'a> DecodingKey<'a> {
 /// If the token or its signature is invalid, it will return an error.
 ///
 /// ```rust///
-/// use jsonwebtoken::{verify_sig, DecodingKey, Validation, Algorithm};
+/// use jsonwebtoken::{verify_signature, DecodingKey, Validation, Algorithm};
 ///
 ///
 /// let token = "a.jwt.token".to_string();
-/// let token_message = verify_sig(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
+/// let token_message = verify_signature(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
 /// ```
-pub fn verify_sig(
-    token: &str,
+pub fn verify_signature<'a>(
+    token: &'a str,
     key: &DecodingKey,
     validation: &Validation,
-) -> Result<(Header, String)> {
+) -> Result<(Header, &'a str)> {
     for alg in &validation.algorithms {
         if key.family != alg.family() {
             return Err(new_error(ErrorKind::InvalidAlgorithm));
@@ -183,7 +183,7 @@ pub fn verify_sig(
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
-    Ok((header, payload.to_string()))
+    Ok((header, payload))
 }
 
 /// Decode and validate a JWT
@@ -209,7 +209,7 @@ pub fn decode<T: DeserializeOwned>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
-    match verify_sig(token, key, validation) {
+    match verify_signature(token, key, validation) {
         Err(e) => Err(e),
         Ok((header, claims)) => {
             let (decoded_claims, claims_map): (T, _) = from_jwt_part_claims(claims)?;
