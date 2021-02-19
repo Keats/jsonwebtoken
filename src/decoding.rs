@@ -262,7 +262,6 @@ pub fn dangerous_insecure_decode_with_validation<T: DeserializeOwned>(
     Ok(TokenData { header, claims: decoded_claims })
 }
 
-
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
 ///
 /// If the token has an invalid format (ie 3 parts separated by a `.`), it will return an error.
