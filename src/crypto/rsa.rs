@@ -1,5 +1,4 @@
 use ring::{rand, signature};
-use simple_asn1::BigUint;
 
 use crate::algorithms::Algorithm;
 use crate::errors::{ErrorKind, Result};
@@ -54,12 +53,10 @@ pub(crate) fn verify_from_components(
     alg: &'static signature::RsaParameters,
     signature: &str,
     message: &[u8],
-    components: (&str, &str),
+    components: (&[u8], &[u8]),
 ) -> Result<bool> {
     let signature_bytes = b64_decode(signature)?;
-    let n = BigUint::from_bytes_be(&b64_decode(components.0)?).to_bytes_be();
-    let e = BigUint::from_bytes_be(&b64_decode(components.1)?).to_bytes_be();
-    let pubkey = signature::RsaPublicKeyComponents { n, e };
+    let pubkey = signature::RsaPublicKeyComponents { n: components.0, e: components.1 };
     let res = pubkey.verify(alg, message, &signature_bytes);
     Ok(res.is_ok())
 }
