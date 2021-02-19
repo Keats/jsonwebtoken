@@ -24,4 +24,4 @@ pub use decoding::{
 };
 pub use encoding::{encode, EncodingKey};
 pub use header::Header;
-pub use validation::Validation;
+pub use validation::{get_current_timestamp, Validation};
