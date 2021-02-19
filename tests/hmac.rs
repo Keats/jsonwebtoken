@@ -37,8 +37,7 @@ fn encode_with_custom_header() {
         company: "ACME".to_string(),
         exp: Utc::now().timestamp() + 10000,
     };
-    let mut header = Header::default();
-    header.kid = Some("kid".to_string());
+    let mut header = Header { kid: Some("kid".to_string()), ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let token_data =
         decode::<Claims>(&token, &DecodingKey::from_secret(b"secret"), &Validation::default())

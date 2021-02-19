@@ -117,7 +117,7 @@ fn rsa_modulus_exponent() {
     .unwrap();
     let res = decode::<Claims>(
         &encrypted,
-        &DecodingKey::from_rsa_components(n, e),
+        &DecodingKey::from_rsa_components(n, e).unwrap(),
         &Validation::new(Algorithm::RS256),
     );
     assert!(res.is_ok());
