@@ -12,9 +12,9 @@ pub(crate) mod rsa;
 
 /// The actual HS signing + encoding
 /// Could be in its own file to match RSA/EC but it's 2 lines...
-pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> Result<String> {
+pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> String {
     let digest = hmac::sign(&hmac::Key::new(alg, key), message.as_bytes());
-    Ok(b64_encode(digest.as_ref()))
+    b64_encode(digest.as_ref())
 }
 
 /// Take the payload of a JWT, sign it using the algorithm given and return
@@ -23,9 +23,9 @@ pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> Resu
 /// If you just want to encode a JWT, use `encode` instead.
 pub fn sign(message: &str, key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
     match algorithm {
-        Algorithm::HS256 => sign_hmac(hmac::HMAC_SHA256, key.inner(), message),
-        Algorithm::HS384 => sign_hmac(hmac::HMAC_SHA384, key.inner(), message),
-        Algorithm::HS512 => sign_hmac(hmac::HMAC_SHA512, key.inner(), message),
+        Algorithm::HS256 => Ok(sign_hmac(hmac::HMAC_SHA256, key.inner(), message)),
+        Algorithm::HS384 => Ok(sign_hmac(hmac::HMAC_SHA384, key.inner(), message)),
+        Algorithm::HS512 => Ok(sign_hmac(hmac::HMAC_SHA512, key.inner(), message)),
 
         Algorithm::ES256 | Algorithm::ES384 => {
             ecdsa::sign(ecdsa::alg_to_ec_signing(algorithm), key.inner(), message)

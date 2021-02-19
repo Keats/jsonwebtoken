@@ -15,9 +15,8 @@ fn main() {
         Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 10000000000 };
     let key = b"secret";
 
-    let mut header = Header::default();
-    header.kid = Some("signing_key".to_owned());
-    header.alg = Algorithm::HS512;
+    let header =
+        Header { kid: Some("signing_key".to_owned()), alg: Algorithm::HS512, ..Default::default() };
 
     let token = match encode(&header, &my_claims, &EncodingKey::from_secret(key)) {
         Ok(t) => t,
