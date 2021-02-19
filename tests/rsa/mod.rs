@@ -28,8 +28,7 @@ fn round_trip_sign_verification_pem_pkcs1() {
 
     for &alg in RSA_ALGORITHMS {
         let encrypted =
-            sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg)
-                .unwrap();
+            sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
         let is_valid = verify(
             &encrypted,
             b"hello world",
@@ -48,8 +47,7 @@ fn round_trip_sign_verification_pem_pkcs8() {
 
     for &alg in RSA_ALGORITHMS {
         let encrypted =
-            sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg)
-                .unwrap();
+            sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
         let is_valid = verify(
             &encrypted,
             b"hello world",
@@ -67,15 +65,10 @@ fn round_trip_sign_verification_der() {
     let pubkey_der = include_bytes!("public_rsa_key.der");
 
     for &alg in RSA_ALGORITHMS {
-        let encrypted =
-            sign(b"hello world", &EncodingKey::from_rsa_der(privkey_der), alg).unwrap();
-        let is_valid = verify(
-            &encrypted,
-            b"hello world",
-            &DecodingKey::from_rsa_der(pubkey_der),
-            alg,
-        )
-        .unwrap();
+        let encrypted = sign(b"hello world", &EncodingKey::from_rsa_der(privkey_der), alg).unwrap();
+        let is_valid =
+            verify(&encrypted, b"hello world", &DecodingKey::from_rsa_der(pubkey_der), alg)
+                .unwrap();
         assert!(is_valid);
     }
 }
