@@ -41,7 +41,9 @@ pub enum ErrorKind {
     /// When the secret given is not a valid ECDSA key
     InvalidEcdsaKey,
     /// When the secret given is not a valid RSA key
-    InvalidRsaKey,
+    InvalidRsaKey(&'static str),
+    /// We could not sign with the given key
+    RsaFailedSigning,
     /// When the algorithm from string doesn't match the one passed to `from_str`
     InvalidAlgorithmName,
     /// When a key is provided with an invalid format
@@ -79,7 +81,8 @@ impl StdError for Error {
             ErrorKind::InvalidToken => None,
             ErrorKind::InvalidSignature => None,
             ErrorKind::InvalidEcdsaKey => None,
-            ErrorKind::InvalidRsaKey => None,
+            ErrorKind::RsaFailedSigning => None,
+            ErrorKind::InvalidRsaKey(_) => None,
             ErrorKind::ExpiredSignature => None,
             ErrorKind::InvalidIssuer => None,
             ErrorKind::InvalidAudience => None,
@@ -102,8 +105,8 @@ impl fmt::Display for Error {
             ErrorKind::InvalidToken
             | ErrorKind::InvalidSignature
             | ErrorKind::InvalidEcdsaKey
-            | ErrorKind::InvalidRsaKey
             | ErrorKind::ExpiredSignature
+            | ErrorKind::RsaFailedSigning
             | ErrorKind::InvalidIssuer
             | ErrorKind::InvalidAudience
             | ErrorKind::InvalidSubject
@@ -111,6 +114,7 @@ impl fmt::Display for Error {
             | ErrorKind::InvalidAlgorithm
             | ErrorKind::InvalidKeyFormat
             | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
+            ErrorKind::InvalidRsaKey(ref msg) => write!(f, "RSA key invalid: {}", msg),
             ErrorKind::Json(ref err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Crypto(ref err) => write!(f, "Crypto error: {}", err),
