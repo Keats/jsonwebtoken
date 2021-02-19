@@ -16,8 +16,6 @@ mod serialization;
 mod validation;
 
 pub use algorithms::Algorithm;
-#[allow(deprecated)]
-pub use decoding::dangerous_unsafe_decode;
 pub use decoding::{
     dangerous_insecure_decode, dangerous_insecure_decode_with_validation, decode, decode_header,
     DecodingKey, TokenData,
