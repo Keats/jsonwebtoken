@@ -123,6 +123,12 @@ impl fmt::Display for Error {
     }
 }
 
+impl PartialEq for ErrorKind {
+    fn eq(&self, other: &Self) -> bool {
+        format!("{:?}", self) == format!("{:?}", other)
+    }
+}
+
 impl From<base64::DecodeError> for Error {
     fn from(err: base64::DecodeError) -> Error {
         new_error(ErrorKind::Base64(err))
