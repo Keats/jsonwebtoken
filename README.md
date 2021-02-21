@@ -169,7 +169,7 @@ struct Validation {
     pub validate_exp: bool,             // Default: true
     pub validate_nbf: bool,             // Default: false
     pub aud: Option<HashSet<String>>,   // Default: None
-    pub iss: Option<String>,            // Default: None
+    pub iss: Option<HashSet<String>>,   // Default: None
     pub sub: Option<String>,            // Default: None
     pub algorithms: Vec<Algorithm>,     // Default: vec![Algorithm::HS256]
 }
@@ -185,7 +185,9 @@ let validation = Validation::new(Algorithm::HS512);
 // Adding some leeway (in seconds) for exp and nbf checks
 let mut validation = Validation {leeway: 60, ..Default::default()};
 // Checking issuer
-let mut validation = Validation {iss: Some("issuer".to_string()), ..Default::default()};
+let mut iss = std::collections::HashSet::new();
+iss.insert("issuer".to_string());
+let mut validation = Validation {iss: Some(iss), ..Default::default()};
 // Setting audience
 let mut validation = Validation::default();
 validation.set_audience(&"Me"); // string
