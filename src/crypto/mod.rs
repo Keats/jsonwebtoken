@@ -12,6 +12,7 @@ pub(crate) mod rsa;
 
 /// The actual HS signing + encoding
 /// Could be in its own file to match RSA/EC but it's 2 lines...
+#[allow(clippy::unnecessary_wraps)]
 pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> Result<String> {
     let digest = hmac::sign(&hmac::Key::new(alg, key), message.as_bytes());
     Ok(b64_encode(digest.as_ref()))

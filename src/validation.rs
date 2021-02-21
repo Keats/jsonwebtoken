@@ -139,12 +139,8 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
     }
 
     if let Some(ref correct_iss) = options.iss {
-        if let Some(iss) = claims.get("iss") {
-            if let Value::String(iss) = iss {
-                if !correct_iss.contains(iss) {
-                    return Err(new_error(ErrorKind::InvalidIssuer));
-                }
-            } else {
+        if let Some(Value::String(iss)) = claims.get("iss") {
+            if !correct_iss.contains(iss) {
                 return Err(new_error(ErrorKind::InvalidIssuer));
             }
         } else {

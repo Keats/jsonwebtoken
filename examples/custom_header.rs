@@ -10,6 +10,7 @@ struct Claims {
     exp: usize,
 }
 
+#[allow(clippy::field_reassign_with_default)]
 fn main() {
     let my_claims =
         Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 10000000000 };

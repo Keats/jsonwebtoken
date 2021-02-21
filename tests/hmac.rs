@@ -31,6 +31,7 @@ fn verify_hs256() {
 }
 
 #[test]
+#[allow(clippy::field_reassign_with_default)]
 fn encode_with_custom_header() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
