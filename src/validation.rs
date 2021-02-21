@@ -69,9 +69,7 @@ pub struct Validation {
 impl Validation {
     /// Create a default validation setup allowing the given alg
     pub fn new(alg: Algorithm) -> Validation {
-        let mut validation = Validation::default();
-        validation.algorithms = vec![alg];
-        validation
+        Validation { algorithms: vec![alg], ..Default::default() }
     }
 
     /// `aud` is a collection of one or more acceptable audience members
@@ -142,14 +140,13 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if let Some(ref correct_iss) = options.iss {
         if let Some(iss) = claims.get("iss") {
-            match iss {
-                Value::String(iss_found) => {
-                    if !correct_iss.contains(iss_found) {
-                        return Err(new_error(ErrorKind::InvalidIssuer));
-                    }
+            if let Value::String(iss) = iss {
+                if !correct_iss.contains(iss) {
+                    return Err(new_error(ErrorKind::InvalidIssuer));
                 }
-                _ => return Err(new_error(ErrorKind::InvalidIssuer)),
-            };
+            } else {
+                return Err(new_error(ErrorKind::InvalidIssuer));
+            }
         } else {
             return Err(new_error(ErrorKind::InvalidIssuer));
         }
@@ -431,6 +428,7 @@ mod tests {
 
     // https://github.com/Keats/jsonwebtoken/issues/51
     #[test]
+    #[should_panic]
     fn does_validation_in_right_order() {
         let mut claims = Map::new();
         claims.insert("exp".to_string(), to_value(get_current_timestamp() + 10000).unwrap());
