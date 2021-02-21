@@ -49,11 +49,11 @@ pub struct Validation {
     ///
     /// Defaults to `None`.
     pub aud: Option<HashSet<String>>,
-    /// If it contains a value, the validation will check that the `iss` field is the same as the
-    /// one provided and will error otherwise.
+    /// If it contains a value, the validation will check that the `iss` field is a member of the
+    /// iss provided and will error otherwise.
     ///
     /// Defaults to `None`.
-    pub iss: Option<String>,
+    pub iss: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `sub` field is the same as the
     /// one provided and will error otherwise.
     ///
@@ -125,16 +125,6 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
         }
     }
 
-    if let Some(ref correct_iss) = options.iss {
-        if let Some(iss) = claims.get("iss") {
-            if from_value::<String>(iss.clone())? != *correct_iss {
-                return Err(new_error(ErrorKind::InvalidIssuer));
-            }
-        } else {
-            return Err(new_error(ErrorKind::InvalidIssuer));
-        }
-    }
-
     if let Some(ref correct_sub) = options.sub {
         if let Some(sub) = claims.get("sub") {
             if from_value::<String>(sub.clone())? != *correct_sub {
@@ -142,6 +132,21 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
             }
         } else {
             return Err(new_error(ErrorKind::InvalidSubject));
+        }
+    }
+
+    if let Some(ref correct_iss) = options.iss {
+        if let Some(iss) = claims.get("iss") {
+            match iss {
+                Value::String(iss_found) => {
+                    if !correct_iss.contains(iss_found) {
+                        return Err(new_error(ErrorKind::InvalidIssuer));
+                    }
+                }
+                _ => return Err(new_error(ErrorKind::InvalidIssuer)),
+            };
+        } else {
+            return Err(new_error(ErrorKind::InvalidIssuer));
         }
     }
 
@@ -263,11 +268,11 @@ mod tests {
     fn iss_ok() {
         let mut claims = Map::new();
         claims.insert("iss".to_string(), to_value("Keats").unwrap());
-        let validation = Validation {
-            validate_exp: false,
-            iss: Some("Keats".to_string()),
-            ..Default::default()
-        };
+
+        let mut iss = std::collections::HashSet::new();
+        iss.insert("Keats".to_string());
+
+        let validation = Validation { validate_exp: false, iss: Some(iss), ..Default::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_ok());
     }
@@ -276,11 +281,11 @@ mod tests {
     fn iss_not_matching_fails() {
         let mut claims = Map::new();
         claims.insert("iss".to_string(), to_value("Hacked").unwrap());
-        let validation = Validation {
-            validate_exp: false,
-            iss: Some("Keats".to_string()),
-            ..Default::default()
-        };
+
+        let mut iss = std::collections::HashSet::new();
+        iss.insert("Keats".to_string());
+
+        let validation = Validation { validate_exp: false, iss: Some(iss), ..Default::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_err());
 
@@ -293,11 +298,11 @@ mod tests {
     #[test]
     fn iss_missing_fails() {
         let claims = Map::new();
-        let validation = Validation {
-            validate_exp: false,
-            iss: Some("Keats".to_string()),
-            ..Default::default()
-        };
+
+        let mut iss = std::collections::HashSet::new();
+        iss.insert("Keats".to_string());
+
+        let validation = Validation { validate_exp: false, iss: Some(iss), ..Default::default() };
         let res = validate(&claims, &validation);
         assert!(res.is_err());
 
@@ -424,10 +429,14 @@ mod tests {
     fn does_validation_in_right_order() {
         let mut claims = Map::new();
         claims.insert("exp".to_string(), to_value(get_current_timestamp() + 10000).unwrap());
+
+        let mut iss = std::collections::HashSet::new();
+        iss.insert("iss no check".to_string());
+
         let v = Validation {
             leeway: 5,
             validate_exp: true,
-            iss: Some("iss no check".to_string()),
+            iss: Some(iss),
             sub: Some("sub no check".to_string()),
             ..Validation::default()
         };
