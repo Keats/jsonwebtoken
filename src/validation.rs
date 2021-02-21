@@ -78,6 +78,11 @@ impl Validation {
     pub fn set_audience<T: ToString>(&mut self, items: &[T]) {
         self.aud = Some(items.iter().map(|x| x.to_string()).collect())
     }
+
+    /// `iss` is a collection of one or more acceptable iss members
+    pub fn set_iss<T: ToString>(&mut self, items: &[T]) {
+        self.iss = Some(items.iter().map(|x| x.to_string()).collect())
+    }
 }
 
 impl Default for Validation {
