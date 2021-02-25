@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Updated `base64` to v0.13
+- Updated `simple_asn1` to v0.5
+
 ## 7.2.0 (2020-06-30)
 
 - Add `dangerous_insecure_decode` to replace `dangerous_unsafe_decode`, which is now deprecated
