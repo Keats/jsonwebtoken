@@ -69,9 +69,7 @@ pub struct Validation {
 impl Validation {
     /// Create a default validation setup allowing the given alg
     pub fn new(alg: Algorithm) -> Validation {
-        let mut validation = Validation::default();
-        validation.algorithms = vec![alg];
-        validation
+        Self { algorithms: vec![alg], ..Self::default() }
     }
 
     /// `aud` is a collection of one or more acceptable audience members

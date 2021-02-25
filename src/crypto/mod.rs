@@ -10,6 +10,9 @@ use crate::serialization::{b64_decode, b64_encode};
 pub(crate) mod ecdsa;
 pub(crate) mod rsa;
 
+// Wrapping is not necessary here but to remove it now would be a breaking
+// change in the API
+#[allow(clippy::clippy::unnecessary_wraps)]
 /// The actual HS signing + encoding
 /// Could be in its own file to match RSA/EC but it's 2 lines...
 pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &str) -> Result<String> {
