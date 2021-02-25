@@ -6,6 +6,7 @@
 - `sign`/`verify` now takes a `&[u8]` instead of `&str` to be more flexible
 - `DecodingKey` now own its data
 - Remove deprecated `dangerous_unsafe_decode`
+- `Validation::iss` is now a `HashSet` instead of a single value
 
 ## 7.2.0 (2020-06-30)
 
