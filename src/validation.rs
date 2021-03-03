@@ -159,7 +159,7 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
                 }
                 Value::Array(_) => {
                     let provided_aud: HashSet<String> = from_value(aud.clone())?;
-                    if provided_aud.intersection(correct_aud).count() == 0 {
+                    if provided_aud.intersection(correct_aud).next().is_none() {
                         return Err(new_error(ErrorKind::InvalidAudience));
                     }
                 }
