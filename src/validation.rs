@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::map::Map;
-use serde_json::{from_value, Value};
+use serde_json::Value;
 
 use crate::algorithms::Algorithm;
 use crate::errors::{new_error, ErrorKind, Result};
@@ -111,7 +111,11 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if options.validate_exp {
         if let Some(exp) = claims.get("exp") {
-            if from_value::<u64>(exp.clone())? < now - options.leeway {
+            if let Some(exp) = exp.as_u64() {
+                if exp < now - options.leeway {
+                    return Err(new_error(ErrorKind::ExpiredSignature));
+                }
+            } else {
                 return Err(new_error(ErrorKind::ExpiredSignature));
             }
         } else {
@@ -121,7 +125,11 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
 
     if options.validate_nbf {
         if let Some(nbf) = claims.get("nbf") {
-            if from_value::<u64>(nbf.clone())? > now + options.leeway {
+            if let Some(nbf) = nbf.as_u64() {
+                if nbf > now + options.leeway {
+                    return Err(new_error(ErrorKind::ImmatureSignature));
+                }
+            } else {
                 return Err(new_error(ErrorKind::ImmatureSignature));
             }
         } else {
@@ -130,8 +138,8 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
     }
 
     if let Some(ref correct_sub) = options.sub {
-        if let Some(sub) = claims.get("sub") {
-            if from_value::<String>(sub.clone())? != *correct_sub {
+        if let Some(Value::String(sub)) = claims.get("sub") {
+            if sub != correct_sub {
                 return Err(new_error(ErrorKind::InvalidSubject));
             }
         } else {
