@@ -18,13 +18,17 @@ fn bench_encode(c: &mut Criterion) {
 }
 
 fn bench_decode(c: &mut Criterion) {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ";
-    let key = DecodingKey::from_secret("secret".as_ref());
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMiwiYXVkIjpbIjEiLCIyIiwiMyJdLCJpc3MiOiIxIn0.sIFUNLHzcPfE01t-V3SYkkGVm2ujfoyhATsKDEzzO3c";
+    let key = DecodingKey::from_secret("your-256-bit-secret".as_ref());
+    let auds: std::collections::HashSet<String> =
+        ["1".to_string(), "2".to_string(), "3".to_string()].iter().cloned().collect();
+    let iss: std::collections::HashSet<String> =
+        ["1".to_string(), "2".to_string()].iter().cloned().collect();
+    let validation =
+        Validation { aud: Some(auds), iss: Some(iss), validate_exp: false, ..Default::default() };
 
     c.bench_function("bench_decode", |b| {
-        b.iter(|| {
-            decode::<Claims>(black_box(token), black_box(&key), black_box(&Validation::default()))
-        })
+        b.iter(|| decode::<Claims>(black_box(token), black_box(&key), black_box(&validation)))
     });
 }
 

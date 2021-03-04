@@ -152,14 +152,16 @@ pub fn validate(claims: &Map<String, Value>, options: &Validation) -> Result<()>
     if let Some(ref correct_aud) = options.aud {
         if let Some(aud) = claims.get("aud") {
             match aud {
-                Value::String(aud_found) => {
-                    if !correct_aud.contains(aud_found) {
+                Value::String(aud) => {
+                    if !correct_aud.contains(aud) {
                         return Err(new_error(ErrorKind::InvalidAudience));
                     }
                 }
                 Value::Array(_) => {
-                    let provided_aud: HashSet<String> = from_value(aud.clone())?;
-                    if provided_aud.intersection(correct_aud).next().is_none() {
+                    // no need to clone the aud value
+                    use serde::Deserialize;
+                    let aud = HashSet::<String>::deserialize(aud)?;
+                    if aud.intersection(correct_aud).next().is_none() {
                         return Err(new_error(ErrorKind::InvalidAudience));
                     }
                 }

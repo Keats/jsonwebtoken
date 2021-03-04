@@ -14,6 +14,7 @@ mod header;
 mod pem;
 mod serialization;
 mod validation;
+mod validator;
 
 pub use algorithms::Algorithm;
 pub use decoding::{
@@ -23,3 +24,5 @@ pub use decoding::{
 pub use encoding::{encode, EncodingKey};
 pub use header::Header;
 pub use validation::{get_current_timestamp, Validation};
+
+pub use validator::*;
