@@ -97,10 +97,10 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
     if key.family != header.alg.family() {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
-    let encoded_header = b64_encode_part(&header)?;
-    let encoded_claims = b64_encode_part(&claims)?;
-    let message = [encoded_header.as_ref(), encoded_claims.as_ref()].join(".");
-    let signature = crypto::sign(&*message.as_bytes(), key, header.alg)?;
+    let encoded_header = b64_encode_part(header)?;
+    let encoded_claims = b64_encode_part(claims)?;
+    let message = [encoded_header, encoded_claims].join(".");
+    let signature = crypto::sign(message.as_bytes(), key, header.alg)?;
 
     Ok([message, signature].join("."))
 }

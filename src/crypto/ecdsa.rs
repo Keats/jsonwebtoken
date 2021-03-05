@@ -34,5 +34,5 @@ pub fn sign(
     let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key)?;
     let rng = rand::SystemRandom::new();
     let out = signing_key.sign(&rng, message)?;
-    Ok(b64_encode(out.as_ref()))
+    Ok(b64_encode(out))
 }
