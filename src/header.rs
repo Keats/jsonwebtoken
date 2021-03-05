@@ -65,11 +65,9 @@ impl Header {
     }
 
     /// Converts an encoded part into the Header struct if possible
-    pub(crate) fn from_encoded(encoded_part: &str) -> Result<Self> {
+    pub(crate) fn from_encoded<T: AsRef<[u8]>>(encoded_part: T) -> Result<Self> {
         let decoded = b64_decode(encoded_part)?;
-        let s = String::from_utf8(decoded)?;
-
-        Ok(serde_json::from_str(&s)?)
+        Ok(serde_json::from_slice(&decoded)?)
     }
 }
 
