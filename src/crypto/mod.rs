@@ -15,7 +15,7 @@ pub(crate) mod rsa;
 /// Could be in its own file to match RSA/EC but it's 2 lines...
 pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &[u8]) -> String {
     let digest = hmac::sign(&hmac::Key::new(alg, key), message);
-    b64_encode(digest.as_ref())
+    b64_encode(digest)
 }
 
 /// Take the payload of a JWT, sign it using the algorithm given and return

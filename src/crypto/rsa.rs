@@ -45,7 +45,7 @@ pub(crate) fn sign(
     let rng = rand::SystemRandom::new();
     key_pair.sign(alg, &rng, message, &mut signature).map_err(|_| ErrorKind::RsaFailedSigning)?;
 
-    Ok(b64_encode(&signature))
+    Ok(b64_encode(signature))
 }
 
 /// Checks that a signature is valid based on the (n, e) RSA pubkey components
