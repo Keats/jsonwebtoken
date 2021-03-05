@@ -37,7 +37,7 @@ pub struct Header {
     /// Defined in [RFC7515#4.1.5](https://tools.ietf.org/html/rfc7515#section-4.1.5).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x5u: Option<String>,
-    /// X.509 certificate chain. A Vec of base64 encoded ASN.1 DER certificates. 
+    /// X.509 certificate chain. A Vec of base64 encoded ASN.1 DER certificates.
     ///
     /// Defined in [RFC7515#](https://tools.ietf.org/html/rfc7515#section-4.1.6).
     #[serde(skip_serializing_if = "Option::is_none")]
