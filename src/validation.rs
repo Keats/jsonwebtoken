@@ -95,7 +95,7 @@ impl Default for Validation {
             sub: None,
             aud: None,
 
-            algorithms: vec![Algorithm::HS256],
+            algorithms: vec![Algorithm::default()],
         }
     }
 }
