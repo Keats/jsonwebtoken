@@ -290,3 +290,40 @@ pub fn decode_header(token: &str) -> Result<Header> {
     let (_, header) = expect_two!(message.rsplitn(2, '.'));
     Header::from_encoded(header)
 }
+
+#[cfg(test)]
+mod test {
+    use super::{verify_signature, DecodingKey, Validation};
+    use crate::Algorithm;
+
+    #[test]
+    pub fn validate_alg_too_strict_fails_with_correct_token() {
+        let validation = Validation {
+            algorithms: vec![Algorithm::ES256, Algorithm::RS256],
+            ..Validation::default()
+        };
+        let key_pem = "-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1n8lxw87OQh39IJYRNRKl3eoxhjf
+tbWSUYPmKO1jpd/ZPsvLI0EpUmHGYswx3xD0Dc/6JbCYGC8S0suNubrHaA==
+-----END PUBLIC KEY-----";
+
+        let dummy_key = DecodingKey::from_ec_pem(key_pem.as_bytes()).unwrap();
+        let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.e30.unloccOouGqg1C3zsbfF08Tif3NFT-TxceMIBRNMAFZzGYzzXh9nCUW44JHR6UuSdbzkvDxG4g59lxAJ9h5ysQ";
+
+        verify_signature(token, &dummy_key, &validation).unwrap();
+    }
+
+    #[test]
+    pub fn validate_alg_strict_succeeds_with_correct_token() {
+        let validation = Validation { algorithms: vec![Algorithm::ES256], ..Validation::default() };
+        let key_pem = "-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1n8lxw87OQh39IJYRNRKl3eoxhjf
+tbWSUYPmKO1jpd/ZPsvLI0EpUmHGYswx3xD0Dc/6JbCYGC8S0suNubrHaA==
+-----END PUBLIC KEY-----";
+
+        let dummy_key = DecodingKey::from_ec_pem(key_pem.as_bytes()).unwrap();
+        let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.e30.unloccOouGqg1C3zsbfF08Tif3NFT-TxceMIBRNMAFZzGYzzXh9nCUW44JHR6UuSdbzkvDxG4g59lxAJ9h5ysQ";
+
+        verify_signature(token, &dummy_key, &validation).unwrap();
+    }
+}
