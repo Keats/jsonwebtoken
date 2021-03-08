@@ -73,13 +73,12 @@ impl Header {
     }
 
     /// Decodes the X.509 certificate chain into ASN.1 DER format.
-    ///
-    /// If any certificate in the chain is unable to be decoded,
-    /// this function will return `None`.
-    pub fn x5c_der(&self) -> Option<Vec<Vec<u8>>> {
-        self.x5c.as_ref().and_then(|b64_certs| {
-            b64_certs.iter().map(base64::decode).collect::<result::Result<_, _>>().ok()
-        })
+    pub fn x5c_der(&self) -> Result<Option<Vec<Vec<u8>>>> {
+        Ok(self
+            .x5c
+            .as_ref()
+            .map(|b64_certs| b64_certs.iter().map(base64::decode).collect::<result::Result<_, _>>())
+            .transpose()?)
     }
 }
 
