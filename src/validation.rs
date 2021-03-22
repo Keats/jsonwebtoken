@@ -59,8 +59,8 @@ pub struct Validation {
     ///
     /// Defaults to `None`.
     pub sub: Option<String>,
-    /// If it contains a value, the validation will check that the `alg` of the header is contained
-    /// in the ones provided and will error otherwise.
+    /// The validation will check that the `alg` of the header is contained
+    /// in the ones provided and will error otherwise. Will error if it is empty.
     ///
     /// Defaults to `vec![Algorithm::HS256]`.
     pub algorithms: Vec<Algorithm>,

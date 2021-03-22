@@ -63,6 +63,8 @@ pub enum ErrorKind {
     /// When the algorithm in the header doesn't match the one passed to `decode` or the encoding/decoding key
     /// used doesn't match the alg requested
     InvalidAlgorithm,
+    /// When the Validation struct does not contain at least 1 algorithm
+    MissingAlgorithm,
 
     // 3rd party errors
     /// An error happened when decoding some base64 text
@@ -84,6 +86,7 @@ impl StdError for Error {
             ErrorKind::RsaFailedSigning => None,
             ErrorKind::InvalidRsaKey(_) => None,
             ErrorKind::ExpiredSignature => None,
+            ErrorKind::MissingAlgorithm => None,
             ErrorKind::InvalidIssuer => None,
             ErrorKind::InvalidAudience => None,
             ErrorKind::InvalidSubject => None,
@@ -107,6 +110,7 @@ impl fmt::Display for Error {
             | ErrorKind::InvalidEcdsaKey
             | ErrorKind::ExpiredSignature
             | ErrorKind::RsaFailedSigning
+            | ErrorKind::MissingAlgorithm
             | ErrorKind::InvalidIssuer
             | ErrorKind::InvalidAudience
             | ErrorKind::InvalidSubject
