@@ -7,6 +7,7 @@
 - `DecodingKey` now own its data
 - Remove deprecated `dangerous_unsafe_decode`
 - `Validation::iss` is now a `HashSet` instead of a single value
+- `decode` will now error if `Validation::algorithms` is empty
 
 ## 7.2.0 (2020-06-30)
 
