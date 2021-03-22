@@ -154,6 +154,10 @@ pub fn verify_signature<'a>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<(Header, &'a str)> {
+    if validation.algorithms.is_empty() {
+        return Err(new_error(ErrorKind::MissingAlgorithm));
+    }
+
     for alg in &validation.algorithms {
         if key.family != alg.family() {
             return Err(new_error(ErrorKind::InvalidAlgorithm));
