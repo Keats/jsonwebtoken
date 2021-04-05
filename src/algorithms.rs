@@ -65,6 +65,24 @@ impl FromStr for Algorithm {
     }
 }
 
+impl ToString for Algorithm {
+    fn to_string(&self) -> String {
+        match self {
+            Algorithm::HS256 => "HS256".to_string(),
+            Algorithm::HS384 => "HS384".to_string(),
+            Algorithm::HS512 => "HS512".to_string(),
+            Algorithm::ES256 => "ES256".to_string(),
+            Algorithm::ES384 => "ES384".to_string(),
+            Algorithm::RS256 => "RS256".to_string(),
+            Algorithm::RS384 => "RS384".to_string(),
+            Algorithm::PS256 => "PS256".to_string(),
+            Algorithm::PS384 => "PS384".to_string(),
+            Algorithm::PS512 => "PS512".to_string(),
+            Algorithm::RS512 => "RS512".to_string(),
+        }
+    }
+}
+
 impl Algorithm {
     pub(crate) fn family(self) -> AlgorithmFamily {
         match self {
