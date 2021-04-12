@@ -11,6 +11,7 @@ pub(crate) enum AlgorithmFamily {
 }
 
 /// The algorithms supported for signing/verifying JWTs
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Hash, Copy, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
     /// HMAC using SHA-256
