@@ -1,7 +1,5 @@
 use crate::errors::{ErrorKind, Result};
 
-use simple_asn1::{BigUint, OID};
-
 /// Supported PEM files for EC and RSA Public and Private Keys
 #[derive(Debug, PartialEq)]
 enum PemType {
