@@ -195,3 +195,18 @@ validation.set_audience(&["Me", "You"]); // array of strings
 ```
 
 Look at `examples/validation.rs` for a full working example.
+
+## Generating Epileptic Curve Key Pairs
+There are many ways to generate a key (pair), to encode, and subsequently decode, a JWT.
+One of the simplest ways is to use the `openssl` command line utility.
+
+Generate an EC private-key, and convert it to a valid pkcs8 formatted key.
+```
+openssl ecparam -name secp384r1 -genkey -noout -out private-key-sec1.pem
+openssl pkcs8 -topk8 -in private-key-sec1.pem -nocrypt -out private-key-pkcs8.pem
+```
+
+Generate an EC public-key, derived from the previously generated private key.
+```
+openssl ec -in keys/private-key.pem -pubout -out keys/public-key.pem
+```
