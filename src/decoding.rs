@@ -37,6 +37,7 @@ pub(crate) enum DecodingKeyKind {
 
 /// All the different kind of keys we can use to decode a JWT
 /// This key can be re-used so make sure you only initialize it once if you can for better performance
+/// Currently only PKCS8 formatted EC keys are supported, ensure this format is selected when generating the key pair.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DecodingKey {
     pub(crate) family: AlgorithmFamily,

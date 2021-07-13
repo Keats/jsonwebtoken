@@ -9,6 +9,7 @@ use crate::serialization::b64_encode_part;
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance
+/// Currently only PKCS8 formatted EC keys are supported, ensure this format is selected when generating the key pair.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EncodingKey {
     pub(crate) family: AlgorithmFamily,
