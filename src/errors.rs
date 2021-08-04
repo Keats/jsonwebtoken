@@ -54,7 +54,7 @@ pub enum ErrorKind {
     InvalidIssuer,
     /// When a token’s `aud` claim does not match one of the expected audience values
     InvalidAudience,
-    /// When a token’s `aud` claim does not match one of the expected audience values
+    /// When a token’s `sub` claim does not match the expected subject
     InvalidSubject,
     /// When a token’s nbf claim represents a time in the future
     ImmatureSignature,
