@@ -4,11 +4,9 @@
 ///! Most of the code in this file is taken from https://github.com/lawliet89/biscuit but
 /// tweaked to remove the private bits as it's not the goal for this crate currently.
 ///!
-
 use crate::Algorithm;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
-
 
 /// The intended usage of the public `KeyType`. This enum is serialized `untagged`
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]

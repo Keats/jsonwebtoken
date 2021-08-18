@@ -131,7 +131,7 @@ impl DecodingKey {
     }
     pub(crate) fn as_bytes(&self) -> &[u8] {
         match &self.kind {
-            DecodingKeyKind::SecretOrDer(b) => &b,
+            DecodingKeyKind::SecretOrDer(b) => b,
             DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
         }
     }
