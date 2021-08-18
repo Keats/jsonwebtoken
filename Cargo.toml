@@ -7,7 +7,7 @@ readme = "README.md"
 description = "Create and decode JWTs in a strongly typed way."
 homepage = "https://github.com/Keats/jsonwebtoken"
 repository = "https://github.com/Keats/jsonwebtoken"
-keywords = ["jwt", "web", "api", "token", "jwk"]
+keywords = ["jwt", "api", "token", "jwk"]
 edition = "2018"
 include = ["src/**/*", "benches/**/*", "tests/**/*", "LICENSE", "README.md", "CHANGELOG.md"]
 

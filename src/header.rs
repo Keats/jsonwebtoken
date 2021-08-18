@@ -4,11 +4,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::algorithms::Algorithm;
 use crate::errors::Result;
+use crate::jwk::Jwk;
 use crate::serialization::b64_decode;
 
 /// A basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional.
-#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Header {
     /// The type of JWS: it can only be "JWT" here
     ///
@@ -29,6 +30,11 @@ pub struct Header {
     /// Defined in [RFC7515#4.1.2](https://tools.ietf.org/html/rfc7515#section-4.1.2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jku: Option<String>,
+    /// JSON Web Key
+    ///
+    /// Defined in [RFC7515#4.1.3](https://tools.ietf.org/html/rfc7515#section-4.1.3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jwk: Option<Jwk>,
     /// Key ID
     ///
     /// Defined in [RFC7515#4.1.4](https://tools.ietf.org/html/rfc7515#section-4.1.4).
@@ -59,6 +65,7 @@ impl Header {
             alg: algorithm,
             cty: None,
             jku: None,
+            jwk: None,
             kid: None,
             x5u: None,
             x5c: None,
