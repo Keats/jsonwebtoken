@@ -79,7 +79,6 @@ impl DecodingKey {
     }
 
     /// If you have (n, e) RSA public key components already decoded, use this.
-    /// TODO: do we need that?
     pub fn from_rsa_raw_components(modulus: &[u8], exponent: &[u8]) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Rsa,
@@ -132,7 +131,7 @@ impl DecodingKey {
     }
     pub(crate) fn as_bytes(&self) -> &[u8] {
         match &self.kind {
-            DecodingKeyKind::SecretOrDer(b) => &b,
+            DecodingKeyKind::SecretOrDer(b) => b,
             DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
         }
     }
