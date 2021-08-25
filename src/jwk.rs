@@ -168,21 +168,28 @@ pub struct CommonParameters {
     pub key_id: Option<String>,
 
     /// X.509 Public key cerfificate URL. This is currently not implemented (correctly).
+    ///
     /// Serialized to `x5u`.
     #[serde(rename = "x5u", skip_serializing_if = "Option::is_none")]
     pub x509_url: Option<String>,
 
     /// X.509 public key certificate chain. This is currently not implemented (correctly).
+    ///
     /// Serialized to `x5c`.
     #[serde(rename = "x5c", skip_serializing_if = "Option::is_none")]
     pub x509_chain: Option<Vec<String>>,
 
-    /// X.509 Certificate thumbprint. This is currently not implemented (correctly).
-    /// Also not implemented, is the SHA-256 thumbprint variant of this header.
+    /// X.509 Certificate SHA1 thumbprint. This is currently not implemented (correctly).
+    ///
     /// Serialized to `x5t`.
-    // TODO: How to make sure the headers are mutually exclusive?
     #[serde(rename = "x5t", skip_serializing_if = "Option::is_none")]
-    pub x509_fingerprint: Option<String>,
+    pub x509_sha1_fingerprint: Option<String>,
+
+    /// X.509 Certificate SHA256 thumbprint. This is currently not implemented (correctly).
+    ///
+    /// Serialized to `x5t#S256`.
+    #[serde(rename = "x5t#S256", skip_serializing_if = "Option::is_none")]
+    pub x509_sha256_fingerprint: Option<String>,
 }
 
 /// Key type value for an Elliptic Curve Key.
