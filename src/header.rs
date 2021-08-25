@@ -50,11 +50,19 @@ pub struct Header {
     /// Defined in [RFC7515#4.1.6](https://tools.ietf.org/html/rfc7515#section-4.1.6).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x5c: Option<Vec<String>>,
-    /// X.509 certificate thumbprint
+    /// X.509 SHA1 certificate thumbprint
     ///
     /// Defined in [RFC7515#4.1.7](https://tools.ietf.org/html/rfc7515#section-4.1.7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x5t: Option<String>,
+    /// X.509 SHA256 certificate thumbprint
+    ///
+    /// Defined in [RFC7515#4.1.8](https://tools.ietf.org/html/rfc7515#section-4.1.8).
+    ///
+    /// This will be serialized/deserialized as "x5t#S256", as defined by the RFC.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "x5t#S256")]
+    pub x5t_s256: Option<String>,
 }
 
 impl Header {
@@ -70,6 +78,7 @@ impl Header {
             x5u: None,
             x5c: None,
             x5t: None,
+            x5t_s256: None,
         }
     }
 
