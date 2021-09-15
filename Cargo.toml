@@ -15,10 +15,10 @@ include = ["src/**/*", "LICENSE", "README.md", "CHANGELOG.md"]
 serde_json = "1.0"
 serde = {version = "1.0", features = ["derive"] }
 ring = { version = "0.16.5", features = ["std"] }
-base64 = "0.12"
+base64 = "0.13"
 # For PEM decoding
 pem = "0.8"
-simple_asn1 = "0.4"
+simple_asn1 = "0.5"
 
 [dev-dependencies]
 # For the custom chrono example
