@@ -9,6 +9,7 @@
 - `Validation::iss` is now a `HashSet` instead of a single value
 - `decode` will now error if `Validation::algorithms` is empty
 - Add JWKs types for easy interop with various Oauth providers
+- Removed `decode_*` functions in favour of using the `Validation` struct
 
 ## 7.2.0 (2020-06-30)
 
