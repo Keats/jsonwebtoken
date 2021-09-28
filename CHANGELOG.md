@@ -8,6 +8,7 @@
 - Remove deprecated `dangerous_unsafe_decode`
 - `Validation::iss` is now a `HashSet` instead of a single value
 - `decode` will now error if `Validation::algorithms` is empty
+- Add JWKs types for easy interop with various Oauth providers
 
 ## 7.2.0 (2020-06-30)
 

@@ -1,9 +1,8 @@
 use chrono::Utc;
-use jsonwebtoken::dangerous_insecure_decode_with_validation;
+use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{
     crypto::{sign, verify},
-    dangerous_insecure_decode, decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey,
-    Header, Validation,
+    decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -39,9 +38,12 @@ fn encode_with_custom_header() {
     };
     let header = Header { kid: Some("kid".to_string()), ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
-    let token_data =
-        decode::<Claims>(&token, &DecodingKey::from_secret(b"secret"), &Validation::default())
-            .unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
 }
@@ -55,9 +57,12 @@ fn round_trip_claim() {
     };
     let token =
         encode(&Header::default(), &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
-    let token_data =
-        decode::<Claims>(&token, &DecodingKey::from_secret(b"secret"), &Validation::default())
-            .unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert!(token_data.header.kid.is_none());
 }
@@ -65,8 +70,11 @@ fn round_trip_claim() {
 #[test]
 fn decode_token() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
-    let claims =
-        decode::<Claims>(token, &DecodingKey::from_secret(b"secret"), &Validation::default());
+    let claims = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    );
     println!("{:?}", claims);
     claims.unwrap();
 }
@@ -75,8 +83,11 @@ fn decode_token() {
 #[should_panic(expected = "InvalidToken")]
 fn decode_token_missing_parts() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-    let claims =
-        decode::<Claims>(token, &DecodingKey::from_secret(b"secret"), &Validation::default());
+    let claims = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    );
     claims.unwrap();
 }
 
@@ -85,8 +96,11 @@ fn decode_token_missing_parts() {
 fn decode_token_invalid_signature() {
     let token =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
-    let claims =
-        decode::<Claims>(token, &DecodingKey::from_secret(b"secret"), &Validation::default());
+    let claims = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    );
     claims.unwrap();
 }
 
@@ -117,8 +131,11 @@ fn encode_wrong_alg_family() {
 #[test]
 fn decode_token_with_bytes_secret() {
     let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
-    let claims =
-        decode::<Claims>(token, &DecodingKey::from_secret(b"\x01\x02\x03"), &Validation::default());
+    let claims = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(b"\x01\x02\x03"),
+        &Validation::new(Algorithm::HS256),
+    );
     assert!(claims.is_ok());
 }
 
@@ -131,60 +148,38 @@ fn decode_header_only() {
 }
 
 #[test]
-fn dangerous_insecure_decode_token() {
+fn dangerous_insecure_decode_valid_token() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
-    let claims = dangerous_insecure_decode::<Claims>(token);
-    claims.unwrap();
-}
-
-#[test]
-#[should_panic(expected = "InvalidToken")]
-fn dangerous_insecure_decode_token_missing_parts() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-    let claims = dangerous_insecure_decode::<Claims>(token);
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.insecure_disable_signature_validation();
+    let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     claims.unwrap();
 }
 
 #[test]
 fn dangerous_insecure_decode_token_invalid_signature() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.wrong";
-    let claims = dangerous_insecure_decode::<Claims>(token);
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.insecure_disable_signature_validation();
+    let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     claims.unwrap();
 }
 
 #[test]
 fn dangerous_insecure_decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
-    let claims = dangerous_insecure_decode::<Claims>(token);
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.insecure_disable_signature_validation();
+    let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     claims.unwrap();
 }
 
 #[test]
-fn dangerous_insecure_decode_token_with_validation() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
-    let claims = dangerous_insecure_decode_with_validation::<Claims>(token, &Validation::default());
-    claims.unwrap();
-}
-
-#[test]
-#[should_panic(expected = "InvalidToken")]
-fn dangerous_insecure_decode_token_with_validation_missing_parts() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-    let claims = dangerous_insecure_decode_with_validation::<Claims>(token, &Validation::default());
-    claims.unwrap();
-}
-
-#[test]
-fn dangerous_insecure_decode_token_with_validation_invalid_signature() {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.wrong";
-    let claims = dangerous_insecure_decode_with_validation::<Claims>(token, &Validation::default());
-    claims.unwrap();
-}
-
-#[test]
-#[should_panic(expected = "InvalidAlgorithm")]
 fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
-    let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
-    let claims = dangerous_insecure_decode_with_validation::<Claims>(token, &Validation::default());
-    claims.unwrap();
+    let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjk1MzI1MjQ4OX0.ONtEUTtP1QmyksYH9ijtPCaXoHjZVHcHKZGX1DuJyPiSyKlT93Y-oKgrp_OSkHSu4huxCcVObLzwsdwF-xwiAQ";
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.insecure_disable_signature_validation();
+    let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
+    let err = claims.unwrap_err();
+    assert_eq!(err.kind(), &ErrorKind::ExpiredSignature);
 }
