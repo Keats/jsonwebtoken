@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 const SECRET: &str = "some-secret";
@@ -56,7 +56,9 @@ mod jwt_numeric_date {
 
         use super::super::{Claims, SECRET};
         use chrono::{Duration, TimeZone, Utc};
-        use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+        use jsonwebtoken::{
+            decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+        };
 
         #[test]
         fn round_trip() {
@@ -75,7 +77,7 @@ mod jwt_numeric_date {
             let decoded = decode::<Claims>(
                 &token,
                 &DecodingKey::from_secret(SECRET.as_ref()),
-                &Validation::default(),
+                &Validation::new(Algorithm::HS256),
             )
             .expect("Failed to decode token");
 
@@ -90,7 +92,7 @@ mod jwt_numeric_date {
             let decode_result = decode::<Claims>(
                 &overflow_token,
                 &DecodingKey::from_secret(SECRET.as_ref()),
-                &Validation::default(),
+                &Validation::new(Algorithm::HS256),
             );
 
             assert!(decode_result.is_err());
@@ -111,7 +113,7 @@ mod jwt_numeric_date {
             let decoded = decode::<Claims>(
                 &token,
                 &DecodingKey::from_secret(SECRET.as_ref()),
-                &Validation::default(),
+                &Validation::new(Algorithm::HS256),
             )
             .expect("Failed to decode token")
             .claims;
@@ -139,7 +141,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token_data = jsonwebtoken::decode::<Claims>(
         &token,
         &DecodingKey::from_secret(SECRET.as_ref()),
-        &Validation::default(),
+        &Validation::new(Algorithm::HS256),
     )?;
 
     println!("token data:\n{:#?}", &token_data);

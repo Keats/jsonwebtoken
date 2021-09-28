@@ -1,5 +1,5 @@
 use jsonwebtoken::errors::ErrorKind;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,7 +18,8 @@ fn main() {
         Err(_) => panic!(), // in practice you would return the error
     };
 
-    let validation = Validation { sub: Some("b@b.com".to_string()), ..Validation::default() };
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.sub = Some("b@b.com".to_string());
     let token_data = match decode::<Claims>(&token, &DecodingKey::from_secret(key), &validation) {
         Ok(c) => c,
         Err(err) => match *err.kind() {

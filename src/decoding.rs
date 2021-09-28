@@ -140,26 +140,20 @@ impl DecodingKey {
 /// Verify signature of a JWT, and return header object and raw payload
 ///
 /// If the token or its signature is invalid, it will return an error.
-///
-/// ```rust///
-/// use jsonwebtoken::{verify_signature, DecodingKey, Validation, Algorithm};
-///
-///
-/// let token = "a.jwt.token".to_string();
-/// let token_message = verify_signature(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
-/// ```
-pub fn verify_signature<'a>(
+fn verify_signature<'a>(
     token: &'a str,
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<(Header, &'a str)> {
-    if validation.algorithms.is_empty() {
+    if validation.validate_signature && validation.algorithms.is_empty() {
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
 
-    for alg in &validation.algorithms {
-        if key.family != alg.family() {
-            return Err(new_error(ErrorKind::InvalidAlgorithm));
+    if validation.validate_signature {
+        for alg in &validation.algorithms {
+            if key.family != alg.family() {
+                return Err(new_error(ErrorKind::InvalidAlgorithm));
+            }
         }
     }
 
@@ -167,11 +161,11 @@ pub fn verify_signature<'a>(
     let (payload, header) = expect_two!(message.rsplitn(2, '.'));
     let header = Header::from_encoded(header)?;
 
-    if !validation.algorithms.contains(&header.alg) {
+    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    if !verify(signature, message.as_bytes(), key, header.alg)? {
+    if validation.validate_signature && !verify(signature, message.as_bytes(), key, header.alg)? {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
@@ -210,72 +204,6 @@ pub fn decode<T: DeserializeOwned>(
             Ok(TokenData { header, claims: decoded_claims })
         }
     }
-}
-
-/// Decode a JWT without any signature verification/validations.
-///
-/// NOTE: Do not use this unless you know what you are doing! If the token's signature is invalid, it will *not* return an error.
-///
-/// ```rust
-/// use serde::{Deserialize, Serialize};
-/// use jsonwebtoken::{dangerous_insecure_decode, Validation, Algorithm};
-///
-/// #[derive(Debug, Serialize, Deserialize)]
-/// struct Claims {
-///     sub: String,
-///     company: String
-/// }
-///
-/// let token = "a.jwt.token".to_string();
-/// // Claims is a struct that implements Deserialize
-/// let token_message = dangerous_insecure_decode::<Claims>(&token);
-/// ```
-pub fn dangerous_insecure_decode<T: DeserializeOwned>(token: &str) -> Result<TokenData<T>> {
-    let (_, message) = expect_two!(token.rsplitn(2, '.'));
-    let (claims, header) = expect_two!(message.rsplitn(2, '.'));
-    let header = Header::from_encoded(header)?;
-
-    let (decoded_claims, _): (T, _) = from_jwt_part_claims(claims)?;
-
-    Ok(TokenData { header, claims: decoded_claims })
-}
-
-/// Decode and validate a JWT without any signature verification.
-///
-/// If the token is invalid or the claims fail validation, it will return an error.
-///
-/// NOTE: Do not use this unless you know what you are doing! If the token's signature is invalid, it will *not* return an error.
-///
-/// ```rust
-/// use serde::{Deserialize, Serialize};
-/// use jsonwebtoken::{dangerous_insecure_decode_with_validation, Validation, Algorithm};
-///
-/// #[derive(Debug, Serialize, Deserialize)]
-/// struct Claims {
-///    sub: String,
-///    company: String
-/// }
-///
-/// let token = "a.jwt.token";
-/// // Claims is a struct that implements Deserialize
-/// let token_message = dangerous_insecure_decode_with_validation::<Claims>(&token, &Validation::new(Algorithm::HS256));
-/// ```
-pub fn dangerous_insecure_decode_with_validation<T: DeserializeOwned>(
-    token: &str,
-    validation: &Validation,
-) -> Result<TokenData<T>> {
-    let (_, message) = expect_two!(token.rsplitn(2, '.'));
-    let (claims, header) = expect_two!(message.rsplitn(2, '.'));
-    let header = Header::from_encoded(header)?;
-
-    if !validation.algorithms.contains(&header.alg) {
-        return Err(new_error(ErrorKind::InvalidAlgorithm));
-    }
-
-    let (decoded_claims, claims_map): (T, _) = from_jwt_part_claims(claims)?;
-    validate(&claims_map, validation)?;
-
-    Ok(TokenData { header, claims: decoded_claims })
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
