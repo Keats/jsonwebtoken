@@ -1,7 +1,4 @@
-use serde::de::DeserializeOwned;
-use serde::ser::Serialize;
-use serde_json::map::Map;
-use serde_json::{from_slice, to_vec, Value};
+use serde::{Deserialize, Serialize};
 
 use crate::errors::Result;
 
@@ -15,18 +12,23 @@ pub(crate) fn b64_decode<T: AsRef<[u8]>>(input: T) -> Result<Vec<u8>> {
 
 /// Serializes a struct to JSON and encodes it in base64
 pub(crate) fn b64_encode_part<T: Serialize>(input: &T) -> Result<String> {
-    let json = to_vec(input)?;
+    let json = serde_json::to_vec(input)?;
     Ok(b64_encode(json))
 }
 
-/// Decodes from base64 and deserializes from JSON to a struct AND a hashmap of Value so we can
-/// run validation on it
-pub(crate) fn from_jwt_part_claims<B: AsRef<[u8]>, T: DeserializeOwned>(
-    encoded: B,
-) -> Result<(T, Map<String, Value>)> {
-    let s = b64_decode(encoded)?;
+/// This is used to decode from base64 then deserialize from JSON to several structs:
+/// - The user-provided struct
+/// - The ClaimsForValidation struct from this crate to run validation on
+pub(crate) struct DecodedJwtPartClaims {
+    b64_decoded: Vec<u8>,
+}
 
-    let claims: T = from_slice(&s)?;
-    let validation_map: Map<_, _> = from_slice(&s)?;
-    Ok((claims, validation_map))
+impl DecodedJwtPartClaims {
+    pub fn from_jwt_part_claims(encoded_jwt_part_claims: impl AsRef<[u8]>) -> Result<Self> {
+        Ok(Self { b64_decoded: b64_decode(encoded_jwt_part_claims)? })
+    }
+
+    pub fn deserialize<'a, T: Deserialize<'a>>(&'a self) -> Result<T> {
+        Ok(serde_json::from_slice(&self.b64_decoded)?)
+    }
 }
