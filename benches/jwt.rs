@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -23,7 +23,11 @@ fn bench_decode(c: &mut Criterion) {
 
     c.bench_function("bench_decode", |b| {
         b.iter(|| {
-            decode::<Claims>(black_box(token), black_box(&key), black_box(&Validation::default()))
+            decode::<Claims>(
+                black_box(token),
+                black_box(&key),
+                black_box(&Validation::new(Algorithm::HS256)),
+            )
         })
     });
 }

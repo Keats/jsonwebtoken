@@ -5,7 +5,7 @@ use crate::crypto::verify;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 use crate::pem::decoder::PemEncodedKey;
-use crate::serialization::{b64_decode, from_jwt_part_claims};
+use crate::serialization::{b64_decode, DecodedJwtPartClaims};
 use crate::validation::{validate, Validation};
 
 /// The return type of a successful call to [decode](fn.decode.html).
@@ -198,10 +198,11 @@ pub fn decode<T: DeserializeOwned>(
     match verify_signature(token, key, validation) {
         Err(e) => Err(e),
         Ok((header, claims)) => {
-            let (decoded_claims, claims_map): (T, _) = from_jwt_part_claims(claims)?;
-            validate(&claims_map, validation)?;
+            let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
+            let claims = decoded_claims.deserialize()?;
+            validate(decoded_claims.deserialize()?, validation)?;
 
-            Ok(TokenData { header, claims: decoded_claims })
+            Ok(TokenData { header, claims })
         }
     }
 }
