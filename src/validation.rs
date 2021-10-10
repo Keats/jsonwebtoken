@@ -70,19 +70,7 @@ pub struct Validation {
 impl Validation {
     /// Create a default validation setup allowing the given alg
     pub fn new(alg: Algorithm) -> Validation {
-        Validation {
-            algorithms: vec![alg],
-            leeway: 0,
-
-            validate_exp: true,
-            validate_nbf: false,
-
-            iss: None,
-            sub: None,
-            aud: None,
-
-            validate_signature: true,
-        }
+        Validation { algorithms: vec![alg], ..Default::default() }
     }
 
     /// `aud` is a collection of one or more acceptable audience members
@@ -100,6 +88,24 @@ impl Validation {
     /// With this flag turned off, you should not trust any of the values of the claims.
     pub fn insecure_disable_signature_validation(&mut self) {
         self.validate_signature = false;
+    }
+}
+
+impl Default for Validation {
+    fn default() -> Self {
+        Validation {
+            algorithms: vec![Algorithm::HS256],
+            leeway: 0,
+
+            validate_exp: true,
+            validate_nbf: false,
+
+            iss: None,
+            sub: None,
+            aud: None,
+
+            validate_signature: true,
+        }
     }
 }
 
