@@ -15,9 +15,9 @@ struct Claims {
 
 impl Claims {
     /// If a token should always be equal to its representation after serializing and deserializing
-    /// again, this function must be used for construction. `DateTime` contains a microsecond field
-    /// but JWT timestamps are defined as UNIX timestamps (seconds). This function normalizes the
-    /// timestamps.
+    /// again, this function must be used for construction. `OffsetDateTime` contains a microsecond
+    /// field but JWT timestamps are defined as UNIX timestamps (seconds). This function normalizes
+    /// the timestamps.
     pub fn new(sub: String, iat: OffsetDateTime, exp: OffsetDateTime) -> Self {
         // normalize the timestamps by stripping of microseconds
         let iat = iat
@@ -30,6 +30,7 @@ impl Claims {
             .with_hms_milli(exp.hour(), exp.minute(), exp.second(), 0)
             .unwrap()
             .assume_utc();
+
         Self { sub, iat, exp }
     }
 }
@@ -59,7 +60,7 @@ mod jwt_numeric_date {
 
     #[cfg(test)]
     mod tests {
-        const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gRGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.RTgha0S53MjPC2pMA4e2oMzaBxSY3DMjiYR2qFfV55A";
+        const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gT2Zmc2V0RGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.BcPipupP9oIV6uFRI6Acn7FMLws_wA3oo6CrfeFF3Gg";
 
         use super::super::{Claims, SECRET};
         use jsonwebtoken::{
@@ -69,7 +70,7 @@ mod jwt_numeric_date {
 
         #[test]
         fn round_trip() {
-            let sub = "Custom DateTime ser/de".to_string();
+            let sub = "Custom OffsetDateTime ser/de".to_string();
             let iat = OffsetDateTime::from_unix_timestamp(0).unwrap();
             let exp = OffsetDateTime::from_unix_timestamp(32503680000).unwrap();
 
@@ -109,7 +110,7 @@ mod jwt_numeric_date {
         fn to_token_and_parse_equals_identity() {
             let iat = OffsetDateTime::now_utc();
             let exp = iat + Duration::days(1);
-            let sub = "Custom DateTime ser/de".to_string();
+            let sub = "Custom OffsetDateTime ser/de".to_string();
 
             let claims = Claims::new(sub.clone(), iat, exp);
 
@@ -131,7 +132,7 @@ mod jwt_numeric_date {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let sub = "Custom DateTime ser/de".to_string();
+    let sub = "Custom OffsetDateTime ser/de".to_string();
     let iat = OffsetDateTime::now_utc();
     let exp = iat + Duration::days(1);
 
