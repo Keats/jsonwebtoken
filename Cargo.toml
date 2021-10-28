@@ -22,7 +22,7 @@ simple_asn1 = "0.6"
 
 [dev-dependencies]
 # For the custom chrono example
-time = "0.3.3"
+time = "0.3"
 criterion = "0.3"
 
 [[bench]]
