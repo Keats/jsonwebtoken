@@ -230,27 +230,6 @@ where
             formatter.write_str("A NumericType that can be reasonably coerced into a u64")
         }
 
-        //fn visit_unit<E>(self) -> std::result::Result<Self::Value, E>
-        //where
-        //    E: de::Error,
-        //{
-        //    Ok(TryParse::NotPresent)
-        //}
-
-        //fn visit_none<E>(self) -> std::result::Result<Self::Value, E>
-        //where
-        //    E: de::Error,
-        //{
-        //    Ok(TryParse::NotPresent)
-        //}
-
-        //fn visit_some<D>(self, deserializer: D) -> std::result::Result<Self::Value, D::Error>
-        //where
-        //    D: Deserializer<'de>,
-        //{
-        //    deserializer.deserialize_any(NumericType(PhantomData))
-        //}
-
         fn visit_f64<E>(self, value: f64) -> std::result::Result<Self::Value, E>
         where
             E: de::Error,
