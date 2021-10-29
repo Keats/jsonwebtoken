@@ -20,16 +20,24 @@ impl Claims {
     /// timestamps.
     pub fn new(sub: String, iat: OffsetDateTime, exp: OffsetDateTime) -> Self {
         // normalize the timestamps by stripping of microseconds
-        let iat = iat.date().with_hms_milli(iat.hour(), iat.minute(), iat.second(), 0).unwrap().assume_utc();
-        let exp = exp.date().with_hms_milli(exp.hour(), exp.minute(), exp.second(), 0).unwrap().assume_utc();
+        let iat = iat
+            .date()
+            .with_hms_milli(iat.hour(), iat.minute(), iat.second(), 0)
+            .unwrap()
+            .assume_utc();
+        let exp = exp
+            .date()
+            .with_hms_milli(exp.hour(), exp.minute(), exp.second(), 0)
+            .unwrap()
+            .assume_utc();
         Self { sub, iat, exp }
     }
 }
 
 mod jwt_numeric_date {
     //! Custom serialization of OffsetDateTime to conform with the JWT spec (RFC 7519 section 2, "Numeric Date")
-    use time::OffsetDateTime;
     use serde::{self, Deserialize, Deserializer, Serializer};
+    use time::OffsetDateTime;
 
     /// Serializes an OffsetDateTime to a Unix timestamp (milliseconds since 1970/1/1T00:00:00T)
     pub fn serialize<S>(date: &OffsetDateTime, serializer: S) -> Result<S::Ok, S::Error>
@@ -57,7 +65,7 @@ mod jwt_numeric_date {
         use jsonwebtoken::{
             decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
         };
-        use time::{OffsetDateTime, Duration};
+        use time::{Duration, OffsetDateTime};
 
         #[test]
         fn round_trip() {

@@ -1,9 +1,9 @@
-use chrono::Utc;
 use jsonwebtoken::{
     crypto::{sign, verify},
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -49,7 +49,7 @@ fn round_trip_claim() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
-        exp: Utc::now().timestamp() + 10000,
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
     let token = encode(
         &Header::new(Algorithm::EdDSA),
