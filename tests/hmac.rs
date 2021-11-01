@@ -1,10 +1,10 @@
-use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{
     crypto::{sign, verify},
     decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -34,7 +34,7 @@ fn encode_with_custom_header() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
-        exp: Utc::now().timestamp() + 10000,
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
     let header = Header { kid: Some("kid".to_string()), ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
@@ -53,7 +53,7 @@ fn round_trip_claim() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
-        exp: Utc::now().timestamp() + 10000,
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
     let token =
         encode(&Header::default(), &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
@@ -122,7 +122,7 @@ fn encode_wrong_alg_family() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
-        exp: Utc::now().timestamp() + 10000,
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
     let claims = encode(&Header::default(), &my_claims, &EncodingKey::from_rsa_der(b"secret"));
     claims.unwrap();

@@ -1,6 +1,6 @@
-use chrono::prelude::*;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
+use time::{Duration, OffsetDateTime};
 
 const SECRET: &str = "some-secret";
 
@@ -8,63 +8,71 @@ const SECRET: &str = "some-secret";
 struct Claims {
     sub: String,
     #[serde(with = "jwt_numeric_date")]
-    iat: DateTime<Utc>,
+    iat: OffsetDateTime,
     #[serde(with = "jwt_numeric_date")]
-    exp: DateTime<Utc>,
+    exp: OffsetDateTime,
 }
 
 impl Claims {
     /// If a token should always be equal to its representation after serializing and deserializing
-    /// again, this function must be used for construction. `DateTime` contains a microsecond field
-    /// but JWT timestamps are defined as UNIX timestamps (seconds). This function normalizes the
-    /// timestamps.
-    pub fn new(sub: String, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
+    /// again, this function must be used for construction. `OffsetDateTime` contains a microsecond
+    /// field but JWT timestamps are defined as UNIX timestamps (seconds). This function normalizes
+    /// the timestamps.
+    pub fn new(sub: String, iat: OffsetDateTime, exp: OffsetDateTime) -> Self {
         // normalize the timestamps by stripping of microseconds
-        let iat = iat.date().and_hms_milli(iat.hour(), iat.minute(), iat.second(), 0);
-        let exp = exp.date().and_hms_milli(exp.hour(), exp.minute(), exp.second(), 0);
+        let iat = iat
+            .date()
+            .with_hms_milli(iat.hour(), iat.minute(), iat.second(), 0)
+            .unwrap()
+            .assume_utc();
+        let exp = exp
+            .date()
+            .with_hms_milli(exp.hour(), exp.minute(), exp.second(), 0)
+            .unwrap()
+            .assume_utc();
+
         Self { sub, iat, exp }
     }
 }
 
 mod jwt_numeric_date {
-    //! Custom serialization of DateTime<Utc> to conform with the JWT spec (RFC 7519 section 2, "Numeric Date")
-    use chrono::{DateTime, TimeZone, Utc};
+    //! Custom serialization of OffsetDateTime to conform with the JWT spec (RFC 7519 section 2, "Numeric Date")
     use serde::{self, Deserialize, Deserializer, Serializer};
+    use time::OffsetDateTime;
 
-    /// Serializes a DateTime<Utc> to a Unix timestamp (milliseconds since 1970/1/1T00:00:00T)
-    pub fn serialize<S>(date: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
+    /// Serializes an OffsetDateTime to a Unix timestamp (milliseconds since 1970/1/1T00:00:00T)
+    pub fn serialize<S>(date: &OffsetDateTime, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let timestamp = date.timestamp();
+        let timestamp = date.unix_timestamp();
         serializer.serialize_i64(timestamp)
     }
 
     /// Attempts to deserialize an i64 and use as a Unix timestamp
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<OffsetDateTime, D::Error>
     where
         D: Deserializer<'de>,
     {
-        Utc.timestamp_opt(i64::deserialize(deserializer)?, 0)
-            .single() // If there are multiple or no valid DateTimes from timestamp, return None
-            .ok_or_else(|| serde::de::Error::custom("invalid Unix timestamp value"))
+        OffsetDateTime::from_unix_timestamp(i64::deserialize(deserializer)?)
+            .map_err(|_| serde::de::Error::custom("invalid Unix timestamp value"))
     }
 
     #[cfg(test)]
     mod tests {
-        const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gRGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.RTgha0S53MjPC2pMA4e2oMzaBxSY3DMjiYR2qFfV55A";
+        const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gT2Zmc2V0RGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.BcPipupP9oIV6uFRI6Acn7FMLws_wA3oo6CrfeFF3Gg";
 
         use super::super::{Claims, SECRET};
-        use chrono::{Duration, TimeZone, Utc};
         use jsonwebtoken::{
             decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
         };
+        use time::{Duration, OffsetDateTime};
 
         #[test]
         fn round_trip() {
-            let sub = "Custom DateTime ser/de".to_string();
-            let iat = Utc.timestamp(0, 0);
-            let exp = Utc.timestamp(32503680000, 0);
+            let sub = "Custom OffsetDateTime ser/de".to_string();
+            let iat = OffsetDateTime::from_unix_timestamp(0).unwrap();
+            let exp = OffsetDateTime::from_unix_timestamp(32503680000).unwrap();
 
             let claims = Claims::new(sub.clone(), iat, exp);
 
@@ -100,9 +108,9 @@ mod jwt_numeric_date {
 
         #[test]
         fn to_token_and_parse_equals_identity() {
-            let iat = Utc::now();
+            let iat = OffsetDateTime::now_utc();
             let exp = iat + Duration::days(1);
-            let sub = "Custom DateTime ser/de".to_string();
+            let sub = "Custom OffsetDateTime ser/de".to_string();
 
             let claims = Claims::new(sub.clone(), iat, exp);
 
@@ -124,9 +132,9 @@ mod jwt_numeric_date {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let sub = "Custom DateTime ser/de".to_string();
-    let iat = Utc::now();
-    let exp = iat + chrono::Duration::days(1);
+    let sub = "Custom OffsetDateTime ser/de".to_string();
+    let iat = OffsetDateTime::now_utc();
+    let exp = iat + Duration::days(1);
 
     let claims = Claims::new(sub, iat, exp);
 
