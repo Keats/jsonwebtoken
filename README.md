@@ -14,7 +14,7 @@ jsonwebtoken = "7"
 serde = {version = "1.0", features = ["derive"] }
 ```
 
-The minimum required Rust version is 1.46.
+The minimum required Rust version is 1.51.
 
 ## Algorithms
 This library currently supports the following:
