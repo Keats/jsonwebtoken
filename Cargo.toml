@@ -18,11 +18,11 @@ ring = { version = "0.16.5", features = ["std"] }
 base64 = "0.13"
 # For PEM decoding
 pem = "1"
-simple_asn1 = "0.5"
+simple_asn1 = "0.6"
 
 [dev-dependencies]
-# For the custom chrono example
-chrono = "0.4"
+# For the custom time example
+time = "0.3"
 criterion = "0.3"
 
 [[bench]]
