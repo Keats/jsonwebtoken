@@ -11,7 +11,7 @@ pub(crate) fn new_error(kind: ErrorKind) -> Error {
 pub type Result<T> = result::Result<T, Error>;
 
 /// An error that can occur when encoding/decoding JWTs
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Error(Box<ErrorKind>);
 
 impl Error {
@@ -132,6 +132,9 @@ impl PartialEq for ErrorKind {
         format!("{:?}", self) == format!("{:?}", other)
     }
 }
+
+// Equality of ErrorKind is an equivalence relation: it is reflexive, symmetric and transitive.
+impl Eq for ErrorKind {}
 
 impl From<base64::DecodeError> for Error {
     fn from(err: base64::DecodeError) -> Error {
