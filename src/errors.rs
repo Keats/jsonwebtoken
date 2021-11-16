@@ -1,6 +1,7 @@
 use std::error::Error as StdError;
 use std::fmt;
 use std::result;
+use std::sync::Arc;
 
 /// A crate private constructor for `Error`.
 pub(crate) fn new_error(kind: ErrorKind) -> Error {
@@ -11,7 +12,7 @@ pub(crate) fn new_error(kind: ErrorKind) -> Error {
 pub type Result<T> = result::Result<T, Error>;
 
 /// An error that can occur when encoding/decoding JWTs
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Error(Box<ErrorKind>);
 
 impl Error {
@@ -32,7 +33,7 @@ impl Error {
 /// attribute makes sure clients don't count on exhaustive matching.
 /// (Otherwise, adding a new variant could break existing code.)
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ErrorKind {
     /// When a token doesn't have a valid JWT shape
     InvalidToken,
@@ -70,7 +71,7 @@ pub enum ErrorKind {
     /// An error happened when decoding some base64 text
     Base64(base64::DecodeError),
     /// An error happened while serializing/deserializing JSON
-    Json(serde_json::Error),
+    Json(Arc<serde_json::Error>),
     /// Some of the text was invalid UTF-8
     Utf8(::std::string::FromUtf8Error),
     /// Something unspecified went wrong with crypto
@@ -95,7 +96,7 @@ impl StdError for Error {
             ErrorKind::InvalidAlgorithmName => None,
             ErrorKind::InvalidKeyFormat => None,
             ErrorKind::Base64(ref err) => Some(err),
-            ErrorKind::Json(ref err) => Some(err),
+            ErrorKind::Json(ref err) => Some(err.as_ref()),
             ErrorKind::Utf8(ref err) => Some(err),
             ErrorKind::Crypto(ref err) => Some(err),
         }
@@ -144,7 +145,7 @@ impl From<base64::DecodeError> for Error {
 
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Error {
-        new_error(ErrorKind::Json(err))
+        new_error(ErrorKind::Json(Arc::new(err)))
     }
 }
 
