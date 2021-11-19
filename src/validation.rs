@@ -98,7 +98,7 @@ impl Default for Validation {
     fn default() -> Self {
         Validation {
             algorithms: vec![Algorithm::HS256],
-            leeway: 0,
+            leeway: 60,
 
             validate_exp: true,
             validate_nbf: false,

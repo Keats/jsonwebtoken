@@ -11,6 +11,8 @@
 - Add JWKs types for easy interop with various Oauth providers
 - Removed `decode_*` functions in favour of using the `Validation` struct
 - Allow float values for `exp` and `nbf`, yes it's in the spec... floats will be rounded to u64
+- Error now implements Clone/Eq
+- Change default leeway from 0s to 60s
 
 ## 7.2.0 (2020-06-30)
 
