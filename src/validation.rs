@@ -23,8 +23,8 @@ use crate::errors::{new_error, ErrorKind, Result};
 /// validation.set_audience(&["Me"]); // a single string
 /// validation.set_audience(&["Me", "You"]); // array of strings
 /// // or issuer
-/// validation.set_iss(&["Me"]); // a single string
-/// validation.set_iss(&["Me", "You"]); // array of strings
+/// validation.set_issuer(&["Me"]); // a single string
+/// validation.set_issuer(&["Me", "You"]); // array of strings
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct Validation {
@@ -47,11 +47,13 @@ pub struct Validation {
     pub validate_nbf: bool,
     /// If it contains a value, the validation will check that the `aud` field is a member of the
     /// audience provided and will error otherwise.
+    /// Use `set_audience` to set it
     ///
     /// Defaults to `None`.
     pub aud: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `iss` field is a member of the
     /// iss provided and will error otherwise.
+    /// Use `set_issuer` to set it
     ///
     /// Defaults to `None`.
     pub iss: Option<HashSet<String>>,
@@ -77,12 +79,14 @@ impl Validation {
     }
 
     /// `aud` is a collection of one or more acceptable audience members
+    /// The simple usage is `set_audience(&["some aud name"])`
     pub fn set_audience<T: ToString>(&mut self, items: &[T]) {
         self.aud = Some(items.iter().map(|x| x.to_string()).collect())
     }
 
-    /// `iss` is a collection of one or more acceptable iss members
-    pub fn set_iss<T: ToString>(&mut self, items: &[T]) {
+    /// `iss` is a collection of one or more acceptable issuers members
+    /// The simple usage is `set_issuer(&["some iss name"])`
+    pub fn set_issuer<T: ToString>(&mut self, items: &[T]) {
         self.iss = Some(items.iter().map(|x| x.to_string()).collect())
     }
 
@@ -379,7 +383,7 @@ mod tests {
 
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = false;
-        validation.set_iss(&["Keats"]);
+        validation.set_issuer(&["Keats"]);
 
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
@@ -391,7 +395,7 @@ mod tests {
 
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = false;
-        validation.set_iss(&["Keats"]);
+        validation.set_issuer(&["Keats"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
@@ -407,7 +411,7 @@ mod tests {
 
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = false;
-        validation.set_iss(&["Keats"]);
+        validation.set_issuer(&["Keats"]);
         let res = validate(deserialize_claims(&claims), &validation);
 
         match res.unwrap_err().kind() {
@@ -528,7 +532,7 @@ mod tests {
 
         let mut validation = Validation::new(Algorithm::HS256);
         validation.leeway = 5;
-        validation.set_iss(&["iss no check"]);
+        validation.set_issuer(&["iss no check"]);
         validation.set_audience(&["iss no check"]);
 
         let res = validate(deserialize_claims(&claims), &validation);

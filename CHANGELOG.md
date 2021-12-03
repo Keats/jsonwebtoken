@@ -8,9 +8,9 @@
 - Remove deprecated `dangerous_unsafe_decode`
 - `Validation::iss` is now a `HashSet` instead of a single value
 - `decode` will now error if `Validation::algorithms` is empty
-- Add JWKs types for easy interop with various Oauth providers
+- Add JWKs types for easy interop with various Oauth provider, see `examples/auth0.rs` for an example
 - Removed `decode_*` functions in favour of using the `Validation` struct
-- Allow float values for `exp` and `nbf`, yes it's in the spec... floats will be rounded to u64
+- Allow float values for `exp` and `nbf`, yes it's in the spec... floats will be rounded and converted to u64
 - Error now implements Clone/Eq
 - Change default leeway from 0s to 60s
 

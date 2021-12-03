@@ -10,7 +10,7 @@ See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more inf
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "7"
+jsonwebtoken = "8"
 serde = {version = "1.0", features = ["derive"] }
 ```
 
@@ -51,6 +51,7 @@ struct Claims {
 
 ### Claims
 The claims fields which can be validated. (see [validation](#validation))
+
 ```rust
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -161,37 +162,5 @@ Since validating time fields is always a bit tricky due to clock skew,
 you can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` field.
 
 Last but not least, you will need to set the algorithm(s) allowed for this token if you are not using `HS256`.
-
-```rust
-#[derive(Debug, Clone, PartialEq)]
-struct Validation {
-    pub leeway: u64,                    // Default: 0
-    pub validate_exp: bool,             // Default: true
-    pub validate_nbf: bool,             // Default: false
-    pub aud: Option<HashSet<String>>,   // Default: None
-    pub iss: Option<HashSet<String>>,   // Default: None
-    pub sub: Option<String>,            // Default: None
-    pub algorithms: Vec<Algorithm>,     // Default: vec![Algorithm::HS256]
-}
-```
-
-```rust
-use jsonwebtoken::{Validation, Algorithm};
-
-// Default validation: the only algo allowed is HS256
-let validation = Validation::default();
-// Quick way to setup a validation where only the algorithm changes
-let validation = Validation::new(Algorithm::HS512);
-// Adding some leeway (in seconds) for exp and nbf checks
-let mut validation = Validation {leeway: 60, ..Default::default()};
-// Checking issuer
-let mut iss = std::collections::HashSet::new();
-iss.insert("issuer".to_string());
-let mut validation = Validation {iss: Some(iss), ..Default::default()};
-// Setting audience
-let mut validation = Validation::default();
-validation.set_audience(&"Me"); // string
-validation.set_audience(&["Me", "You"]); // array of strings
-```
 
 Look at `examples/validation.rs` for a full working example.
