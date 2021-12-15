@@ -13,6 +13,7 @@
 - Allow float values for `exp` and `nbf`, yes it's in the spec... floats will be rounded and converted to u64
 - Error now implements Clone/Eq
 - Change default leeway from 0s to 60s
+- Add `Validation::require_spec_claims` to validate presence of the spec claims
 
 ## 7.2.0 (2020-06-30)
 
