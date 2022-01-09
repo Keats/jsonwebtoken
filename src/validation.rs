@@ -35,7 +35,7 @@ pub struct Validation {
     ///
     /// Defaults to `{"exp"}`
     pub required_spec_claims: HashSet<String>,
-    /// Add some leeway (in seconds) to the `exp`, `iat` and `nbf` validation to
+    /// Add some leeway (in seconds) to the `exp` and `nbf` validation to
     /// account for clock skew.
     ///
     /// Defaults to `0`.
