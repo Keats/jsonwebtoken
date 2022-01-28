@@ -21,6 +21,7 @@ pub struct Claims {
     exp: i64,
 }
 
+#[cfg(feature = "use_pem")]
 #[test]
 fn round_trip_sign_verification_pem_pkcs1() {
     let privkey_pem = include_bytes!("private_rsa_key_pkcs1.pem");
@@ -40,6 +41,7 @@ fn round_trip_sign_verification_pem_pkcs1() {
     }
 }
 
+#[cfg(feature = "use_pem")]
 #[test]
 fn round_trip_sign_verification_pem_pkcs8() {
     let privkey_pem = include_bytes!("private_rsa_key_pkcs8.pem");
@@ -73,6 +75,7 @@ fn round_trip_sign_verification_der() {
     }
 }
 
+#[cfg(feature = "use_pem")]
 #[test]
 fn round_trip_claim() {
     let my_claims = Claims {
@@ -98,6 +101,7 @@ fn round_trip_claim() {
     }
 }
 
+#[cfg(feature = "use_pem")]
 #[test]
 fn rsa_modulus_exponent() {
     let privkey = include_str!("private_rsa_key_pkcs1.pem");
@@ -124,6 +128,7 @@ fn rsa_modulus_exponent() {
 }
 
 // https://jwt.io/ is often used for examples so ensure their example works with jsonwebtoken
+#[cfg(feature = "use_pem")]
 #[test]
 fn roundtrip_with_jwtio_example_jey() {
     let privkey_pem = include_bytes!("private_jwtio.pem");

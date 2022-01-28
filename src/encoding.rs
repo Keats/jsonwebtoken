@@ -4,6 +4,7 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
+#[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::b64_encode_part;
 
@@ -29,12 +30,14 @@ impl EncodingKey {
 
     /// If you are loading a RSA key from a .pem file.
     /// This errors if the key is not a valid RSA key.
+    /// Only exists if the feature `use_pem` is enabled.
     ///
     /// # NOTE
     ///
     /// According to the [ring doc](https://briansmith.org/rustdoc/ring/signature/struct.RsaKeyPair.html#method.from_pkcs8),
     /// the key should be at least 2047 bits.
     ///
+    #[cfg(feature = "use_pem")]
     pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
@@ -43,6 +46,7 @@ impl EncodingKey {
 
     /// If you are loading a ECDSA key from a .pem file
     /// This errors if the key is not a valid private EC key
+    /// Only exists if the feature `use_pem` is enabled.
     ///
     /// # NOTE
     ///
@@ -54,6 +58,7 @@ impl EncodingKey {
     /// openssl ecparam -genkey -noout -name prime256v1 \
     ///     | openssl pkcs8 -topk8 -nocrypt -out ec-private.pem
     /// ```
+    #[cfg(feature = "use_pem")]
     pub fn from_ec_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ec_private_key()?;
@@ -62,6 +67,8 @@ impl EncodingKey {
 
     /// If you are loading a EdDSA key from a .pem file
     /// This errors if the key is not a valid private Ed key
+    /// Only exists if the feature `use_pem` is enabled.
+    #[cfg(feature = "use_pem")]
     pub fn from_ed_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ed_private_key()?;
