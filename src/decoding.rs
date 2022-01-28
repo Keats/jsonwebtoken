@@ -4,6 +4,7 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::verify;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
+#[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, DecodedJwtPartClaims};
 use crate::validation::{validate, Validation};
@@ -59,6 +60,8 @@ impl DecodingKey {
     }
 
     /// If you are loading a public RSA key in a PEM format, use this.
+    /// Only exists if the feature `use_pem` is enabled.
+    #[cfg(feature = "use_pem")]
     pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
@@ -87,6 +90,8 @@ impl DecodingKey {
     }
 
     /// If you have a ECDSA public key in PEM format, use this.
+    /// Only exists if the feature `use_pem` is enabled.
+    #[cfg(feature = "use_pem")]
     pub fn from_ec_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ec_public_key()?;
@@ -97,6 +102,8 @@ impl DecodingKey {
     }
 
     /// If you have a EdDSA public key in PEM format, use this.
+    /// Only exists if the feature `use_pem` is enabled.
+    #[cfg(feature = "use_pem")]
     pub fn from_ed_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ed_public_key()?;

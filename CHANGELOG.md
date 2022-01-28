@@ -14,6 +14,7 @@
 - Error now implements Clone/Eq
 - Change default leeway from 0s to 60s
 - Add `Validation::require_spec_claims` to validate presence of the spec claims
+- Add default feature for pem decoding named `use_pem` that can be disabled to avoid 2 dependencies
 
 ## 7.2.0 (2020-06-30)
 

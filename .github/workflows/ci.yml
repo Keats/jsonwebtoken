@@ -68,5 +68,8 @@ jobs:
     - name: Build System Info
       run: rustc --version
 
-    - name: Run tests
+    - name: Run tests default features
       run: cargo test
+
+    - name: Run tests no features
+      run: cargo test --no-default-features

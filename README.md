@@ -11,6 +11,8 @@ Add the following to Cargo.toml:
 
 ```toml
 jsonwebtoken = "8"
+# If you do not need pem decoding, you can disable the default feature `use_pem` that way:
+# jsonwebtoken = {version = "8", default-features = false }
 serde = {version = "1.0", features = ["derive"] }
 ```
 

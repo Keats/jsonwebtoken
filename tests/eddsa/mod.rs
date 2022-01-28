@@ -25,6 +25,7 @@ fn round_trip_sign_verification_pk8() {
     assert!(is_valid);
 }
 
+#[cfg(feature = "use_pem")]
 #[test]
 fn round_trip_sign_verification_pem() {
     let privkey_pem = include_bytes!("private_ed25519_key.pem");
@@ -42,6 +43,7 @@ fn round_trip_sign_verification_pem() {
     assert!(is_valid);
 }
 
+#[cfg(feature = "use_pem")]
 #[test]
 fn round_trip_claim() {
     let privkey_pem = include_bytes!("private_ed25519_key.pem");
