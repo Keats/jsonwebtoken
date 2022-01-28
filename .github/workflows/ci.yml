@@ -50,13 +50,13 @@ jobs:
         build: [pinned, stable, nightly]
         include:
         - build: pinned
-          os: ubuntu-18.04
-          rust: 1.53.0
+          os: ubuntu-20.04
+          rust: 1.56.0
         - build: stable
-          os: ubuntu-18.04
+          os: ubuntu-20.04
           rust: stable
         - build: nightly
-          os: ubuntu-18.04
+          os: ubuntu-20.04
           rust: nightly
     steps:
     - uses: actions/checkout@v1
