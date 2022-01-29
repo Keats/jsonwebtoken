@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
@@ -11,21 +13,21 @@ use crate::serialization::b64_encode_part;
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance
 #[derive(Clone)]
-pub struct EncodingKey {
+pub struct EncodingKey<'a> {
     pub(crate) family: AlgorithmFamily,
-    content: Vec<u8>,
+    content: Cow<'a, [u8]>,
 }
 
-impl EncodingKey {
+impl<'a> EncodingKey<'a> {
     /// If you're using a HMAC secret that is not base64, use that.
-    pub fn from_secret(secret: &[u8]) -> Self {
-        EncodingKey { family: AlgorithmFamily::Hmac, content: secret.to_vec() }
+    pub fn from_secret(secret: &'a [u8]) -> Self {
+        EncodingKey { family: AlgorithmFamily::Hmac, content: Cow::Borrowed(secret) }
     }
 
     /// If you have a base64 HMAC secret, use that.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
         let out = base64::decode(&secret)?;
-        Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
+        Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: Cow::Owned(out) })
     }
 
     /// If you are loading a RSA key from a .pem file.
@@ -41,7 +43,7 @@ impl EncodingKey {
     pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
-        Ok(EncodingKey { family: AlgorithmFamily::Rsa, content: content.to_vec() })
+        Ok(EncodingKey { family: AlgorithmFamily::Rsa, content: Cow::Owned(content.to_vec()) })
     }
 
     /// If you are loading a ECDSA key from a .pem file
@@ -62,7 +64,7 @@ impl EncodingKey {
     pub fn from_ec_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ec_private_key()?;
-        Ok(EncodingKey { family: AlgorithmFamily::Ec, content: content.to_vec() })
+        Ok(EncodingKey { family: AlgorithmFamily::Ec, content: Cow::Owned(content.to_vec()) })
     }
 
     /// If you are loading a EdDSA key from a .pem file
@@ -72,22 +74,22 @@ impl EncodingKey {
     pub fn from_ed_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ed_private_key()?;
-        Ok(EncodingKey { family: AlgorithmFamily::Ed, content: content.to_vec() })
+        Ok(EncodingKey { family: AlgorithmFamily::Ed, content: Cow::Owned(content.to_vec()) })
     }
 
     /// If you know what you're doing and have the DER-encoded key, for RSA only
-    pub fn from_rsa_der(der: &[u8]) -> Self {
-        EncodingKey { family: AlgorithmFamily::Rsa, content: der.to_vec() }
+    pub fn from_rsa_der(der: &'a [u8]) -> Self {
+        EncodingKey { family: AlgorithmFamily::Rsa, content: Cow::Borrowed(der) }
     }
 
     /// If you know what you're doing and have the DER-encoded key, for ECDSA
-    pub fn from_ec_der(der: &[u8]) -> Self {
-        EncodingKey { family: AlgorithmFamily::Ec, content: der.to_vec() }
+    pub fn from_ec_der(der: &'a [u8]) -> Self {
+        EncodingKey { family: AlgorithmFamily::Ec, content: Cow::Borrowed(der) }
     }
 
     /// If you know what you're doing and have the DER-encoded key, for EdDSA
-    pub fn from_ed_der(der: &[u8]) -> Self {
-        EncodingKey { family: AlgorithmFamily::Ed, content: der.to_vec() }
+    pub fn from_ed_der(der: &'a [u8]) -> Self {
+        EncodingKey { family: AlgorithmFamily::Ed, content: Cow::Borrowed(der) }
     }
 
     pub(crate) fn inner(&self) -> &[u8] {

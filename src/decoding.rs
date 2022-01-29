@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
@@ -31,32 +33,35 @@ macro_rules! expect_two {
 }
 
 #[derive(Clone)]
-pub(crate) enum DecodingKeyKind {
-    SecretOrDer(Vec<u8>),
+pub(crate) enum DecodingKeyKind<'a> {
+    SecretOrDer(Cow<'a, [u8]>),
     RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
 }
 
 /// All the different kind of keys we can use to decode a JWT
 /// This key can be re-used so make sure you only initialize it once if you can for better performance
 #[derive(Clone)]
-pub struct DecodingKey {
+pub struct DecodingKey<'a> {
     pub(crate) family: AlgorithmFamily,
-    pub(crate) kind: DecodingKeyKind,
+    pub(crate) kind: DecodingKeyKind<'a>,
 }
 
-impl DecodingKey {
+impl<'a> DecodingKey<'a> {
     /// If you're using HMAC, use this.
-    pub fn from_secret(secret: &[u8]) -> Self {
+    pub fn from_secret(secret: &'a [u8]) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Hmac,
-            kind: DecodingKeyKind::SecretOrDer(secret.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(secret)),
         }
     }
 
     /// If you're using HMAC with a base64 encoded secret, use this.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
         let out = base64::decode(&secret)?;
-        Ok(DecodingKey { family: AlgorithmFamily::Hmac, kind: DecodingKeyKind::SecretOrDer(out) })
+        Ok(DecodingKey {
+            family: AlgorithmFamily::Hmac,
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(out)),
+        })
     }
 
     /// If you are loading a public RSA key in a PEM format, use this.
@@ -67,7 +72,7 @@ impl DecodingKey {
         let content = pem_key.as_rsa_key()?;
         Ok(DecodingKey {
             family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())),
         })
     }
 
@@ -97,7 +102,7 @@ impl DecodingKey {
         let content = pem_key.as_ec_public_key()?;
         Ok(DecodingKey {
             family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())),
         })
     }
 
@@ -109,31 +114,31 @@ impl DecodingKey {
         let content = pem_key.as_ed_public_key()?;
         Ok(DecodingKey {
             family: AlgorithmFamily::Ed,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())),
         })
     }
 
     /// If you know what you're doing and have a RSA DER encoded public key, use this.
-    pub fn from_rsa_der(der: &[u8]) -> Self {
+    pub fn from_rsa_der(der: &'a [u8]) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
         }
     }
 
     /// If you know what you're doing and have a RSA EC encoded public key, use this.
-    pub fn from_ec_der(der: &[u8]) -> Self {
+    pub fn from_ec_der(der: &'a [u8]) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
         }
     }
 
     /// If you know what you're doing and have a Ed DER encoded public key, use this.
-    pub fn from_ed_der(der: &[u8]) -> Self {
+    pub fn from_ed_der(der: &'a [u8]) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Ed,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
         }
     }
     pub(crate) fn as_bytes(&self) -> &[u8] {
