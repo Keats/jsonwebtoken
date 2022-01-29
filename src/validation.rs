@@ -82,7 +82,23 @@ pub struct Validation {
 impl Validation {
     /// Create a default validation setup allowing the given alg
     pub fn new(alg: Algorithm) -> Validation {
-        Validation { algorithms: vec![alg], ..Default::default() }
+        let mut required_claims = HashSet::with_capacity(1);
+        required_claims.insert("exp".to_owned());
+
+        Validation {
+            required_spec_claims: required_claims,
+            algorithms: vec![alg],
+            leeway: 60,
+
+            validate_exp: true,
+            validate_nbf: false,
+
+            iss: None,
+            sub: None,
+            aud: None,
+
+            validate_signature: true,
+        }
     }
 
     /// `aud` is a collection of one or more acceptable audience members
@@ -116,23 +132,7 @@ impl Validation {
 
 impl Default for Validation {
     fn default() -> Self {
-        let mut required_claims = HashSet::with_capacity(1);
-        required_claims.insert("exp".to_owned());
-
-        Validation {
-            required_spec_claims: required_claims,
-            algorithms: vec![Algorithm::HS256],
-            leeway: 60,
-
-            validate_exp: true,
-            validate_nbf: false,
-
-            iss: None,
-            sub: None,
-            aud: None,
-
-            validate_signature: true,
-        }
+        Self::new(Algorithm::HS256)
     }
 }
 
