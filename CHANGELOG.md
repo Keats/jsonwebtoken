@@ -1,6 +1,6 @@
 # Changelog
 
-## 8.0.0 (unreleased)
+## 8.0.0 (2022-02-02)
  
 - Add EdDSA algorithm
 - `sign`/`verify` now takes a `&[u8]` instead of `&str` to be more flexible
