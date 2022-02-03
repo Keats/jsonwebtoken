@@ -38,7 +38,7 @@ pub struct Validation {
     /// Add some leeway (in seconds) to the `exp` and `nbf` validation to
     /// account for clock skew.
     ///
-    /// Defaults to `0`.
+    /// Defaults to `60`.
     pub leeway: u64,
     /// Whether to validate the `exp` field.
     ///
