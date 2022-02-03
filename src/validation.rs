@@ -115,7 +115,7 @@ impl Validation {
 
     /// Which claims are required to be present for this JWT to be considered valid.
     /// The only values that will be considered are "exp", "nbf", "aud", "iss", "sub".
-    /// The simple usage is `set_required_claims(&["exp", "nbf"])`.
+    /// The simple usage is `set_required_spec_claims(&["exp", "nbf"])`.
     /// If you want to have an empty set, do not use this function - set an empty set on the struct
     /// param directly.
     pub fn set_required_spec_claims<T: ToString>(&mut self, items: &[T]) {
