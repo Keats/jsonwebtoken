@@ -1,5 +1,10 @@
 # Changelog
 
+## 8.0.1 (2022-02-03)
+
+- Fix documentation of leeway
+
+
 ## 8.0.0 (2022-02-02)
  
 - Add EdDSA algorithm
