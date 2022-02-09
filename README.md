@@ -106,14 +106,6 @@ something similar and reuse it.
 
 ### Decoding
 
-In some cases when the algorithm is not known or you need to grab the `kid`, you can choose to decode the header only:
-
-```rust
-let header = decode_header(&token)?;
-```
-
-This does not perform any signature verification or validate the token claims.
-
 #### Decoding with a shared secret
 
 ```rust
@@ -153,9 +145,17 @@ The JWK values can usually be found by looking up the OIDC configuration of the 
 2. look up the URL for `jwks_uri` field in the downloaded document
 3. download JWKS (a JWK set) from `jwks_uri` and use the record with `kid` matching `kid` in the token's header
 
-If you are the token issuer, you should be able to find the link to your JWKS somewhere in your token provider's control panel.
+Keys in PEM format have better performance if `DecodingKey` is generated once with `once_cell` for reuse.
 
-Keys in PEM format have better performance if `DecodingKey` is generated once with `lazy_static` for reuse.
+#### Decoding header only
+
+In some cases when the algorithm is not known or you need to grab the `kid`, you can choose to decode the header only:
+
+```rust
+let header = decode_header(&token)?;
+```
+
+This does not perform any signature verification or validate the token claims.
 
 ### Convert SEC1 private key to PKCS8
 `jsonwebtoken` currently only supports PKCS8 format for private EC keys. If your key has `BEGIN EC PRIVATE KEY` at the top,
