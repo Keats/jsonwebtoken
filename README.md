@@ -106,6 +106,16 @@ something similar and reuse it.
 
 ### Decoding
 
+In some cases when the algorithm is not known or you need to grab the `kid`, you can choose to decode the header only:
+
+```rust
+let header = decode_header(&token)?;
+```
+
+This does not perform any signature verification or validate the token claims.
+
+#### Decoding with a shared secret
+
 ```rust
 // `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
 let token = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::default())?;
@@ -119,15 +129,14 @@ let token = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()
 As with encoding, when using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
 RSA/EC, the key should always be the content of the public key in the PEM or DER format.
 
-In some cases, for example if you don't know the algorithm used or need to grab the `kid`, you can choose to decode only the header:
+#### Decoding with a public key
 
+You can also decode a token using the public key components of an RSA key in base64 format:
 ```rust
-let header = decode_header(&token)?;
+// `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
+let token = decode::<Claims>(&token, &DecodingKey::from_rsa_components(jwk["n"], jwk["e"]), &Validation::new(Algorithm::RS256))?;
 ```
 
-This does not perform any signature verification or validate the token claims.
-
-You can also decode a token using the public key components of a RSA key in base64 format.
 The main use-case is for JWK where your public key is in a JSON format like so:
 
 ```json
@@ -138,14 +147,15 @@ The main use-case is for JWK where your public key is in a JSON format like so:
    "n":"yRE6rHuNR0QbHO3H3Kt2pOKGVhQqGZXInOduQNxXzuKlvQTLUTv4l4sggh5_CYYi_cvI-SXVT9kPWSKXxJXBXd_4LkvcPuUakBoAkfh-eiFVMh2VrUyWyj3MFl0HTVF9KwRXLAcwkREiS3npThHRyIxuy0ZMeZfxVL5arMhw1SRELB8HoGfG_AtH89BIE9jDBHZ9dLelK9a184zAf8LwoPLxvJb3Il5nncqPcSfKDDodMFBIMc4lQzDKL5gvmiXLXB1AGLm8KBjfE8s3L5xqi-yUod-j8MtvIj812dkS4QMiRVN_by2h3ZY8LYVGrqZXZTcgn2ujn8uKjXLZVD5TdQ"
 }
 ```
+The JWK values can usually be found by looking up the OIDC configuration of the token issuer:
 
-```rust
-// `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
-let token = decode::<Claims>(&token, &DecodingKey::from_rsa_components(jwk["n"], jwk["e"]), &Validation::new(Algorithm::RS256))?;
-```
+1. append `/.well-known/openid-configuration` to the value of `iss` field from the token and download the JSON file from that URL
+2. look up the URL for `jwks_uri` field in the downloaded document
+3. download JWKS (a JWK set) from `jwks_uri` and use the record with `kid` matching `kid` in the token's header
 
-If your key is in PEM format, it is better performance wise to generate the `DecodingKey` once in a `lazy_static` or
-something similar and reuse it.
+If you are the token issuer, you should be able to find the link to your JWKS somewhere in your token provider's control panel.
+
+Keys in PEM format have better performance if `DecodingKey` is generated once with `lazy_static` for reuse.
 
 ### Convert SEC1 private key to PKCS8
 `jsonwebtoken` currently only supports PKCS8 format for private EC keys. If your key has `BEGIN EC PRIVATE KEY` at the top,
