@@ -230,46 +230,49 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
     }
 
-    if options.validate_exp
-        && !matches!(claims.exp, TryParse::Parsed(exp) if exp >= now-options.leeway)
-    {
+    if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway) {
         return Err(new_error(ErrorKind::ExpiredSignature));
     }
 
-    if options.validate_nbf
-        && !matches!(claims.nbf, TryParse::Parsed(nbf) if nbf <= now + options.leeway)
-    {
+    if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway) {
         return Err(new_error(ErrorKind::ImmatureSignature));
     }
 
-    if let Some(correct_sub) = options.sub.as_deref() {
-        if !matches!(claims.sub, TryParse::Parsed(sub) if sub == correct_sub) {
-            return Err(new_error(ErrorKind::InvalidSubject));
+    match (claims.sub, options.sub.as_deref()) {
+        (TryParse::Parsed(sub), Some(correct_sub)) => {
+            if sub != correct_sub {
+                return Err(new_error(ErrorKind::InvalidSubject));
+            }
         }
+        _ => {}
     }
 
-    if let Some(ref correct_iss) = options.iss {
-        let is_valid = match claims.iss {
-            TryParse::Parsed(Issuer::Single(iss)) if correct_iss.contains(&*iss) => true,
-            TryParse::Parsed(Issuer::Multiple(iss)) => is_subset(correct_iss, &iss),
-            _ => false,
-        };
-
-        if !is_valid {
-            return Err(new_error(ErrorKind::InvalidIssuer));
-        }
+    match (claims.iss, options.iss.as_ref()) {
+        (TryParse::Parsed(Issuer::Single(iss)), Some(correct_iss)) => {
+            if !correct_iss.contains(&*iss) {
+                return Err(new_error(ErrorKind::InvalidIssuer));
+            }
+        },
+        (TryParse::Parsed(Issuer::Multiple(iss)), Some(correct_iss)) => {
+            if !is_subset(correct_iss, &iss) {
+                return Err(new_error(ErrorKind::InvalidIssuer));
+            }
+        },
+        _ => {}
     }
 
-    if let Some(ref correct_aud) = options.aud {
-        let is_valid = match claims.aud {
-            TryParse::Parsed(Audience::Single(aud)) if correct_aud.contains(&*aud) => true,
-            TryParse::Parsed(Audience::Multiple(aud)) => is_subset(correct_aud, &aud),
-            _ => false,
-        };
-
-        if !is_valid {
-            return Err(new_error(ErrorKind::InvalidAudience));
-        }
+    match (claims.aud, options.aud.as_ref()) {
+        (TryParse::Parsed(Audience::Single(aud)), Some(correct_aud)) => {
+            if !correct_aud.contains(&*aud) {
+                return Err(new_error(ErrorKind::InvalidAudience));
+            }
+        },
+        (TryParse::Parsed(Audience::Multiple(aud)), Some(correct_aud)) => {
+            if !is_subset(correct_aud, &aud) {
+                return Err(new_error(ErrorKind::InvalidAudience));
+            }
+        },
+        _ => {}
     }
 
     Ok(())
@@ -376,12 +379,54 @@ mod tests {
 
     // https://github.com/Keats/jsonwebtoken/issues/51
     #[test]
-    fn validation_called_even_if_field_is_empty() {
+    fn validate_required_fields_are_present() {
+        for spec_claim in ["exp", "nbf", "aud", "iss", "sub"] {
+            let claims = json!({});
+            let mut validation = Validation::new(Algorithm::HS256);
+            validation.set_required_spec_claims(&[spec_claim]);
+            let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
+            assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim(spec_claim.to_owned()));
+        }
+    }
+
+    #[test]
+    fn exp_validated_but_not_required_ok() {
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
-        let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
-        assert_eq!(res.kind(), &ErrorKind::ExpiredSignature);
+        validation.validate_exp = true;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+    
+    #[test]
+    fn exp_validated_but_not_required_fails() {
+        let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = true;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn exp_required_but_not_validated_ok() {
+        let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["exp"]);
+        validation.validate_exp = false;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+    
+    #[test]
+    fn exp_required_but_not_validated_fails() {
+        let claims = json!({});
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["exp"]);
+        validation.validate_exp = false;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
     }
 
     #[test]
@@ -478,13 +523,13 @@ mod tests {
         let claims = json!({});
 
         let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
+        validation.set_required_spec_claims(&["iss"]);
         validation.validate_exp = false;
         validation.set_issuer(&["Keats"]);
         let res = validate(deserialize_claims(&claims), &validation);
 
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidIssuer => (),
+            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "iss"),
             _ => unreachable!(),
         };
     }
@@ -521,13 +566,13 @@ mod tests {
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
+        validation.set_required_spec_claims(&["sub"]);
         validation.sub = Some("Keats".to_owned());
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidSubject => (),
+            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "sub"),
             _ => unreachable!(),
         };
     }
@@ -591,13 +636,13 @@ mod tests {
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
+        validation.set_required_spec_claims(&["aud"]);
         validation.set_audience(&["None"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidAudience => (),
+            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "aud"),
             _ => unreachable!(),
         };
     }
@@ -608,6 +653,7 @@ mod tests {
         let claims = json!({ "exp": get_current_timestamp() + 10000 });
 
         let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["exp", "iss"]);
         validation.leeway = 5;
         validation.set_issuer(&["iss no check"]);
         validation.set_audience(&["iss no check"]);
@@ -616,7 +662,7 @@ mod tests {
         // It errors because it needs to validate iss/sub which are missing
         assert!(res.is_err());
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidIssuer => (),
+            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "iss"),
             t => panic!("{:?}", t),
         };
     }
@@ -638,10 +684,4 @@ mod tests {
         assert!(res.is_ok());
     }
 
-    #[test]
-    fn errors_when_required_claim_is_missing() {
-        let claims = json!({});
-        let res = validate(deserialize_claims(&claims), &Validation::default()).unwrap_err();
-        assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim("exp".to_owned()));
-    }
 }
