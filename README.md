@@ -32,6 +32,7 @@ This library currently supports the following:
 - PS512
 - ES256
 - ES384
+- EdDSA
 
 
 ## How to use
