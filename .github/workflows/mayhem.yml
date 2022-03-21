@@ -38,14 +38,14 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: qisblue/rust_jsonwebtoken:mayhem
+          labels: $
 
       - name: Mayhem for Code Scan
         uses: ethan42/mcode-action@v1
         with:
           mayhem-token: ${{ secrets.MAYHEM_TOKEN }}
-          args: --image ${{ steps.meta.outputs.tags }}
+          args: --image qisblue/rust_jsonwebtoken:mayhem
           sarif-output: sarif
 
       - name: Upload SARIF file(s)
