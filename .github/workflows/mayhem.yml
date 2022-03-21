@@ -39,10 +39,10 @@ jobs:
         with:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: $
+          labels: ${{ steps.meta.outputs.labels }}
 
       - name: Mayhem for Code Scan
-        uses: ethan42/mcode-action@v1
+        uses: ForAllSecure/mcode-action@v1
         with:
           mayhem-token: ${{ secrets.MAYHEM_TOKEN }}
           args: --image ${{ steps.meta.outputs.tags }}
