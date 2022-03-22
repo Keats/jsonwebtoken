@@ -42,7 +42,7 @@ jobs:
           labels: $
 
       - name: Mayhem for Code Scan
-        uses: ethan42/mcode-action@v1
+        uses: ForAllSecure/mcode-action@v1.0.0
         with:
           mayhem-token: ${{ secrets.MAYHEM_TOKEN }}
           args: --image qisblue/rust_jsonwebtoken:mayhem
