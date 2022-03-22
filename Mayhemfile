@@ -3,4 +3,4 @@ project: rust_jsonwebtoken
 target: rust_jsonwebtoken
 baseimage: qisblue/rust_jsonwebtoken:mayhem
 cmds:
-  - cmd: cargo fuzz run target
+  - cmd: /home/fuzz/target/x86_64-unknown-linux-gnu/release/target

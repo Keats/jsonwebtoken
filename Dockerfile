@@ -8,4 +8,4 @@ RUN rustup override set nightly
 RUN cargo fuzz build
 RUN cargo fuzz list
 
-CMD cargo fuzz run target
+CMD /home/fuzz/target/x86_64-unknown-linux-gnu/release/target
