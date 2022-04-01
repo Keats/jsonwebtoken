@@ -1,6 +1,6 @@
 version: '1.16'
-project: rust_jsonwebtoken
-target: rust_jsonwebtoken
+project: rust-jsonwebtoken
+target: rust-jsonwebtoken
 baseimage: qisblue/rust_jsonwebtoken:mayhem
 cmds:
   - cmd: /home/fuzz/target/x86_64-unknown-linux-gnu/release/target
