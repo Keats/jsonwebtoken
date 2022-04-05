@@ -230,11 +230,13 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
     }
 
-    if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway) {
+    if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
+    {
         return Err(new_error(ErrorKind::ExpiredSignature));
     }
 
-    if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway) {
+    if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway)
+    {
         return Err(new_error(ErrorKind::ImmatureSignature));
     }
 
@@ -252,12 +254,12 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
             if !correct_iss.contains(&*iss) {
                 return Err(new_error(ErrorKind::InvalidIssuer));
             }
-        },
+        }
         (TryParse::Parsed(Issuer::Multiple(iss)), Some(correct_iss)) => {
             if !is_subset(correct_iss, &iss) {
                 return Err(new_error(ErrorKind::InvalidIssuer));
             }
-        },
+        }
         _ => {}
     }
 
@@ -266,12 +268,12 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
             if !correct_aud.contains(&*aud) {
                 return Err(new_error(ErrorKind::InvalidAudience));
             }
-        },
+        }
         (TryParse::Parsed(Audience::Multiple(aud)), Some(correct_aud)) => {
             if !is_subset(correct_aud, &aud) {
                 return Err(new_error(ErrorKind::InvalidAudience));
             }
-        },
+        }
         _ => {}
     }
 
@@ -398,7 +400,7 @@ mod tests {
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
-    
+
     #[test]
     fn exp_validated_but_not_required_fails() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
@@ -418,7 +420,7 @@ mod tests {
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
-    
+
     #[test]
     fn exp_required_but_not_validated_fails() {
         let claims = json!({});
@@ -683,5 +685,4 @@ mod tests {
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
-
 }
