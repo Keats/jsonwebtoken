@@ -240,13 +240,10 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         return Err(new_error(ErrorKind::ImmatureSignature));
     }
 
-    match (claims.sub, options.sub.as_deref()) {
-        (TryParse::Parsed(sub), Some(correct_sub)) => {
-            if sub != correct_sub {
-                return Err(new_error(ErrorKind::InvalidSubject));
-            }
+    if let (TryParse::Parsed(sub), Some(correct_sub)) = (claims.sub, options.sub.as_deref()) {
+        if sub != correct_sub {
+            return Err(new_error(ErrorKind::InvalidSubject));
         }
-        _ => {}
     }
 
     match (claims.iss, options.iss.as_ref()) {
