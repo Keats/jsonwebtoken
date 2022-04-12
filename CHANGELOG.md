@@ -1,5 +1,10 @@
 # Changelog
 
+## 8.1.0 (2022-04-12)
+
+- Make optional fields in the spec really optional
+- Implements `Hash` for `Header`
+
 ## 8.0.1 (2022-02-03)
 
 - Fix documentation of leeway

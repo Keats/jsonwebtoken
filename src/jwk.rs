@@ -143,7 +143,7 @@ impl<'de> Deserialize<'de> for KeyOperations {
 }
 
 /// Common JWK parameters
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct CommonParameters {
     /// The intended use of the public key. Should not be specified with `key_operations`.
     /// See sections 4.2 and 4.3 of [RFC7517](https://tools.ietf.org/html/rfc7517).
@@ -194,7 +194,7 @@ pub struct CommonParameters {
 
 /// Key type value for an Elliptic Curve Key.
 /// This single value enum is a workaround for Rust not supporting associated constants.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum EllipticCurveKeyType {
     /// Key type value for an Elliptic Curve Key.
     EC,
@@ -208,7 +208,7 @@ impl Default for EllipticCurveKeyType {
 
 /// Type of cryptographic curve used by a key. This is defined in
 /// [RFC 7518 #7.6](https://tools.ietf.org/html/rfc7518#section-7.6)
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum EllipticCurve {
     /// P-256 curve
     #[serde(rename = "P-256")]
@@ -228,7 +228,7 @@ impl Default for EllipticCurve {
 }
 
 /// Parameters for an Elliptic Curve Key
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct EllipticCurveKeyParameters {
     /// Key type value for an Elliptic Curve Key.
     #[serde(rename = "kty")]
@@ -247,7 +247,7 @@ pub struct EllipticCurveKeyParameters {
 
 /// Key type value for an RSA Key.
 /// This single value enum is a workaround for Rust not supporting associated constants.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum RSAKeyType {
     /// Key type value for an RSA Key.
     RSA,
@@ -260,7 +260,7 @@ impl Default for RSAKeyType {
 }
 
 /// Parameters for a RSA Key
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct RSAKeyParameters {
     /// Key type value for a RSA Key
     #[serde(rename = "kty")]
@@ -277,7 +277,7 @@ pub struct RSAKeyParameters {
 
 /// Key type value for an Octet symmetric key.
 /// This single value enum is a workaround for Rust not supporting associated constants.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum OctetKeyType {
     /// Key type value for an Octet symmetric key.
     #[serde(rename = "oct")]
@@ -291,7 +291,7 @@ impl Default for OctetKeyType {
 }
 
 /// Parameters for an Octet Key
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct OctetKeyParameters {
     /// Key type value for an Octet Key
     #[serde(rename = "kty")]
@@ -302,7 +302,7 @@ pub struct OctetKeyParameters {
 
 /// Key type value for an Octet Key Pair.
 /// This single value enum is a workaround for Rust not supporting associated constants.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum OctetKeyPairType {
     /// Key type value for an Octet Key Pair.
     #[serde(rename = "OKP")]
@@ -316,7 +316,7 @@ impl Default for OctetKeyPairType {
 }
 
 /// Parameters for an Octet Key Pair
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct OctetKeyPairParameters {
     /// Key type value for an Octet Key Pair
     #[serde(rename = "kty")]
@@ -330,7 +330,7 @@ pub struct OctetKeyPairParameters {
 }
 
 /// Algorithm specific parameters
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 #[serde(untagged)]
 pub enum AlgorithmParameters {
     EllipticCurve(EllipticCurveKeyParameters),
@@ -339,7 +339,7 @@ pub enum AlgorithmParameters {
     OctetKeyPair(OctetKeyPairParameters),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct Jwk {
     #[serde(flatten)]
     pub common: CommonParameters,
