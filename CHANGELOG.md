@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.1.1 (2022-06-17)
+
+- Fix invalid field name on OctetKeyParameters
+
 ## 8.1.0 (2022-04-12)
 
 - Make optional fields in the spec really optional
