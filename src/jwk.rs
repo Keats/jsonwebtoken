@@ -297,6 +297,7 @@ pub struct OctetKeyParameters {
     #[serde(rename = "kty")]
     pub key_type: OctetKeyType,
     /// The octet key value
+    #[serde(rename = "k")]
     pub value: String,
 }
 
@@ -360,5 +361,41 @@ impl JwkSet {
         self.keys
             .iter()
             .find(|jwk| jwk.common.key_id.is_some() && jwk.common.key_id.as_ref().unwrap() == kid)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::jwk::{AlgorithmParameters, JwkSet, OctetKeyType};
+    use crate::Algorithm;
+    use serde_json::json;
+
+    #[test]
+    fn check_hs256() {
+        let key =
+            base64::encode_config("abcdefghijklmnopqrstuvwxyz012345", base64::URL_SAFE_NO_PAD);
+        let jwks_json = json!({
+            "keys": [
+                {
+                    "kty": "oct",
+                    "alg": "HS256",
+                    "kid": "abc123",
+                    "k": key
+                }
+            ]
+        });
+
+        let set: JwkSet = serde_json::from_value(jwks_json).expect("Failed HS256 check");
+        assert_eq!(set.keys.len(), 1);
+        let key = &set.keys[0];
+        assert_eq!(key.common.key_id, Some("abc123".to_string()));
+        assert_eq!(key.common.algorithm, Some(Algorithm::HS256));
+        match &key.algorithm {
+            AlgorithmParameters::OctetKey(key) => {
+                assert_eq!(key.key_type, OctetKeyType::Octet);
+                assert_eq!(key.value, key.value)
+            }
+            _ => panic!("Unexpected key algorithm"),
+        }
     }
 }
