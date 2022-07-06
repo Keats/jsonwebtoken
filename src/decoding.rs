@@ -36,8 +36,8 @@ pub(crate) enum DecodingKeyKind {
     RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
 }
 
-/// All the different kind of keys we can use to decode a JWT
-/// This key can be re-used so make sure you only initialize it once if you can for better performance
+/// All the different kind of keys we can use to decode a JWT.
+/// This key can be re-used so make sure you only initialize it once if you can for better performance.
 #[derive(Clone)]
 pub struct DecodingKey {
     pub(crate) family: AlgorithmFamily,
