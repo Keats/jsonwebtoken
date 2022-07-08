@@ -1,7 +1,5 @@
 # jsonwebtoken
 
-[![Build Status](https://travis-ci.org/Keats/jsonwebtoken.svg)](https://travis-ci.org/Keats/jsonwebtoken)
-
 [API documentation on docs.rs](https://docs.rs/jsonwebtoken/)
 
 See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more information on what JSON Web Tokens are.
