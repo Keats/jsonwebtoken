@@ -14,7 +14,7 @@ const RSA_ALGORITHMS: &[Algorithm] = &[
     Algorithm::PS512,
 ];
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
     sub: String,
     company: String,
