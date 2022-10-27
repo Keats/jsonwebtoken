@@ -350,7 +350,7 @@ pub struct Jwk {
 }
 
 /// A JWK set
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct JwkSet {
     pub keys: Vec<Jwk>,
 }
