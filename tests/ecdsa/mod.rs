@@ -68,6 +68,32 @@ fn round_trip_claim() {
     assert_eq!(my_claims, token_data.claims);
 }
 
+#[cfg(feature = "use_pem")]
+#[test]
+fn ec_x_y() {
+    let privkey = include_str!("private_ecdsa_key.pem");
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let x = "w7JAoU_gJbZJvV-zCOvU9yFJq0FNC_edCMRM78P8eQQ";
+    let y = "wQg1EytcsEmGrM70Gb53oluoDbVhCZ3Uq3hHMslHVb4";
+
+    let encrypted = encode(
+        &Header::new(Algorithm::ES256),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey.as_ref()).unwrap(),
+    )
+    .unwrap();
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_ec_components(x, y).unwrap(),
+        &Validation::new(Algorithm::ES256),
+    );
+    assert!(res.is_ok());
+}
+
 // https://jwt.io/ is often used for examples so ensure their example works with jsonwebtoken
 #[cfg(feature = "use_pem")]
 #[test]
