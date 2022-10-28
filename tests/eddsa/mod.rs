@@ -92,3 +92,39 @@ fn ed_x() {
     );
     assert!(res.is_ok());
 }
+
+#[cfg(feature = "use_pem")]
+#[test]
+fn ed_jwk() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
+    let privkey = include_str!("private_ed25519_key.pem");
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let jwk: Jwk = serde_json::from_value(json!({
+            "kty": "OKP",
+            "use": "sig",
+            "crv": "Ed25519",
+            "x": "2-Jj2UvNCvQiUPNYRgSi0cJSPiJI6Rs6D0UTeEpQVj8",
+            "kid": "ed01",
+            "alg": "EdDSA"
+    }))
+    .unwrap();
+
+    let encrypted = encode(
+        &Header::new(Algorithm::EdDSA),
+        &my_claims,
+        &EncodingKey::from_ed_pem(privkey.as_ref()).unwrap(),
+    )
+    .unwrap();
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_jwk(&jwk).unwrap(),
+        &Validation::new(Algorithm::EdDSA),
+    );
+    assert!(res.is_ok());
+}

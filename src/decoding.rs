@@ -4,6 +4,7 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::verify;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
+use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, DecodedJwtPartClaims};
@@ -160,6 +161,24 @@ impl DecodingKey {
             family: AlgorithmFamily::Ed,
             kind: DecodingKeyKind::SecretOrDer(x_decoded),
         })
+    }
+
+    /// If you have a key in Jwk format
+    pub fn from_jwk(jwk: &Jwk) -> Result<Self> {
+        match jwk.algorithm {
+            AlgorithmParameters::RSA(ref params) => {
+                DecodingKey::from_rsa_components(&params.n, &params.e)
+            }
+            AlgorithmParameters::EllipticCurve(ref params) => {
+                DecodingKey::from_ec_components(&params.x, &params.y)
+            }
+            AlgorithmParameters::OctetKeyPair(ref params) => {
+                DecodingKey::from_ed_components(&params.x)
+            }
+            AlgorithmParameters::OctetKey(ref params) => {
+                DecodingKey::from_base64_secret(&params.value)
+            }
+        }
     }
 
     pub(crate) fn as_bytes(&self) -> &[u8] {

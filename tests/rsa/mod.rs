@@ -127,6 +127,41 @@ fn rsa_modulus_exponent() {
     assert!(res.is_ok());
 }
 
+#[cfg(feature = "use_pem")]
+#[test]
+fn rsa_jwk() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
+    let privkey = include_str!("private_rsa_key_pkcs8.pem");
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let jwk:Jwk = serde_json::from_value(json!({
+        "kty": "RSA",
+        "n": "yRE6rHuNR0QbHO3H3Kt2pOKGVhQqGZXInOduQNxXzuKlvQTLUTv4l4sggh5_CYYi_cvI-SXVT9kPWSKXxJXBXd_4LkvcPuUakBoAkfh-eiFVMh2VrUyWyj3MFl0HTVF9KwRXLAcwkREiS3npThHRyIxuy0ZMeZfxVL5arMhw1SRELB8HoGfG_AtH89BIE9jDBHZ9dLelK9a184zAf8LwoPLxvJb3Il5nncqPcSfKDDodMFBIMc4lQzDKL5gvmiXLXB1AGLm8KBjfE8s3L5xqi-yUod-j8MtvIj812dkS4QMiRVN_by2h3ZY8LYVGrqZXZTcgn2ujn8uKjXLZVD5TdQ",
+        "e": "AQAB",
+        "kid": "rsa01",
+        "alg": "RS256",
+        "use": "sig"
+    })).unwrap();
+
+    let encrypted = encode(
+        &Header::new(Algorithm::RS256),
+        &my_claims,
+        &EncodingKey::from_rsa_pem(privkey.as_ref()).unwrap(),
+    )
+    .unwrap();
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_jwk(&jwk).unwrap(),
+        &Validation::new(Algorithm::RS256),
+    );
+    assert!(res.is_ok());
+}
+
 // https://jwt.io/ is often used for examples so ensure their example works with jsonwebtoken
 #[cfg(feature = "use_pem")]
 #[test]
