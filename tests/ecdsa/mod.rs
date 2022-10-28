@@ -94,6 +94,43 @@ fn ec_x_y() {
     assert!(res.is_ok());
 }
 
+#[cfg(feature = "use_pem")]
+#[test]
+fn ed_jwk() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
+    let privkey = include_str!("private_ecdsa_key.pem");
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let jwk: Jwk = serde_json::from_value(json!({
+        "kty": "EC",
+        "crv": "P-256",
+        "x": "w7JAoU_gJbZJvV-zCOvU9yFJq0FNC_edCMRM78P8eQQ",
+        "y": "wQg1EytcsEmGrM70Gb53oluoDbVhCZ3Uq3hHMslHVb4",
+        "kid": "ec01",
+        "alg": "ES256",
+        "use": "sig"
+    }))
+    .unwrap();
+
+    let encrypted = encode(
+        &Header::new(Algorithm::ES256),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey.as_ref()).unwrap(),
+    )
+    .unwrap();
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_jwk(&jwk).unwrap(),
+        &Validation::new(Algorithm::ES256),
+    );
+    assert!(res.is_ok());
+}
+
 // https://jwt.io/ is often used for examples so ensure their example works with jsonwebtoken
 #[cfg(feature = "use_pem")]
 #[test]
