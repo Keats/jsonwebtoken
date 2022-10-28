@@ -67,3 +67,28 @@ fn round_trip_claim() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
 }
+
+#[cfg(feature = "use_pem")]
+#[test]
+fn ed_x() {
+    let privkey = include_str!("private_ed25519_key.pem");
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let x = "2-Jj2UvNCvQiUPNYRgSi0cJSPiJI6Rs6D0UTeEpQVj8";
+
+    let encrypted = encode(
+        &Header::new(Algorithm::EdDSA),
+        &my_claims,
+        &EncodingKey::from_ed_pem(privkey.as_ref()).unwrap(),
+    )
+    .unwrap();
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_ed_components(x).unwrap(),
+        &Validation::new(Algorithm::EdDSA),
+    );
+    assert!(res.is_ok());
+}

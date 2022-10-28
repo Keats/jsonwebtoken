@@ -101,6 +101,22 @@ impl DecodingKey {
         })
     }
 
+    /// If you have (x,y) ECDSA key components
+    pub fn from_ec_components(x: &str, y: &str) -> Result<Self> {
+        let x_cmp = b64_decode(x)?;
+        let y_cmp = b64_decode(y)?;
+
+        let mut public_key = Vec::with_capacity(1 + x.len() + y.len());
+        public_key.push(0x04);
+        public_key.extend_from_slice(&x_cmp);
+        public_key.extend_from_slice(&y_cmp);
+
+        Ok(DecodingKey {
+            family: AlgorithmFamily::Ec,
+            kind: DecodingKeyKind::SecretOrDer(public_key),
+        })
+    }
+
     /// If you have a EdDSA public key in PEM format, use this.
     /// Only exists if the feature `use_pem` is enabled.
     #[cfg(feature = "use_pem")]
@@ -136,6 +152,16 @@ impl DecodingKey {
             kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
         }
     }
+
+    /// From x part (base64 encoded) of the JWK encoding
+    pub fn from_ed_components(x: &str) -> Result<Self> {
+        let x_decoded = b64_decode(&x)?;
+        Ok(DecodingKey {
+            family: AlgorithmFamily::Ed,
+            kind: DecodingKeyKind::SecretOrDer(x_decoded),
+        })
+    }
+
     pub(crate) fn as_bytes(&self) -> &[u8] {
         match &self.kind {
             DecodingKeyKind::SecretOrDer(b) => b,
