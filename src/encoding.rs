@@ -24,7 +24,7 @@ impl EncodingKey {
 
     /// If you have a base64 HMAC secret, use that.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
-        let out = base64::decode(&secret)?;
+        let out = base64::decode(secret)?;
         Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
     }
 
