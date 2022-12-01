@@ -78,42 +78,44 @@ impl PemEncodedKey {
                     // https://security.stackexchange.com/questions/84327/converting-ecc-private-key-to-pkcs1-format
                     // "there is no such thing as a "PKCS#1 format" for elliptic curve (EC) keys"
 
-                    // This handles PKCS#8 public & private keys
-                    tag @ "PRIVATE KEY" | tag @ "PUBLIC KEY" => match classify_pem(&asn1_content) {
-                        Some(c) => {
-                            let is_private = tag == "PRIVATE KEY";
-                            let pem_type = match c {
-                                Classification::Ec => {
-                                    if is_private {
-                                        PemType::EcPrivate
-                                    } else {
-                                        PemType::EcPublic
+                    // This handles PKCS#8 certificates and public & private keys
+                    tag @ "PRIVATE KEY" | tag @ "PUBLIC KEY" | tag @ "CERTIFICATE" => {
+                        match classify_pem(&asn1_content) {
+                            Some(c) => {
+                                let is_private = tag == "PRIVATE KEY";
+                                let pem_type = match c {
+                                    Classification::Ec => {
+                                        if is_private {
+                                            PemType::EcPrivate
+                                        } else {
+                                            PemType::EcPublic
+                                        }
                                     }
-                                }
-                                Classification::Ed => {
-                                    if is_private {
-                                        PemType::EdPrivate
-                                    } else {
-                                        PemType::EdPublic
+                                    Classification::Ed => {
+                                        if is_private {
+                                            PemType::EdPrivate
+                                        } else {
+                                            PemType::EdPublic
+                                        }
                                     }
-                                }
-                                Classification::Rsa => {
-                                    if is_private {
-                                        PemType::RsaPrivate
-                                    } else {
-                                        PemType::RsaPublic
+                                    Classification::Rsa => {
+                                        if is_private {
+                                            PemType::RsaPrivate
+                                        } else {
+                                            PemType::RsaPublic
+                                        }
                                     }
-                                }
-                            };
-                            Ok(PemEncodedKey {
-                                content: pem_contents,
-                                asn1: asn1_content,
-                                pem_type,
-                                standard: Standard::Pkcs8,
-                            })
+                                };
+                                Ok(PemEncodedKey {
+                                    content: pem_contents,
+                                    asn1: asn1_content,
+                                    pem_type,
+                                    standard: Standard::Pkcs8,
+                                })
+                            }
+                            None => Err(ErrorKind::InvalidKeyFormat.into()),
                         }
-                        None => Err(ErrorKind::InvalidKeyFormat.into()),
-                    },
+                    }
 
                     // Unknown/unsupported type
                     _ => Err(ErrorKind::InvalidKeyFormat.into()),

@@ -26,10 +26,12 @@ pub struct Claims {
 fn round_trip_sign_verification_pem_pkcs1() {
     let privkey_pem = include_bytes!("private_rsa_key_pkcs1.pem");
     let pubkey_pem = include_bytes!("public_rsa_key_pkcs1.pem");
+    let certificate_pem = include_bytes!("certificate_rsa_key_pkcs1.crt");
 
     for &alg in RSA_ALGORITHMS {
         let encrypted =
             sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
+
         let is_valid = verify(
             &encrypted,
             b"hello world",
@@ -38,6 +40,15 @@ fn round_trip_sign_verification_pem_pkcs1() {
         )
         .unwrap();
         assert!(is_valid);
+
+        let cert_is_valid = verify(
+            &encrypted,
+            b"hello world",
+            &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
+            alg,
+        )
+        .unwrap();
+        assert!(cert_is_valid);
     }
 }
 
@@ -46,10 +57,12 @@ fn round_trip_sign_verification_pem_pkcs1() {
 fn round_trip_sign_verification_pem_pkcs8() {
     let privkey_pem = include_bytes!("private_rsa_key_pkcs8.pem");
     let pubkey_pem = include_bytes!("public_rsa_key_pkcs8.pem");
+    let certificate_pem = include_bytes!("certificate_rsa_key_pkcs8.crt");
 
     for &alg in RSA_ALGORITHMS {
         let encrypted =
             sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
+
         let is_valid = verify(
             &encrypted,
             b"hello world",
@@ -58,6 +71,15 @@ fn round_trip_sign_verification_pem_pkcs8() {
         )
         .unwrap();
         assert!(is_valid);
+
+        let cert_is_valid = verify(
+            &encrypted,
+            b"hello world",
+            &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
+            alg,
+        )
+        .unwrap();
+        assert!(cert_is_valid);
     }
 }
 
@@ -85,6 +107,7 @@ fn round_trip_claim() {
     };
     let privkey_pem = include_bytes!("private_rsa_key_pkcs1.pem");
     let pubkey_pem = include_bytes!("public_rsa_key_pkcs1.pem");
+    let certificate_pem = include_bytes!("certificate_rsa_key_pkcs1.crt");
 
     for &alg in RSA_ALGORITHMS {
         let token =
@@ -98,6 +121,15 @@ fn round_trip_claim() {
         .unwrap();
         assert_eq!(my_claims, token_data.claims);
         assert!(token_data.header.kid.is_none());
+
+        let cert_token_data = decode::<Claims>(
+            &token,
+            &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
+            &Validation::new(alg),
+        )
+        .unwrap();
+        assert_eq!(my_claims, cert_token_data.claims);
+        assert!(cert_token_data.header.kid.is_none());
     }
 }
 
@@ -168,6 +200,7 @@ fn rsa_jwk() {
 fn roundtrip_with_jwtio_example_jey() {
     let privkey_pem = include_bytes!("private_jwtio.pem");
     let pubkey_pem = include_bytes!("public_jwtio.pem");
+    let certificate_pem = include_bytes!("certificate_jwtio.crt");
 
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
@@ -179,6 +212,7 @@ fn roundtrip_with_jwtio_example_jey() {
         let token =
             encode(&Header::new(alg), &my_claims, &EncodingKey::from_rsa_pem(privkey_pem).unwrap())
                 .unwrap();
+
         let token_data = decode::<Claims>(
             &token,
             &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
@@ -186,5 +220,13 @@ fn roundtrip_with_jwtio_example_jey() {
         )
         .unwrap();
         assert_eq!(my_claims, token_data.claims);
+
+        let cert_token_data = decode::<Claims>(
+            &token,
+            &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
+            &Validation::new(alg),
+        )
+        .unwrap();
+        assert_eq!(my_claims, cert_token_data.claims);
     }
 }
