@@ -199,7 +199,7 @@ enum Issuer<'a> {
 struct BorrowedCowIfPossible<'a>(#[serde(borrow)] Cow<'a, str>);
 impl std::borrow::Borrow<str> for BorrowedCowIfPossible<'_> {
     fn borrow(&self) -> &str {
-        &*self.0
+        &self.0
     }
 }
 
