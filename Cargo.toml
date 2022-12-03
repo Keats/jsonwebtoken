@@ -1,6 +1,6 @@
 [package]
 name = "jsonwebtoken"
-version = "8.1.1"
+version = "8.2.0"
 authors = ["Vincent Prouillet <hello@vincentprouillet.com>"]
 license = "MIT"
 readme = "README.md"
@@ -23,7 +23,7 @@ simple_asn1 = {version = "0.6", optional = true}
 [dev-dependencies]
 # For the custom time example
 time = "0.3"
-criterion = "0.3"
+criterion = "0.4"
 
 [features]
 default = ["use_pem"]

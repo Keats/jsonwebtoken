@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.2.0 (2022-12-03)
+
+- Add DecodingKey::from_jwk
+- Can now use PEM certificates if you have the `use_pem` feature enabled
+
+
 ## 8.1.1 (2022-06-17)
 
 - Fix invalid field name on OctetKeyParameters

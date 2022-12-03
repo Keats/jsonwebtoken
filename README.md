@@ -116,7 +116,7 @@ let token = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()
 - validation of at least one reserved claim failed
 
 As with encoding, when using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
-RSA/EC, the key should always be the content of the public key in the PEM or DER format.
+RSA/EC, the key should always be the content of the public key in the PEM (or certificate in this case) or DER format.
 
 In some cases, for example if you don't know the algorithm used or need to grab the `kid`, you can choose to decode only the header:
 
