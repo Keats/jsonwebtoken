@@ -156,7 +156,7 @@ impl DecodingKey {
 
     /// From x part (base64 encoded) of the JWK encoding
     pub fn from_ed_components(x: &str) -> Result<Self> {
-        let x_decoded = b64_decode(&x)?;
+        let x_decoded = b64_decode(x)?;
         Ok(DecodingKey {
             family: AlgorithmFamily::Ed,
             kind: DecodingKeyKind::SecretOrDer(x_decoded),
