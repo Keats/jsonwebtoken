@@ -2,12 +2,18 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::Result;
 
+const URL_SAFE_ENGINE: base64::engine::fast_portable::FastPortable =
+    base64::engine::fast_portable::FastPortable::from(
+        &base64::alphabet::URL_SAFE,
+        base64::engine::fast_portable::NO_PAD,
+    );
+
 pub(crate) fn b64_encode<T: AsRef<[u8]>>(input: T) -> String {
-    base64::encode_config(input, base64::URL_SAFE_NO_PAD)
+    base64::encode_engine(input, &URL_SAFE_ENGINE)
 }
 
 pub(crate) fn b64_decode<T: AsRef<[u8]>>(input: T) -> Result<Vec<u8>> {
-    base64::decode_config(input, base64::URL_SAFE_NO_PAD).map_err(|e| e.into())
+    base64::decode_engine(input, &URL_SAFE_ENGINE).map_err(|e| e.into())
 }
 
 /// Serializes a struct to JSON and encodes it in base64
