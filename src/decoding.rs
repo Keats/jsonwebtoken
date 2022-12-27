@@ -1,3 +1,4 @@
+use base64::{engine::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
@@ -56,7 +57,7 @@ impl DecodingKey {
 
     /// If you're using HMAC with a base64 encoded secret, use this.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
-        let out = base64::decode(secret)?;
+        let out = STANDARD.decode(secret)?;
         Ok(DecodingKey { family: AlgorithmFamily::Hmac, kind: DecodingKeyKind::SecretOrDer(out) })
     }
 

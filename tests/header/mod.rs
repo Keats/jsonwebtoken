@@ -1,3 +1,4 @@
+use base64::{engine::STANDARD, Engine};
 use jsonwebtoken::Header;
 
 static CERT_CHAIN: [&str; 3] = include!("cert_chain.json");
@@ -14,7 +15,7 @@ fn x5c_der_empty_chain() {
 #[test]
 fn x5c_der_valid_chain() {
     let der_chain: Vec<Vec<u8>> =
-        CERT_CHAIN.iter().map(base64::decode).collect::<Result<_, _>>().unwrap();
+        CERT_CHAIN.iter().map(|x| STANDARD.decode(x)).collect::<Result<_, _>>().unwrap();
 
     let x5c = Some(CERT_CHAIN.iter().map(ToString::to_string).collect());
     let header = Header { x5c, ..Default::default() };
