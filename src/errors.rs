@@ -8,7 +8,7 @@ pub(crate) fn new_error(kind: ErrorKind) -> Error {
     Error(Box::new(kind))
 }
 
-/// A type alias for `Result<T, jsonwebtoken::Error>`.
+/// A type alias for `Result<T, jsonwebtoken::errors::Error>`.
 pub type Result<T> = result::Result<T, Error>;
 
 /// An error that can occur when encoding/decoding JWTs
