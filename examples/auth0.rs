@@ -18,8 +18,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => return Err("Token doesn't have a `kid` header field".into()),
     };
     if let Some(j) = jwks.find(&kid) {
-        match j.algorithm {
-            AlgorithmParameters::RSA(ref rsa) => {
+        match &j.algorithm {
+            AlgorithmParameters::RSA(rsa) => {
                 let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e).unwrap();
                 let mut validation = Validation::new(j.common.algorithm.unwrap());
                 validation.validate_exp = false;

@@ -82,7 +82,7 @@ pub enum ErrorKind {
 
 impl StdError for Error {
     fn cause(&self) -> Option<&dyn StdError> {
-        match *self.0 {
+        match &*self.0 {
             ErrorKind::InvalidToken => None,
             ErrorKind::InvalidSignature => None,
             ErrorKind::InvalidEcdsaKey => None,
@@ -98,17 +98,17 @@ impl StdError for Error {
             ErrorKind::InvalidAlgorithm => None,
             ErrorKind::InvalidAlgorithmName => None,
             ErrorKind::InvalidKeyFormat => None,
-            ErrorKind::Base64(ref err) => Some(err),
-            ErrorKind::Json(ref err) => Some(err.as_ref()),
-            ErrorKind::Utf8(ref err) => Some(err),
-            ErrorKind::Crypto(ref err) => Some(err),
+            ErrorKind::Base64(err) => Some(err),
+            ErrorKind::Json(err) => Some(err.as_ref()),
+            ErrorKind::Utf8(err) => Some(err),
+            ErrorKind::Crypto(err) => Some(err),
         }
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self.0 {
+        match &*self.0 {
             ErrorKind::InvalidToken
             | ErrorKind::InvalidSignature
             | ErrorKind::InvalidEcdsaKey
@@ -122,12 +122,12 @@ impl fmt::Display for Error {
             | ErrorKind::InvalidAlgorithm
             | ErrorKind::InvalidKeyFormat
             | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
-            ErrorKind::MissingRequiredClaim(ref c) => write!(f, "Missing required claim: {}", c),
-            ErrorKind::InvalidRsaKey(ref msg) => write!(f, "RSA key invalid: {}", msg),
-            ErrorKind::Json(ref err) => write!(f, "JSON error: {}", err),
-            ErrorKind::Utf8(ref err) => write!(f, "UTF-8 error: {}", err),
-            ErrorKind::Crypto(ref err) => write!(f, "Crypto error: {}", err),
-            ErrorKind::Base64(ref err) => write!(f, "Base64 error: {}", err),
+            ErrorKind::MissingRequiredClaim(c) => write!(f, "Missing required claim: {}", c),
+            ErrorKind::InvalidRsaKey(msg) => write!(f, "RSA key invalid: {}", msg),
+            ErrorKind::Json(err) => write!(f, "JSON error: {}", err),
+            ErrorKind::Utf8(err) => write!(f, "UTF-8 error: {}", err),
+            ErrorKind::Crypto(err) => write!(f, "Crypto error: {}", err),
+            ErrorKind::Base64(err) => write!(f, "Base64 error: {}", err),
         }
     }
 }

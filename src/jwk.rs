@@ -24,10 +24,10 @@ impl Serialize for PublicKeyUse {
     where
         S: Serializer,
     {
-        let string = match *self {
+        let string = match self {
             PublicKeyUse::Signature => "sig",
             PublicKeyUse::Encryption => "enc",
-            PublicKeyUse::Other(ref other) => other,
+            PublicKeyUse::Other(other) => other,
         };
 
         serializer.serialize_str(string)
@@ -91,7 +91,7 @@ impl Serialize for KeyOperations {
     where
         S: Serializer,
     {
-        let string = match *self {
+        let string = match self {
             KeyOperations::Sign => "sign",
             KeyOperations::Verify => "verify",
             KeyOperations::Encrypt => "encrypt",
@@ -100,7 +100,7 @@ impl Serialize for KeyOperations {
             KeyOperations::UnwrapKey => "unwrapKey",
             KeyOperations::DeriveKey => "deriveKey",
             KeyOperations::DeriveBits => "deriveBits",
-            KeyOperations::Other(ref other) => other,
+            KeyOperations::Other(other) => other,
         };
 
         serializer.serialize_str(string)
