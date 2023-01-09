@@ -1,4 +1,4 @@
-use base64::{engine::STANDARD, Engine};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;

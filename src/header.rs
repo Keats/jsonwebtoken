@@ -1,6 +1,6 @@
 use std::result;
 
-use base64::{engine::STANDARD, Engine};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
 
 use crate::algorithms::Algorithm;

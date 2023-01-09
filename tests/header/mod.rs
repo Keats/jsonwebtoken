@@ -1,4 +1,4 @@
-use base64::{engine::STANDARD, Engine};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use jsonwebtoken::Header;
 
 static CERT_CHAIN: [&str; 3] = include!("cert_chain.json");
