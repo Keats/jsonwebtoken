@@ -34,7 +34,7 @@ impl EncodingKey {
     ///
     /// # NOTE
     ///
-    /// According to the [ring doc](https://briansmith.org/rustdoc/ring/signature/struct.RsaKeyPair.html#method.from_pkcs8),
+    /// According to the [ring doc](https://docs.rs/ring/latest/ring/signature/struct.RsaKeyPair.html#method.from_pkcs8),
     /// the key should be at least 2047 bits.
     ///
     #[cfg(feature = "use_pem")]

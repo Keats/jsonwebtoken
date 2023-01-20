@@ -32,7 +32,7 @@ pub(crate) fn alg_to_rsa_signing(alg: Algorithm) -> &'static dyn signature::RsaE
 
 /// The actual RSA signing + encoding
 /// The key needs to be in PKCS8 format
-/// Taken from Ring doc https://briansmith.org/rustdoc/ring/signature/index.html
+/// Taken from Ring doc https://docs.rs/ring/latest/ring/signature/index.html
 pub(crate) fn sign(
     alg: &'static dyn signature::RsaEncoding,
     key: &[u8],
