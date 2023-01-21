@@ -166,19 +166,15 @@ impl DecodingKey {
 
     /// If you have a key in Jwk format
     pub fn from_jwk(jwk: &Jwk) -> Result<Self> {
-        match jwk.algorithm {
-            AlgorithmParameters::RSA(ref params) => {
+        match &jwk.algorithm {
+            AlgorithmParameters::RSA(params) => {
                 DecodingKey::from_rsa_components(&params.n, &params.e)
             }
-            AlgorithmParameters::EllipticCurve(ref params) => {
+            AlgorithmParameters::EllipticCurve(params) => {
                 DecodingKey::from_ec_components(&params.x, &params.y)
             }
-            AlgorithmParameters::OctetKeyPair(ref params) => {
-                DecodingKey::from_ed_components(&params.x)
-            }
-            AlgorithmParameters::OctetKey(ref params) => {
-                DecodingKey::from_base64_secret(&params.value)
-            }
+            AlgorithmParameters::OctetKeyPair(params) => DecodingKey::from_ed_components(&params.x),
+            AlgorithmParameters::OctetKey(params) => DecodingKey::from_base64_secret(&params.value),
         }
     }
 
