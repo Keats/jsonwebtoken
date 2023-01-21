@@ -1,5 +1,6 @@
 use std::result;
 
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 
 use crate::algorithms::Algorithm;
@@ -93,7 +94,12 @@ impl Header {
         Ok(self
             .x5c
             .as_ref()
-            .map(|b64_certs| b64_certs.iter().map(base64::decode).collect::<result::Result<_, _>>())
+            .map(|b64_certs| {
+                b64_certs
+                    .iter()
+                    .map(|x| base64::engine::general_purpose::STANDARD.decode(x))
+                    .collect::<result::Result<_, _>>()
+            })
             .transpose()?)
     }
 }

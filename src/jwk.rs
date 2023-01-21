@@ -371,12 +371,13 @@ impl JwkSet {
 mod tests {
     use crate::jwk::{AlgorithmParameters, JwkSet, OctetKeyType};
     use crate::Algorithm;
+    use base64::Engine;
     use serde_json::json;
 
     #[test]
     fn check_hs256() {
-        let key =
-            base64::encode_config("abcdefghijklmnopqrstuvwxyz012345", base64::URL_SAFE_NO_PAD);
+        let key = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .encode("abcdefghijklmnopqrstuvwxyz012345");
         let jwks_json = json!({
             "keys": [
                 {
