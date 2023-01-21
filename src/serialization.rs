@@ -1,13 +1,14 @@
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Result;
 
 pub(crate) fn b64_encode<T: AsRef<[u8]>>(input: T) -> String {
-    base64::encode_config(input, base64::URL_SAFE_NO_PAD)
+    URL_SAFE_NO_PAD.encode(input)
 }
 
 pub(crate) fn b64_decode<T: AsRef<[u8]>>(input: T) -> Result<Vec<u8>> {
-    base64::decode_config(input, base64::URL_SAFE_NO_PAD).map_err(|e| e.into())
+    URL_SAFE_NO_PAD.decode(input).map_err(|e| e.into())
 }
 
 /// Serializes a struct to JSON and encodes it in base64
