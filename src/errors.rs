@@ -59,9 +59,9 @@ pub enum ErrorKind {
     InvalidIssuer,
     /// When a token’s `aud` claim does not match one of the expected audience values
     InvalidAudience,
-    /// When a token’s `sub` claim does not match one of the expected audience values
+    /// When a token’s `sub` claim does not match one of the expected subject values
     InvalidSubject,
-    /// When a token’s nbf claim represents a time in the future
+    /// When a token’s `nbf` claim represents a time in the future
     ImmatureSignature,
     /// When the algorithm in the header doesn't match the one passed to `decode` or the encoding/decoding key
     /// used doesn't match the alg requested
