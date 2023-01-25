@@ -1,8 +1,12 @@
 use jsonwebtoken::{
     crypto::{sign, verify},
-    decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+    Algorithm, DecodingKey, EncodingKey,
 };
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "use_pem")]
+use jsonwebtoken::{decode, encode, Header, Validation};
+#[cfg(feature = "use_pem")]
 use time::OffsetDateTime;
 
 const RSA_ALGORITHMS: &[Algorithm] = &[
