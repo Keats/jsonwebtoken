@@ -11,7 +11,7 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install Rust
       uses: actions-rs/toolchain@v1
       with:
@@ -30,7 +30,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -59,7 +59,7 @@ jobs:
           os: ubuntu-20.04
           rust: nightly
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
     - name: Install Rust
       uses: hecrj/setup-rust-action@v1
       with:
