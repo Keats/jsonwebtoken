@@ -122,9 +122,9 @@ impl Validation {
         self.required_spec_claims = items.iter().map(|x| x.to_string()).collect();
     }
 
-    /// Whether to validate the JWT cryptographic signature
-    /// Very insecure to turn that off, only do it if you know what you're doing.
-    /// With this flag turned off, you should not trust any of the values of the claims.
+    /// Whether to validate the JWT cryptographic signature.
+    /// Disabling validation is dangerous, only do it if you know what you're doing.
+    /// With validation disabled you should not trust any of the values of the claims.
     pub fn insecure_disable_signature_validation(&mut self) {
         self.validate_signature = false;
     }
@@ -136,7 +136,7 @@ impl Default for Validation {
     }
 }
 
-/// Gets the current timestamp in the format JWT expect
+/// Gets the current timestamp in the format expected by JWTs.
 pub fn get_current_timestamp() -> u64 {
     let start = SystemTime::now();
     start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs()
