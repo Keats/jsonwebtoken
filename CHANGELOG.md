@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.3.0 (2023-03-15)
+
+- Update base64
+- Implement Clone for TokenData<T> if T impls Clone
+
+
 ## 8.2.0 (2022-12-03)
 
 - Add DecodingKey::from_jwk

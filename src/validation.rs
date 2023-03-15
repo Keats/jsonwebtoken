@@ -578,7 +578,7 @@ mod tests {
 
     #[test]
     fn aud_string_ok() {
-        let claims = json!({"aud": ["Everyone"]});
+        let claims = json!({"aud": "Everyone"});
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
