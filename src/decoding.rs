@@ -20,6 +20,15 @@ pub struct TokenData<T> {
     pub claims: T,
 }
 
+impl<T> Clone for TokenData<T>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        Self { header: self.header.clone(), claims: self.claims.clone() }
+    }
+}
+
 /// Takes the result of a rsplit and ensure we only get 2 parts
 /// Errors if we don't
 macro_rules! expect_two {
