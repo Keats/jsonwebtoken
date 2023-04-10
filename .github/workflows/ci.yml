@@ -13,9 +13,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install Rust
-      uses: hecrj/setup-rust-action@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
-        rust-version: stable
         components: rustfmt
     - name: Check format
       run: cargo fmt --check
@@ -25,9 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: hecrj/setup-rust-action@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          rust-version: stable
           components: clippy
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
@@ -50,9 +48,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install Rust
-      uses: hecrj/setup-rust-action@v1
+      uses: dtolnay/rust-toolchain@master
       with:
-        rust-version: ${{ matrix.rust }}
+        toolchain: ${{ matrix.rust }}
 
     - name: Build System Info
       run: rustc --version
