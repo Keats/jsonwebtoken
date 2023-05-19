@@ -31,7 +31,7 @@ jsonwebtoken = { version = "8", features = ["pem", "default_chrono"] }
 
 You can also enable both `time` and `chrono` support without making them the default time library used by this crate 
 by enabling the `time` and `chrono` features. You will then be able to specify which library to use using the 
-`validate_with_options` function. Unlike `default_time` and `default_chrono`, these cargo features are not mutually 
+`decode_with_options` function. Unlike `default_time` and `default_chrono`, these cargo features are not mutually 
 exclusive.
 
 ## Algorithms
