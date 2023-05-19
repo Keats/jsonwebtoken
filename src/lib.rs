@@ -16,9 +16,12 @@ pub mod jwk;
 mod pem;
 mod serialization;
 mod validation;
+/// Compatibility types for deserializing and comparing timestamps
+pub mod time;
 
 pub use algorithms::Algorithm;
-pub use decoding::{decode, decode_header, DecodingKey, TokenData};
+pub use decoding::{decode, decode_with_options, decode_header, DecodingKey, TokenData,
+                   DecodingOptions, DefaultDecodingOptions};
 pub use encoding::{encode, EncodingKey};
 pub use header::Header;
-pub use validation::{get_current_timestamp, Validation};
+pub use validation::Validation;

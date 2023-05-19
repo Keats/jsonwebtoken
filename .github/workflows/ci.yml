@@ -60,3 +60,9 @@ jobs:
 
     - name: Run tests no features
       run: cargo test --no-default-features
+
+    - name: Run tests with time
+      run: cargo test --features default_time
+
+    - name: Run tests with chrono
+      run: cargo test --features default_chrono

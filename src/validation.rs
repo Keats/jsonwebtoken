@@ -8,7 +8,9 @@ use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer};
 
 use crate::algorithms::Algorithm;
+use crate::decoding::DecodingOptions;
 use crate::errors::{new_error, ErrorKind, Result};
+use crate::time::{JwtInstant, TimestampOptions};
 
 /// Contains the various validations that are applied after decoding a JWT.
 ///
@@ -136,18 +138,10 @@ impl Default for Validation {
     }
 }
 
-/// Gets the current timestamp in the format expected by JWTs.
-pub fn get_current_timestamp() -> u64 {
-    let start = SystemTime::now();
-    start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs()
-}
-
 #[derive(Deserialize)]
-pub(crate) struct ClaimsForValidation<'a> {
-    #[serde(deserialize_with = "numeric_type", default)]
-    exp: TryParse<u64>,
-    #[serde(deserialize_with = "numeric_type", default)]
-    nbf: TryParse<u64>,
+pub(crate) struct ClaimsForValidation<'a, JI> {
+    exp: TryParse<JI>,
+    nbf: TryParse<JI>,
     #[serde(borrow)]
     sub: TryParse<Cow<'a, str>>,
     #[serde(borrow)]
@@ -155,12 +149,14 @@ pub(crate) struct ClaimsForValidation<'a> {
     #[serde(borrow)]
     aud: TryParse<Audience<'a>>,
 }
+
 #[derive(Debug)]
 enum TryParse<T> {
     Parsed(T),
     FailedToParse,
     NotPresent,
 }
+
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for TryParse<T> {
     fn deserialize<D: serde::Deserializer<'de>>(
         deserializer: D,
@@ -172,6 +168,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for TryParse<T> {
         })
     }
 }
+
 impl<T> Default for TryParse<T> {
     fn default() -> Self {
         Self::NotPresent
@@ -197,6 +194,7 @@ enum Issuer<'a> {
 /// We use this struct in this case.
 #[derive(Deserialize, PartialEq, Eq, Hash)]
 struct BorrowedCowIfPossible<'a>(#[serde(borrow)] Cow<'a, str>);
+
 impl std::borrow::Borrow<str> for BorrowedCowIfPossible<'_> {
     fn borrow(&self) -> &str {
         &self.0
@@ -212,8 +210,11 @@ fn is_subset(reference: &HashSet<String>, given: &HashSet<BorrowedCowIfPossible<
     }
 }
 
-pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Result<()> {
-    let now = get_current_timestamp();
+pub(crate) fn validate<DO: DecodingOptions>(
+    claims: ClaimsForValidation<'_, <DO::TimestampOptions as TimestampOptions>::InstantDeserializationWrapper>,
+    options: &Validation
+) -> Result<()> {
+    let now = <DO::TimestampOptions as TimestampOptions>::Instant::now();
 
     for required_claim in &options.required_spec_claims {
         let present = match required_claim.as_str() {
@@ -230,12 +231,12 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
     }
 
-    if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
+    if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && <DO::TimestampOptions as TimestampOptions>::Instant::from(&exp).with_added_seconds(options.leeway).is_before(&now))
     {
         return Err(new_error(ErrorKind::ExpiredSignature));
     }
 
-    if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway)
+    if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && <DO::TimestampOptions as TimestampOptions>::Instant::from(&nbf).is_after(&now.with_added_seconds(options.leeway)))
     {
         return Err(new_error(ErrorKind::ImmatureSignature));
     }
@@ -278,8 +279,8 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
 }
 
 fn numeric_type<'de, D>(deserializer: D) -> std::result::Result<TryParse<u64>, D::Error>
-where
-    D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
 {
     struct NumericType(PhantomData<fn() -> TryParse<u64>>);
 
@@ -291,8 +292,8 @@ where
         }
 
         fn visit_f64<E>(self, value: f64) -> std::result::Result<Self::Value, E>
-        where
-            E: de::Error,
+            where
+                E: de::Error,
         {
             if value.is_finite() && value >= 0.0 && value < (u64::MAX as f64) {
                 Ok(TryParse::Parsed(value.round() as u64))
@@ -302,8 +303,8 @@ where
         }
 
         fn visit_u64<E>(self, value: u64) -> std::result::Result<Self::Value, E>
-        where
-            E: de::Error,
+            where
+                E: de::Error,
         {
             Ok(TryParse::Parsed(value))
         }
@@ -319,34 +320,50 @@ where
 mod tests {
     use serde_json::json;
 
-    use super::{get_current_timestamp, validate, ClaimsForValidation, Validation};
+    use super::{validate, ClaimsForValidation, Validation};
 
     use crate::errors::ErrorKind;
     use crate::Algorithm;
     use std::collections::HashSet;
+    use std::time::{Duration, SystemTime};
+    use serde::de::DeserializeOwned;
+    use crate::decoding::DefaultDecodingOptions;
+    use crate::time::{JwtInstant, SerdeSystemTimeFromSeconds};
 
-    fn deserialize_claims(claims: &serde_json::Value) -> ClaimsForValidation {
+    fn deserialize_claims<JI: DeserializeOwned>(claims: &serde_json::Value) -> ClaimsForValidation<'_, JI> {
         serde::Deserialize::deserialize(claims).unwrap()
     }
 
     #[test]
     fn exp_in_future_ok() {
-        let claims = json!({ "exp": get_current_timestamp() + 10000 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let exp = (SystemTime::now() + Duration::from_secs(10000))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let claims = json!({ "exp": exp });
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
         assert!(res.is_ok());
     }
 
     #[test]
     fn exp_float_in_future_ok() {
-        let claims = json!({ "exp": (get_current_timestamp() as f64) + 10000.123 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let exp = (SystemTime::now() + Duration::from_millis(10000123))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f32();
+        let claims = json!({ "exp": exp });
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
         assert!(res.is_ok());
     }
 
     #[test]
     fn exp_in_past_fails() {
-        let claims = json!({ "exp": get_current_timestamp() - 100000 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let exp = (SystemTime::now() - Duration::from_secs(10000))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let claims = json!({ "exp": exp });
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -357,8 +374,12 @@ mod tests {
 
     #[test]
     fn exp_float_in_past_fails() {
-        let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let exp = (SystemTime::now() - Duration::from_millis(10000123))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f32();
+        let claims = json!({ "exp": exp });
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -369,10 +390,14 @@ mod tests {
 
     #[test]
     fn exp_in_past_but_in_leeway_ok() {
-        let claims = json!({ "exp": get_current_timestamp() - 500 });
+        let exp = (SystemTime::now() - Duration::from_secs(500))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let claims = json!({ "exp": exp });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.leeway = 1000 * 60;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
@@ -383,7 +408,7 @@ mod tests {
             let claims = json!({});
             let mut validation = Validation::new(Algorithm::HS256);
             validation.set_required_spec_claims(&[spec_claim]);
-            let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
+            let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation).unwrap_err();
             assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim(spec_claim.to_owned()));
         }
     }
@@ -394,27 +419,35 @@ mod tests {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
     #[test]
     fn exp_validated_but_not_required_fails() {
-        let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
+        let exp = (SystemTime::now() - Duration::from_millis(100001234))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f32();
+        let claims = json!({ "exp": exp });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
     }
 
     #[test]
     fn exp_required_but_not_validated_ok() {
-        let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
+        let exp = (SystemTime::now() - Duration::from_millis(100001234))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f32();
+        let claims = json!({ "exp": exp });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["exp"]);
         validation.validate_exp = false;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
@@ -424,40 +457,52 @@ mod tests {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["exp"]);
         validation.validate_exp = false;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
     }
 
     #[test]
     fn nbf_in_past_ok() {
-        let claims = json!({ "nbf": get_current_timestamp() - 10000 });
+        let nbf = (SystemTime::now() - Duration::from_secs(10000))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let claims = json!({ "nbf": nbf });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
     #[test]
     fn nbf_float_in_past_ok() {
-        let claims = json!({ "nbf": (get_current_timestamp() as f64) - 10000.1234 });
+        let nbf = (SystemTime::now() - Duration::from_millis(100001234))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f32();
+        let claims = json!({ "nbf": nbf });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
     #[test]
     fn nbf_in_future_fails() {
-        let claims = json!({ "nbf": get_current_timestamp() + 100000 });
+        let nbf = (SystemTime::now() + Duration::from_secs(10000))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let claims = json!({ "nbf": nbf });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -468,13 +513,17 @@ mod tests {
 
     #[test]
     fn nbf_in_future_but_in_leeway_ok() {
-        let claims = json!({ "nbf": get_current_timestamp() + 500 });
+        let nbf = (SystemTime::now() + Duration::from_secs(500))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let claims = json!({ "nbf": nbf });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
         validation.leeway = 1000 * 60;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
@@ -485,7 +534,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.set_issuer(&["Keats"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
@@ -496,7 +545,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.set_issuer(&["UserA", "UserB"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
@@ -508,7 +557,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.set_issuer(&["Keats"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -525,7 +574,7 @@ mod tests {
         validation.set_required_spec_claims(&["iss"]);
         validation.validate_exp = false;
         validation.set_issuer(&["Keats"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
 
         match res.unwrap_err().kind() {
             ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "iss"),
@@ -540,7 +589,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.sub = Some("Keats".to_owned());
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
@@ -551,7 +600,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.sub = Some("Keats".to_owned());
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -567,7 +616,7 @@ mod tests {
         validation.validate_exp = false;
         validation.set_required_spec_claims(&["sub"]);
         validation.sub = Some("Keats".to_owned());
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -583,7 +632,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["Everyone"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
@@ -594,7 +643,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["UserA", "UserB"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 
@@ -605,7 +654,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["UserA", "UserB"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -621,7 +670,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["None"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -637,7 +686,7 @@ mod tests {
         validation.validate_exp = false;
         validation.set_required_spec_claims(&["aud"]);
         validation.set_audience(&["None"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -649,7 +698,11 @@ mod tests {
     // https://github.com/Keats/jsonwebtoken/issues/51
     #[test]
     fn does_validation_in_right_order() {
-        let claims = json!({ "exp": get_current_timestamp() + 10000 });
+        let exp = (SystemTime::now() + Duration::from_secs(10000))
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let claims = json!({ "exp": exp });
 
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["exp", "iss"]);
@@ -657,7 +710,7 @@ mod tests {
         validation.set_issuer(&["iss no check"]);
         validation.set_audience(&["iss no check"]);
 
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         // It errors because it needs to validate iss/sub which are missing
         assert!(res.is_err());
         match res.unwrap_err().kind() {
@@ -679,7 +732,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["my-googleclientid1234.apps.googleusercontent.com"]);
 
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
 }

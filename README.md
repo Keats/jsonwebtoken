@@ -16,6 +16,24 @@ serde = {version = "1.0", features = ["derive"] }
 
 The minimum required Rust version is 1.56.
 
+## Cargo features
+
+By default, this crate uses `std::time` to compare timestamps and does not depend on `time` and `chrono`.
+This comes with a significant caveat: token expiration validation checks assume that the system's timezone is UTC. If 
+the system's timezone is not UTC, token expiration checks will be wrong.
+
+To alleviate this issue, you can use a timezone-aware time library like `time` or `chrono`. To make `time` the default
+time library used by `jsonwebtoken`, enable the `default_time` feature of this crate. Similarly, to make `chrono`
+the default, enable the `default_chrono` feature. For example:
+```
+jsonwebtoken = { version = "8", features = ["pem", "default_chrono"] }
+```
+
+You can also enable both `time` and `chrono` support without making them the default time library used by this crate 
+by enabling the `time` and `chrono` features. You will then be able to specify which library to use using the 
+`validate_with_options` function. Unlike `default_time` and `default_chrono`, these cargo features are not mutually 
+exclusive.
+
 ## Algorithms
 This library currently supports the following:
 

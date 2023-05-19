@@ -20,6 +20,8 @@ base64 = "0.21.0"
 # For PEM decoding
 pem = {version = "1", optional = true}
 simple_asn1 = {version = "0.6", optional = true}
+time = {version = "0.3", optional = true, features = ["serde", "parsing"] }
+chrono = {version = "0.3", optional = true, features = ["serde"] }
 
 [dev-dependencies]
 # For the custom time example
@@ -29,6 +31,10 @@ criterion = "0.4"
 [features]
 default = ["use_pem"]
 use_pem = ["pem", "simple_asn1"]
+default_time = ["time"]
+default_chrono = ["chrono"]
+time = ["dep:time"]
+chrono = ["dep:chrono"]
 
 [[bench]]
 name = "jwt"

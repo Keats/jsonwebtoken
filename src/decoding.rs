@@ -1,5 +1,7 @@
+use std::time::SystemTime;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Deserializer};
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::verify;
@@ -9,6 +11,7 @@ use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, DecodedJwtPartClaims};
+use crate::time::{DefaultTimestampOptions, JwtInstant, SerdeSystemTimeFromSeconds, TimestampOptions};
 use crate::validation::{validate, Validation};
 
 /// The return type of a successful call to [decode](fn.decode.html).
@@ -39,6 +42,29 @@ macro_rules! expect_two {
             _ => return Err(new_error(ErrorKind::InvalidToken)),
         }
     }};
+}
+
+/// Specifies the options used to decode the JWT
+pub trait DecodingOptions {
+    /// Timestamp deserializing and comparison settings. Please see
+    /// [`crate::time::TimestampOptions`] and [`crate::time::DefaultTimestampOptions`] for more
+    /// details.
+    type TimestampOptions: TimestampOptions;
+
+    /// Returns the options to be used when deserializing and comparing timestamps.
+    fn timestamp_options(&self) -> Self::TimestampOptions;
+}
+
+/// The default options to be used to decode the JWT
+#[derive(Default, Clone)]
+pub struct DefaultDecodingOptions;
+
+impl DecodingOptions for DefaultDecodingOptions {
+    type TimestampOptions = DefaultTimestampOptions;
+
+    fn timestamp_options(&self) -> Self::TimestampOptions {
+        DefaultTimestampOptions::default()
+    }
 }
 
 #[derive(Clone)]
@@ -234,7 +260,54 @@ fn verify_signature<'a>(
 ///
 /// If the token or its signature is invalid or the claims fail validation, it will return an error.
 ///
+/// This function allows you to customize how the token is decoded and processed by specifying
+/// an implementation of [`crate::decoding::DecodingOptions`]. Please see
+/// [`crate::decoding::DecodingOptions`] for more details.
+///
 /// ```rust
+/// use std::time::SystemTime;
+/// use serde::{Deserialize, Serialize};
+/// use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm, decode_with_options, DefaultDecodingOptions};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String
+/// }
+///
+/// let token = "a.jwt.token".to_string();
+/// // Claims is a struct that implements Deserialize
+/// let token_message = decode_with_options::<Claims, _>(
+///     &token,
+///     &DecodingKey::from_secret("secret".as_ref()),
+///     &Validation::new(Algorithm::HS256),
+///     &DefaultDecodingOptions::default()
+/// );
+/// ```
+pub fn decode_with_options<T: DeserializeOwned, DO: DecodingOptions>(
+    token: &str,
+    key: &DecodingKey,
+    validation: &Validation,
+    options: &DO,
+) -> Result<TokenData<T>> {
+    match verify_signature(token, key, validation) {
+        Err(e) => Err(e),
+        Ok((header, claims)) => {
+            let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
+            let claims = decoded_claims.deserialize()?;
+            validate::<DO>(decoded_claims.deserialize()?, validation)?;
+
+            Ok(TokenData { header, claims })
+        }
+    }
+}
+
+/// Decode and validate a JWT
+///
+/// If the token or its signature is invalid or the claims fail validation, it will return an error.
+///
+/// ```rust
+/// use std::time::SystemTime;
 /// use serde::{Deserialize, Serialize};
 /// use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 ///
@@ -253,16 +326,7 @@ pub fn decode<T: DeserializeOwned>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
-    match verify_signature(token, key, validation) {
-        Err(e) => Err(e),
-        Ok((header, claims)) => {
-            let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
-            let claims = decoded_claims.deserialize()?;
-            validate(decoded_claims.deserialize()?, validation)?;
-
-            Ok(TokenData { header, claims })
-        }
-    }
+    decode_with_options(token, key, validation, &DefaultDecodingOptions::default())
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).

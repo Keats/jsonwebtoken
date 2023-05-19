@@ -1,5 +1,6 @@
+use std::time::SystemTime;
 use jsonwebtoken::{
-    decode, encode, get_current_timestamp, Algorithm, DecodingKey, EncodingKey, Validation,
+    decode, encode, Algorithm, DecodingKey, EncodingKey, Validation,
 };
 use ring::signature::{Ed25519KeyPair, KeyPair};
 use serde::{Deserialize, Serialize};
@@ -17,7 +18,8 @@ fn main() {
     let pair = Ed25519KeyPair::from_pkcs8(doc.as_ref()).unwrap();
     let decoding_key = DecodingKey::from_ed_der(pair.public_key().as_ref());
 
-    let claims = Claims { sub: "test".to_string(), exp: get_current_timestamp() };
+    let exp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+    let claims = Claims { sub: "test".to_string(), exp: exp };
 
     let token =
         encode(&jsonwebtoken::Header::new(Algorithm::EdDSA), &claims, &encoding_key).unwrap();
