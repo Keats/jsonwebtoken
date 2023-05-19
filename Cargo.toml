@@ -33,8 +33,6 @@ default = ["use_pem"]
 use_pem = ["pem", "simple_asn1"]
 default_time = ["time"]
 default_chrono = ["chrono"]
-time = ["dep:time"]
-chrono = ["dep:chrono"]
 
 [[bench]]
 name = "jwt"
