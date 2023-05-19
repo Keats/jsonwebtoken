@@ -2,18 +2,18 @@
 mod time_crate;
 
 #[cfg(feature = "time")]
-pub use self::time_crate::{SerdeTimeOffsetTimeAsSeconds};
+pub use self::time_crate::SerdeTimeOffsetTimeAsSeconds;
 
 #[cfg(feature = "chrono")]
 mod chrono;
 
 #[cfg(feature = "chrono")]
-pub use self::chrono::{ChronoDateTimeUtcUnixTimestampOrRFC3339};
+pub use self::chrono::ChronoDateTimeUtcUnixTimestampOrRFC3339;
 
+use serde::de::{Error, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt::Formatter;
 use std::time::{Duration, SystemTime};
-use serde::{Deserialize, Deserializer, Serialize};
-use serde::de::{Error, Visitor};
 
 /// Trait for getting the current time and comparing various JWT timestamps.
 pub trait JwtInstant: Sized {
@@ -48,21 +48,33 @@ impl<'de> Visitor<'de> for SerdeSystemTimeAsSecondsVisitor {
         formatter.write_str("an integer or float representing a unix timestamp")
     }
 
-    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> where E: Error {
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
         Ok(SerdeSystemTimeFromSeconds(SystemTime::UNIX_EPOCH + Duration::from_secs(v)))
     }
 
-    fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E> where E: Error {
+    fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
         Ok(SerdeSystemTimeFromSeconds(SystemTime::UNIX_EPOCH + Duration::from_secs_f32(v)))
     }
 
-    fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E> where E: Error {
+    fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
         Ok(SerdeSystemTimeFromSeconds(SystemTime::UNIX_EPOCH + Duration::from_secs_f64(v)))
     }
 }
 
 impl<'de> Deserialize<'de> for SerdeSystemTimeFromSeconds {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
         deserializer.deserialize_any(SerdeSystemTimeAsSecondsVisitor)
     }
 }
@@ -72,7 +84,6 @@ impl<'a> From<&'a SerdeSystemTimeFromSeconds> for SystemTime {
         value.0
     }
 }
-
 
 impl JwtInstant for SystemTime {
     fn now() -> Self {

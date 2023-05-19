@@ -211,8 +211,11 @@ fn is_subset(reference: &HashSet<String>, given: &HashSet<BorrowedCowIfPossible<
 }
 
 pub(crate) fn validate<DO: DecodingOptions>(
-    claims: ClaimsForValidation<'_, <DO::TimestampOptions as TimestampOptions>::InstantDeserializationWrapper>,
-    options: &Validation
+    claims: ClaimsForValidation<
+        '_,
+        <DO::TimestampOptions as TimestampOptions>::InstantDeserializationWrapper,
+    >,
+    options: &Validation,
 ) -> Result<()> {
     let now = <DO::TimestampOptions as TimestampOptions>::Instant::now();
 
@@ -279,8 +282,8 @@ pub(crate) fn validate<DO: DecodingOptions>(
 }
 
 fn numeric_type<'de, D>(deserializer: D) -> std::result::Result<TryParse<u64>, D::Error>
-    where
-        D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
 {
     struct NumericType(PhantomData<fn() -> TryParse<u64>>);
 
@@ -292,8 +295,8 @@ fn numeric_type<'de, D>(deserializer: D) -> std::result::Result<TryParse<u64>, D
         }
 
         fn visit_f64<E>(self, value: f64) -> std::result::Result<Self::Value, E>
-            where
-                E: de::Error,
+        where
+            E: de::Error,
         {
             if value.is_finite() && value >= 0.0 && value < (u64::MAX as f64) {
                 Ok(TryParse::Parsed(value.round() as u64))
@@ -303,8 +306,8 @@ fn numeric_type<'de, D>(deserializer: D) -> std::result::Result<TryParse<u64>, D
         }
 
         fn visit_u64<E>(self, value: u64) -> std::result::Result<Self::Value, E>
-            where
-                E: de::Error,
+        where
+            E: de::Error,
         {
             Ok(TryParse::Parsed(value))
         }
@@ -322,15 +325,17 @@ mod tests {
 
     use super::{validate, ClaimsForValidation, Validation};
 
+    use crate::decoding::DefaultDecodingOptions;
     use crate::errors::ErrorKind;
+    use crate::time::{JwtInstant, SerdeSystemTimeFromSeconds};
     use crate::Algorithm;
+    use serde::de::DeserializeOwned;
     use std::collections::HashSet;
     use std::time::{Duration, SystemTime};
-    use serde::de::DeserializeOwned;
-    use crate::decoding::DefaultDecodingOptions;
-    use crate::time::{JwtInstant, SerdeSystemTimeFromSeconds};
 
-    fn deserialize_claims<JI: DeserializeOwned>(claims: &serde_json::Value) -> ClaimsForValidation<'_, JI> {
+    fn deserialize_claims<JI: DeserializeOwned>(
+        claims: &serde_json::Value,
+    ) -> ClaimsForValidation<'_, JI> {
         serde::Deserialize::deserialize(claims).unwrap()
     }
 
@@ -341,7 +346,10 @@ mod tests {
             .unwrap()
             .as_secs();
         let claims = json!({ "exp": exp });
-        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let res = validate::<DefaultDecodingOptions>(
+            deserialize_claims(&claims),
+            &Validation::new(Algorithm::HS256),
+        );
         assert!(res.is_ok());
     }
 
@@ -352,7 +360,10 @@ mod tests {
             .unwrap()
             .as_secs_f32();
         let claims = json!({ "exp": exp });
-        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let res = validate::<DefaultDecodingOptions>(
+            deserialize_claims(&claims),
+            &Validation::new(Algorithm::HS256),
+        );
         assert!(res.is_ok());
     }
 
@@ -363,7 +374,10 @@ mod tests {
             .unwrap()
             .as_secs();
         let claims = json!({ "exp": exp });
-        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let res = validate::<DefaultDecodingOptions>(
+            deserialize_claims(&claims),
+            &Validation::new(Algorithm::HS256),
+        );
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -379,7 +393,10 @@ mod tests {
             .unwrap()
             .as_secs_f32();
         let claims = json!({ "exp": exp });
-        let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let res = validate::<DefaultDecodingOptions>(
+            deserialize_claims(&claims),
+            &Validation::new(Algorithm::HS256),
+        );
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -408,7 +425,8 @@ mod tests {
             let claims = json!({});
             let mut validation = Validation::new(Algorithm::HS256);
             validation.set_required_spec_claims(&[spec_claim]);
-            let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation).unwrap_err();
+            let res = validate::<DefaultDecodingOptions>(deserialize_claims(&claims), &validation)
+                .unwrap_err();
             assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim(spec_claim.to_owned()));
         }
     }

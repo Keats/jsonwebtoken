@@ -15,13 +15,15 @@ pub mod jwk;
 #[cfg(feature = "use_pem")]
 mod pem;
 mod serialization;
-mod validation;
 /// Compatibility types for deserializing and comparing timestamps
 pub mod time;
+mod validation;
 
 pub use algorithms::Algorithm;
-pub use decoding::{decode, decode_with_options, decode_header, DecodingKey, TokenData,
-                   DecodingOptions, DefaultDecodingOptions};
+pub use decoding::{
+    decode, decode_header, decode_with_options, DecodingKey, DecodingOptions,
+    DefaultDecodingOptions, TokenData,
+};
 pub use encoding::{encode, EncodingKey};
 pub use header::Header;
 pub use validation::Validation;

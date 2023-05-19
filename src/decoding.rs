@@ -1,7 +1,7 @@
-use std::time::SystemTime;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer};
+use std::time::SystemTime;
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::verify;
@@ -11,7 +11,9 @@ use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, DecodedJwtPartClaims};
-use crate::time::{DefaultTimestampOptions, JwtInstant, SerdeSystemTimeFromSeconds, TimestampOptions};
+use crate::time::{
+    DefaultTimestampOptions, JwtInstant, SerdeSystemTimeFromSeconds, TimestampOptions,
+};
 use crate::validation::{validate, Validation};
 
 /// The return type of a successful call to [decode](fn.decode.html).

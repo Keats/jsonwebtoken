@@ -1,9 +1,7 @@
-use std::time::SystemTime;
-use jsonwebtoken::{
-    decode, encode, Algorithm, DecodingKey, EncodingKey, Validation,
-};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Validation};
 use ring::signature::{Ed25519KeyPair, KeyPair};
 use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {

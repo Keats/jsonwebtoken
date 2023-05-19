@@ -1,12 +1,12 @@
-use std::fmt::Formatter;
+use crate::decoding::DecodingOptions;
+use crate::time::JwtInstant;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
+use std::fmt::Formatter;
 use time::error::Parse;
 use time::format_description::well_known::{Iso8601, Rfc3339};
-use time::OffsetDateTime;
 use time::serde::iso8601;
-use crate::decoding::DecodingOptions;
-use crate::time::{JwtInstant};
+use time::OffsetDateTime;
 
 /// Deserializes [`time::OffsetDateTime`] from a UNIX timestamp, an ISO8601 timestamp, or an
 /// RFC3339 timestamp.
@@ -19,11 +19,14 @@ impl<'de> Visitor<'de> for SerdeTimeOffsetTimeAsSecondsVisitor {
 
     fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
         formatter.write_str(
-            "an integer or float representing a unix timestamp, or an ISO timestamp string"
+            "an integer or float representing a unix timestamp, or an ISO timestamp string",
         )
     }
 
-    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E> where E: Error {
+    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
         if let Ok(t) = OffsetDateTime::from_unix_timestamp(v) {
             return Ok(SerdeTimeOffsetTimeAsSeconds(t));
         } else {
@@ -31,7 +34,10 @@ impl<'de> Visitor<'de> for SerdeTimeOffsetTimeAsSecondsVisitor {
         }
     }
 
-    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> where E: Error {
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
         if let Ok(t) = OffsetDateTime::from_unix_timestamp(v as i64) {
             return Ok(SerdeTimeOffsetTimeAsSeconds(t));
         } else {
@@ -39,9 +45,12 @@ impl<'de> Visitor<'de> for SerdeTimeOffsetTimeAsSecondsVisitor {
         }
     }
 
-    fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E> where E: Error {
+    fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
         if let Ok(t) = OffsetDateTime::from_unix_timestamp_nanos(
-            std::time::Duration::from_secs_f32(v).as_nanos() as i128
+            std::time::Duration::from_secs_f32(v).as_nanos() as i128,
         ) {
             return Ok(SerdeTimeOffsetTimeAsSeconds(t));
         } else {
@@ -49,9 +58,12 @@ impl<'de> Visitor<'de> for SerdeTimeOffsetTimeAsSecondsVisitor {
         }
     }
 
-    fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E> where E: Error {
+    fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
         if let Ok(t) = OffsetDateTime::from_unix_timestamp_nanos(
-            std::time::Duration::from_secs_f64(v).as_nanos() as i128
+            std::time::Duration::from_secs_f64(v).as_nanos() as i128,
         ) {
             return Ok(SerdeTimeOffsetTimeAsSeconds(t));
         } else {
@@ -59,21 +71,25 @@ impl<'de> Visitor<'de> for SerdeTimeOffsetTimeAsSecondsVisitor {
         }
     }
 
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: Error {
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
         if let Ok(t) = OffsetDateTime::parse(v, &Iso8601::DEFAULT) {
             return Ok(SerdeTimeOffsetTimeAsSeconds(t));
         }
         match OffsetDateTime::parse(v, &Rfc3339) {
             Ok(t) => Ok(SerdeTimeOffsetTimeAsSeconds(t)),
-            Err(err) => {
-                Err(E::custom("Invalid timestamp format"))
-            }
+            Err(err) => Err(E::custom("Invalid timestamp format")),
         }
     }
 }
 
 impl<'de> Deserialize<'de> for SerdeTimeOffsetTimeAsSeconds {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
         deserializer.deserialize_any(SerdeTimeOffsetTimeAsSecondsVisitor)
     }
 }
@@ -83,7 +99,6 @@ impl<'a> From<&'a SerdeTimeOffsetTimeAsSeconds> for OffsetDateTime {
         value.0
     }
 }
-
 
 impl JwtInstant for OffsetDateTime {
     fn now() -> Self {
