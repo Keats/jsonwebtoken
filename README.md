@@ -97,7 +97,7 @@ Encoding a JWT takes 3 parameters:
 - some claims: your own struct
 - a key/secret
 
-When using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
+When using HS256, HS384 or HS512, the key is always a shared secret like in the example above. When using
 RSA/EC, the key should always be the content of the private key in the PEM or DER format.
 
 If your key is in PEM format, it is better performance wise to generate the `EncodingKey` once in a `lazy_static` or
