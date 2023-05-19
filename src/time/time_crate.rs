@@ -3,13 +3,9 @@ use crate::time::JwtInstant;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
-use time::error::Parse;
-use time::format_description::well_known::{Iso8601, Rfc3339};
-use time::serde::iso8601;
 use time::OffsetDateTime;
 
-/// Deserializes [`time::OffsetDateTime`] from a UNIX timestamp, an ISO8601 timestamp, or an
-/// RFC3339 timestamp.
+/// Deserializes [`time::OffsetDateTime`] from a UNIX timestamp
 pub struct SerdeTimeOffsetTimeAsSeconds(OffsetDateTime);
 
 struct SerdeTimeOffsetTimeAsSecondsVisitor;
@@ -68,19 +64,6 @@ impl<'de> Visitor<'de> for SerdeTimeOffsetTimeAsSecondsVisitor {
             return Ok(SerdeTimeOffsetTimeAsSeconds(t));
         } else {
             return Err(E::custom("Couldn't unix timestamp to OffsetDateTime"));
-        }
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        if let Ok(t) = OffsetDateTime::parse(v, &Iso8601::DEFAULT) {
-            return Ok(SerdeTimeOffsetTimeAsSeconds(t));
-        }
-        match OffsetDateTime::parse(v, &Rfc3339) {
-            Ok(t) => Ok(SerdeTimeOffsetTimeAsSeconds(t)),
-            Err(err) => Err(E::custom("Invalid timestamp format")),
         }
     }
 }

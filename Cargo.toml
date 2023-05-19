@@ -20,8 +20,8 @@ base64 = "0.21.0"
 # For PEM decoding
 pem = {version = "1", optional = true}
 simple_asn1 = {version = "0.6", optional = true}
-time = {version = "0.3", optional = true, features = ["serde", "parsing"] }
-chrono = {version = "0.3", optional = true, features = ["serde"] }
+time = {version = "0.3", optional = true }
+chrono = {version = "0.3", optional = true }
 
 [dev-dependencies]
 # For the custom time example

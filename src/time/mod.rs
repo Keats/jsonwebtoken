@@ -8,7 +8,7 @@ pub use self::time_crate::SerdeTimeOffsetTimeAsSeconds;
 mod chrono;
 
 #[cfg(feature = "chrono")]
-pub use self::chrono::ChronoDateTimeUtcUnixTimestampOrRFC3339;
+pub use self::chrono::ChronoDateTimeUtcUnixTimestamp;
 
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -151,5 +151,5 @@ pub struct ChronoDateTimeUtcTimestampOptions;
 #[cfg(feature = "chrono")]
 impl TimestampOptions for ChronoDateTimeUtcTimestampOptions {
     type Instant = ::chrono::DateTime<::chrono::UTC>;
-    type InstantDeserializationWrapper = crate::time::ChronoDateTimeUtcUnixTimestampOrRFC3339;
+    type InstantDeserializationWrapper = crate::time::ChronoDateTimeUtcUnixTimestamp;
 }
