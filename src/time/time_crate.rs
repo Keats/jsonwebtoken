@@ -1,4 +1,3 @@
-use crate::decoding::DecodingOptions;
 use crate::time::JwtInstant;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -19,38 +18,14 @@ impl<'de> Visitor<'de> for SerdeTimeOffsetTimeAsSecondsVisitor {
         )
     }
 
-    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        if let Ok(t) = OffsetDateTime::from_unix_timestamp(v) {
-            return Ok(SerdeTimeOffsetTimeAsSeconds(t));
-        } else {
-            return Err(E::custom("Couldn't unix timestamp to OffsetDateTime"));
-        }
-    }
-
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
     where
         E: Error,
     {
         if let Ok(t) = OffsetDateTime::from_unix_timestamp(v as i64) {
-            return Ok(SerdeTimeOffsetTimeAsSeconds(t));
+            Ok(SerdeTimeOffsetTimeAsSeconds(t))
         } else {
-            return Err(E::custom("Couldn't unix timestamp to OffsetDateTime"));
-        }
-    }
-
-    fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        if let Ok(t) = OffsetDateTime::from_unix_timestamp_nanos(
-            std::time::Duration::from_secs_f32(v).as_nanos() as i128,
-        ) {
-            return Ok(SerdeTimeOffsetTimeAsSeconds(t));
-        } else {
-            return Err(E::custom("Couldn't unix timestamp to OffsetDateTime"));
+            Err(E::custom("Couldn't unix timestamp to OffsetDateTime"))
         }
     }
 
@@ -61,9 +36,9 @@ impl<'de> Visitor<'de> for SerdeTimeOffsetTimeAsSecondsVisitor {
         if let Ok(t) = OffsetDateTime::from_unix_timestamp_nanos(
             std::time::Duration::from_secs_f64(v).as_nanos() as i128,
         ) {
-            return Ok(SerdeTimeOffsetTimeAsSeconds(t));
+            Ok(SerdeTimeOffsetTimeAsSeconds(t))
         } else {
-            return Err(E::custom("Couldn't unix timestamp to OffsetDateTime"));
+            Err(E::custom("Couldn't unix timestamp to OffsetDateTime"))
         }
     }
 }

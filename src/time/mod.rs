@@ -11,7 +11,7 @@ mod chrono;
 pub use self::chrono::ChronoDateTimeUtcUnixTimestamp;
 
 use serde::de::{Error, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
 use std::time::{Duration, SystemTime};
 

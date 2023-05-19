@@ -17,7 +17,7 @@ fn main() {
     let decoding_key = DecodingKey::from_ed_der(pair.public_key().as_ref());
 
     let exp = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
-    let claims = Claims { sub: "test".to_string(), exp: exp };
+    let claims = Claims { sub: "test".to_string(), exp };
 
     let token =
         encode(&jsonwebtoken::Header::new(Algorithm::EdDSA), &claims, &encoding_key).unwrap();

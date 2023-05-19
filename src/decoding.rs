@@ -1,7 +1,7 @@
+#![allow(unused_imports)]
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Deserializer};
-use std::time::SystemTime;
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::verify;
@@ -290,7 +290,7 @@ pub fn decode_with_options<T: DeserializeOwned, DO: DecodingOptions>(
     token: &str,
     key: &DecodingKey,
     validation: &Validation,
-    options: &DO,
+    _options: &DO,
 ) -> Result<TokenData<T>> {
     match verify_signature(token, key, validation) {
         Err(e) => Err(e),

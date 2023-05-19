@@ -27,7 +27,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo clippy --all-targets --features pem -- -D warnings
+      - run: cargo clippy --all-targets --features pem,default_time -- -D warnings
+      - run: cargo clippy --all-targets --features pem,default_chrono -- -D warnings
 
   tests:
     name: Tests

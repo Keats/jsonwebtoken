@@ -1,6 +1,5 @@
-use crate::decoding::DecodingOptions;
 use crate::time::JwtInstant;
-use chrono::{DateTime, TimeZone};
+use chrono::TimeZone;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::Formatter;
@@ -17,28 +16,11 @@ impl<'de> Visitor<'de> for SerdeChronoDateTimeUtcAsSecondsVisitor {
         formatter.write_str("an integer or float representing a unix timestamp")
     }
 
-    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        Ok(ChronoDateTimeUtcUnixTimestamp(chrono::UTC.timestamp(v, 0)))
-    }
-
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
     where
         E: Error,
     {
         Ok(ChronoDateTimeUtcUnixTimestamp(chrono::UTC.timestamp(v as i64, 0)))
-    }
-
-    fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        let duration = std::time::Duration::from_secs_f32(v);
-        Ok(ChronoDateTimeUtcUnixTimestamp(
-            chrono::UTC.timestamp(duration.as_secs() as i64, duration.subsec_nanos()),
-        ))
     }
 
     fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>

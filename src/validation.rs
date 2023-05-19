@@ -1,11 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::fmt;
-use std::marker::PhantomData;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::de::{self, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
 use crate::algorithms::Algorithm;
 use crate::decoding::DecodingOptions;
@@ -281,44 +277,6 @@ pub(crate) fn validate<DO: DecodingOptions>(
     Ok(())
 }
 
-fn numeric_type<'de, D>(deserializer: D) -> std::result::Result<TryParse<u64>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct NumericType(PhantomData<fn() -> TryParse<u64>>);
-
-    impl<'de> Visitor<'de> for NumericType {
-        type Value = TryParse<u64>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("A NumericType that can be reasonably coerced into a u64")
-        }
-
-        fn visit_f64<E>(self, value: f64) -> std::result::Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            if value.is_finite() && value >= 0.0 && value < (u64::MAX as f64) {
-                Ok(TryParse::Parsed(value.round() as u64))
-            } else {
-                Err(serde::de::Error::custom("NumericType must be representable as a u64"))
-            }
-        }
-
-        fn visit_u64<E>(self, value: u64) -> std::result::Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(TryParse::Parsed(value))
-        }
-    }
-
-    match deserializer.deserialize_any(NumericType(PhantomData)) {
-        Ok(ok) => Ok(ok),
-        Err(_) => Ok(TryParse::FailedToParse),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -327,7 +285,6 @@ mod tests {
 
     use crate::decoding::DefaultDecodingOptions;
     use crate::errors::ErrorKind;
-    use crate::time::{JwtInstant, SerdeSystemTimeFromSeconds};
     use crate::Algorithm;
     use serde::de::DeserializeOwned;
     use std::collections::HashSet;
