@@ -53,22 +53,21 @@ impl PemEncodedKey {
     pub fn new(input: &[u8]) -> Result<PemEncodedKey> {
         match pem::parse(input) {
             Ok(content) => {
-                let pem_contents = content.contents;
-                let asn1_content = match simple_asn1::from_der(pem_contents.as_slice()) {
+                let asn1_content = match simple_asn1::from_der(content.contents()) {
                     Ok(asn1) => asn1,
                     Err(_) => return Err(ErrorKind::InvalidKeyFormat.into()),
                 };
 
-                match content.tag.as_ref() {
+                match content.tag().as_ref() {
                     // This handles a PKCS#1 RSA Private key
                     "RSA PRIVATE KEY" => Ok(PemEncodedKey {
-                        content: pem_contents,
+                        content: content.into_contents(),
                         asn1: asn1_content,
                         pem_type: PemType::RsaPrivate,
                         standard: Standard::Pkcs1,
                     }),
                     "RSA PUBLIC KEY" => Ok(PemEncodedKey {
-                        content: pem_contents,
+                        content: content.into_contents(),
                         asn1: asn1_content,
                         pem_type: PemType::RsaPublic,
                         standard: Standard::Pkcs1,
@@ -107,7 +106,7 @@ impl PemEncodedKey {
                                     }
                                 };
                                 Ok(PemEncodedKey {
-                                    content: pem_contents,
+                                    content: content.into_contents(),
                                     asn1: asn1_content,
                                     pem_type,
                                     standard: Standard::Pkcs8,
