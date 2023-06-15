@@ -213,8 +213,6 @@ fn is_subset(reference: &HashSet<String>, given: &HashSet<BorrowedCowIfPossible<
 }
 
 pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Result<()> {
-    let now = get_current_timestamp();
-
     for required_claim in &options.required_spec_claims {
         let present = match required_claim.as_str() {
             "exp" => matches!(claims.exp, TryParse::Parsed(_)),
@@ -230,14 +228,18 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
     }
 
-    if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
-    {
-        return Err(new_error(ErrorKind::ExpiredSignature));
-    }
+    if (options.validate_exp || options.validate_nbf) {
+        let now = get_current_timestamp();
 
-    if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway)
-    {
-        return Err(new_error(ErrorKind::ImmatureSignature));
+        if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
+        {
+            return Err(new_error(ErrorKind::ExpiredSignature));
+        }
+
+        if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway)
+        {
+            return Err(new_error(ErrorKind::ImmatureSignature));
+        }
     }
 
     if let (TryParse::Parsed(sub), Some(correct_sub)) = (claims.sub, options.sub.as_deref()) {
