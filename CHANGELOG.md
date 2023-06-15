@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.4.0 (unreleased)
+
+- Update pem
+- Bump MSRV to 1.67
+- Fix JWK HMAC keys base64 decoding
+- Only get current timestamp if user is validating exp or nbf
+
 ## 8.3.0 (2023-03-15)
 
 - Update base64
