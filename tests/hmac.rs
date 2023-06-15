@@ -1,4 +1,5 @@
 use jsonwebtoken::errors::ErrorKind;
+use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{
     crypto::{sign, verify},
     decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
@@ -182,4 +183,23 @@ fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
     let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     let err = claims.unwrap_err();
     assert_eq!(err.kind(), &ErrorKind::ExpiredSignature);
+}
+
+#[test]
+fn verify_hs256_rfc7517_appendix_a1() {
+    #[derive(Debug, PartialEq, Eq, Clone, Deserialize)]
+    struct C {
+        iss: String,
+    }
+    let token = "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+    let jwk = r#"{"kty":"oct",
+                  "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
+                 }"#;
+    let jwk: Jwk = serde_json::from_str(jwk).unwrap();
+    let key = DecodingKey::from_jwk(&jwk).unwrap();
+    let mut validation = Validation::new(Algorithm::HS256);
+    // The RFC example signed jwt has expired
+    validation.validate_exp = false;
+    let c = decode::<C>(token, &key, &validation).unwrap();
+    assert_eq!(c.claims.iss, "joe");
 }

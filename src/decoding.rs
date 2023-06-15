@@ -183,7 +183,13 @@ impl DecodingKey {
                 DecodingKey::from_ec_components(&params.x, &params.y)
             }
             AlgorithmParameters::OctetKeyPair(params) => DecodingKey::from_ed_components(&params.x),
-            AlgorithmParameters::OctetKey(params) => DecodingKey::from_base64_secret(&params.value),
+            AlgorithmParameters::OctetKey(params) => {
+                let out = b64_decode(&params.value)?;
+                Ok(DecodingKey {
+                    family: AlgorithmFamily::Hmac,
+                    kind: DecodingKeyKind::SecretOrDer(out),
+                })
+            }
         }
     }
 
