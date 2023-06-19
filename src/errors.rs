@@ -42,7 +42,7 @@ pub enum ErrorKind {
     /// When the secret given is not a valid ECDSA key
     InvalidEcdsaKey,
     /// When the secret given is not a valid RSA key
-    InvalidRsaKey(&'static str),
+    InvalidRsaKey(String),
     /// We could not sign with the given key
     RsaFailedSigning,
     /// When the algorithm from string doesn't match the one passed to `from_str`
@@ -77,6 +77,7 @@ pub enum ErrorKind {
     /// Some of the text was invalid UTF-8
     Utf8(::std::string::FromUtf8Error),
     /// Something unspecified went wrong with crypto
+    #[cfg(not(target_arch = "wasm32"))]
     Crypto(::ring::error::Unspecified),
 }
 
@@ -101,6 +102,7 @@ impl StdError for Error {
             ErrorKind::Base64(err) => Some(err),
             ErrorKind::Json(err) => Some(err.as_ref()),
             ErrorKind::Utf8(err) => Some(err),
+            #[cfg(not(target_arch = "wasm32"))]
             ErrorKind::Crypto(err) => Some(err),
         }
     }
@@ -126,6 +128,7 @@ impl fmt::Display for Error {
             ErrorKind::InvalidRsaKey(msg) => write!(f, "RSA key invalid: {}", msg),
             ErrorKind::Json(err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(err) => write!(f, "UTF-8 error: {}", err),
+            #[cfg(not(target_arch = "wasm32"))]
             ErrorKind::Crypto(err) => write!(f, "Crypto error: {}", err),
             ErrorKind::Base64(err) => write!(f, "Base64 error: {}", err),
         }
@@ -159,12 +162,14 @@ impl From<::std::string::FromUtf8Error> for Error {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<::ring::error::Unspecified> for Error {
     fn from(err: ::ring::error::Unspecified) -> Error {
         new_error(ErrorKind::Crypto(err))
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<::ring::error::KeyRejected> for Error {
     fn from(_err: ::ring::error::KeyRejected) -> Error {
         new_error(ErrorKind::InvalidEcdsaKey)
