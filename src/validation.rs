@@ -77,6 +77,10 @@ pub struct Validation {
 
     /// Whether to validate the JWT signature. Very insecure to turn that off
     pub(crate) validate_signature: bool,
+
+    /// The validation will check that this value lies between expiry and not-valid-before
+    /// timestamps
+    pub(crate) timestamp: Option<u64>,
 }
 
 impl Validation {
@@ -98,7 +102,14 @@ impl Validation {
             aud: None,
 
             validate_signature: true,
+            timestamp: None,
         }
+    }
+
+    /// If set with Some, the value will be used to validate expiry and not-valid-after fields.
+    /// If set to None, local SystemTime will be used
+    pub fn validate_against_system_time(&mut self, timestamp: Option<u64>) {
+        self.timestamp = timestamp;
     }
 
     /// `aud` is a collection of one or more acceptable audience members
@@ -229,7 +240,7 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     }
 
     if (options.validate_exp || options.validate_nbf) {
-        let now = get_current_timestamp();
+        let now = options.timestamp.unwrap_or_else(get_current_timestamp);
 
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
         {
