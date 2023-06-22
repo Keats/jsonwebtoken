@@ -14,6 +14,7 @@ pub struct Claims {
     sub: String,
     company: String,
     exp: i64,
+    nbf: i64,
 }
 
 #[test]
@@ -56,6 +57,7 @@ fn round_trip_claim() {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+        nbf: OffsetDateTime::now_utc().unix_timestamp() - 10000,
     };
     let token = encode(
         &Header::new(Algorithm::ES256),
@@ -74,12 +76,53 @@ fn round_trip_claim() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+fn expiry_and_nbf() {
+    let privkey_pem = include_bytes!("private_ecdsa_key.pem");
+    let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
+    let exp = OffsetDateTime::now_utc().unix_timestamp() - 10000;
+    let nbf = OffsetDateTime::now_utc().unix_timestamp() - 20000;
+    let my_claims = Claims { sub: "b@b.com".to_string(), company: "ACME".to_string(), exp, nbf };
+    let token = encode(
+        &Header::new(Algorithm::ES256),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey_pem).unwrap(),
+    )
+    .unwrap();
+    let decoding_key = DecodingKey::from_ec_pem(pubkey_pem).unwrap();
+    let mut validation = Validation::new(Algorithm::ES256);
+
+    // Validate expiry against current time => should be expired
+    let error = decode::<Claims>(&token, &decoding_key, &validation).unwrap_err().into_kind();
+    assert!(matches!(error, jsonwebtoken::errors::ErrorKind::ExpiredSignature));
+
+    // Validate against past valid time => Should be ok
+    validation.validate_against_system_time(Some(exp as u64 - 100));
+    decode::<Claims>(&token, &decoding_key, &validation).unwrap();
+
+    // Validate against past invalid time => Should be Err
+    validation.validate_against_system_time(Some(exp as u64 + 100));
+    let error = decode::<Claims>(&token, &decoding_key, &validation).unwrap_err().into_kind();
+    assert!(matches!(error, jsonwebtoken::errors::ErrorKind::ExpiredSignature));
+
+    // Validate not-valid-before => invalid time span
+    validation.validate_against_system_time(Some(nbf as u64 - 100));
+    // nbf validation off (default) - we expect Ok
+    decode::<Claims>(&token, &decoding_key, &validation).unwrap();
+    validation.validate_nbf = true;
+    // nbf validation on - we expect Err
+    let error = decode::<Claims>(&token, &decoding_key, &validation).unwrap_err().into_kind();
+    assert!(matches!(error, jsonwebtoken::errors::ErrorKind::ImmatureSignature));
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
 fn ec_x_y() {
     let privkey = include_str!("private_ecdsa_key.pem");
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+        nbf: OffsetDateTime::now_utc().unix_timestamp() - 10000,
     };
     let x = "w7JAoU_gJbZJvV-zCOvU9yFJq0FNC_edCMRM78P8eQQ";
     let y = "wQg1EytcsEmGrM70Gb53oluoDbVhCZ3Uq3hHMslHVb4";
@@ -109,6 +152,7 @@ fn ed_jwk() {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+        nbf: OffsetDateTime::now_utc().unix_timestamp() - 10000,
     };
     let jwk: Jwk = serde_json::from_value(json!({
         "kty": "EC",
@@ -146,6 +190,7 @@ fn roundtrip_with_jwtio_example() {
         sub: "b@b.com".to_string(),
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+        nbf: OffsetDateTime::now_utc().unix_timestamp() - 10000,
     };
     let token = encode(
         &Header::new(Algorithm::ES384),

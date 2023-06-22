@@ -25,6 +25,8 @@ use crate::errors::{new_error, ErrorKind, Result};
 /// // or issuer
 /// validation.set_issuer(&["Me"]); // a single string
 /// validation.set_issuer(&["Me", "You"]); // array of strings
+/// validation.validate_against_system_time(Some(1687425589)) // validate expiry and
+/// // not-valid-before with respect to this timestamp
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Validation {
