@@ -25,8 +25,6 @@ use crate::errors::{new_error, ErrorKind, Result};
 /// // or issuer
 /// validation.set_issuer(&["Me"]); // a single string
 /// validation.set_issuer(&["Me", "You"]); // array of strings
-/// validation.validate_against_system_time(Some(1687425589)) // validate expiry and
-/// // not-valid-before with respect to this timestamp
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Validation {
@@ -110,8 +108,8 @@ impl Validation {
 
     /// If set with Some, the value will be used to validate expiry and not-valid-after fields.
     /// If set to None, local SystemTime will be used
-    pub fn validate_against_system_time(&mut self, timestamp: Option<u64>) {
-        self.timestamp = timestamp;
+    pub fn use_given_timestamp(&mut self, timestamp: u64) {
+        self.timestamp = Some(timestamp);
     }
 
     /// `aud` is a collection of one or more acceptable audience members

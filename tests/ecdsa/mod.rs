@@ -76,7 +76,7 @@ fn round_trip_claim() {
 
 #[cfg(feature = "use_pem")]
 #[test]
-fn expiry_and_nbf() {
+fn expiry_and_nbf_with_custom_timestamp() {
     let privkey_pem = include_bytes!("private_ecdsa_key.pem");
     let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
     let exp = OffsetDateTime::now_utc().unix_timestamp() - 10000;
@@ -96,16 +96,16 @@ fn expiry_and_nbf() {
     assert!(matches!(error, jsonwebtoken::errors::ErrorKind::ExpiredSignature));
 
     // Validate against past valid time => Should be ok
-    validation.validate_against_system_time(Some(exp as u64 - 100));
+    validation.use_given_timestamp(exp as u64 - 100);
     decode::<Claims>(&token, &decoding_key, &validation).unwrap();
 
     // Validate against past invalid time => Should be Err
-    validation.validate_against_system_time(Some(exp as u64 + 100));
+    validation.use_given_timestamp(exp as u64 + 100);
     let error = decode::<Claims>(&token, &decoding_key, &validation).unwrap_err().into_kind();
     assert!(matches!(error, jsonwebtoken::errors::ErrorKind::ExpiredSignature));
 
     // Validate not-valid-before => invalid time span
-    validation.validate_against_system_time(Some(nbf as u64 - 100));
+    validation.use_given_timestamp(nbf as u64 - 100);
     // nbf validation off (default) - we expect Ok
     decode::<Claims>(&token, &decoding_key, &validation).unwrap();
     validation.validate_nbf = true;
