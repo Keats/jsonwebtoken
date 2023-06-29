@@ -15,7 +15,7 @@ rust-version = "1.56.0"
 [dependencies]
 serde_json = "1.0"
 serde = {version = "1.0", features = ["derive"] }
-ring = { version = "0.16.5", features = ["std"] }
+ring = { version = "0.16.20", features = ["std"] }
 base64 = "0.21.0"
 # For PEM decoding
 pem = {version = "2", optional = true}
