@@ -228,7 +228,7 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
     }
 
-    if (options.validate_exp || options.validate_nbf) {
+    if options.validate_exp || options.validate_nbf {
         let now = get_current_timestamp();
 
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)

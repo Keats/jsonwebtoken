@@ -12,9 +12,10 @@ pub(crate) enum AlgorithmFamily {
 
 /// The algorithms supported for signing/verifying JWTs
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
     /// HMAC using SHA-256
+    #[default]
     HS256,
     /// HMAC using SHA-384
     HS384,
@@ -42,12 +43,6 @@ pub enum Algorithm {
 
     /// Edwards-curve Digital Signature Algorithm (EdDSA)
     EdDSA,
-}
-
-impl Default for Algorithm {
-    fn default() -> Self {
-        Algorithm::HS256
-    }
 }
 
 impl FromStr for Algorithm {
