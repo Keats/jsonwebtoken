@@ -272,7 +272,6 @@ pub enum OctetKeyType {
     Octet,
 }
 
-
 /// Parameters for an Octet Key
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct OctetKeyParameters {
