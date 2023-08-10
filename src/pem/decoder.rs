@@ -58,7 +58,7 @@ impl PemEncodedKey {
                     Err(_) => return Err(ErrorKind::InvalidKeyFormat.into()),
                 };
 
-                match content.tag().as_ref() {
+                match content.tag() {
                     // This handles a PKCS#1 RSA Private key
                     "RSA PRIVATE KEY" => Ok(PemEncodedKey {
                         content: content.into_contents(),

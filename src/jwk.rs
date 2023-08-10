@@ -1,9 +1,8 @@
 #![allow(missing_docs)]
-///! This crate contains types only for working JWK and JWK Sets
-///! This is only meant to be used to deal with public JWK, not generate ones.
-///! Most of the code in this file is taken from https://github.com/lawliet89/biscuit but
-/// tweaked to remove the private bits as it's not the goal for this crate currently.
-///!
+//! This crate contains types only for working JWK and JWK Sets
+//! This is only meant to be used to deal with public JWK, not generate ones.
+//! Most of the code in this file is taken from https://github.com/lawliet89/biscuit but
+//! tweaked to remove the private bits as it's not the goal for this crate currently.
 use crate::Algorithm;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
@@ -194,24 +193,20 @@ pub struct CommonParameters {
 
 /// Key type value for an Elliptic Curve Key.
 /// This single value enum is a workaround for Rust not supporting associated constants.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum EllipticCurveKeyType {
     /// Key type value for an Elliptic Curve Key.
+    #[default]
     EC,
-}
-
-impl Default for EllipticCurveKeyType {
-    fn default() -> Self {
-        EllipticCurveKeyType::EC
-    }
 }
 
 /// Type of cryptographic curve used by a key. This is defined in
 /// [RFC 7518 #7.6](https://tools.ietf.org/html/rfc7518#section-7.6)
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum EllipticCurve {
     /// P-256 curve
     #[serde(rename = "P-256")]
+    #[default]
     P256,
     /// P-384 curve
     #[serde(rename = "P-384")]
@@ -222,12 +217,6 @@ pub enum EllipticCurve {
     /// Ed25519 curve
     #[serde(rename = "Ed25519")]
     Ed25519,
-}
-
-impl Default for EllipticCurve {
-    fn default() -> Self {
-        EllipticCurve::P256
-    }
 }
 
 /// Parameters for an Elliptic Curve Key
@@ -250,16 +239,11 @@ pub struct EllipticCurveKeyParameters {
 
 /// Key type value for an RSA Key.
 /// This single value enum is a workaround for Rust not supporting associated constants.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum RSAKeyType {
     /// Key type value for an RSA Key.
+    #[default]
     RSA,
-}
-
-impl Default for RSAKeyType {
-    fn default() -> Self {
-        RSAKeyType::RSA
-    }
 }
 
 /// Parameters for a RSA Key
@@ -280,17 +264,12 @@ pub struct RSAKeyParameters {
 
 /// Key type value for an Octet symmetric key.
 /// This single value enum is a workaround for Rust not supporting associated constants.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum OctetKeyType {
     /// Key type value for an Octet symmetric key.
     #[serde(rename = "oct")]
+    #[default]
     Octet,
-}
-
-impl Default for OctetKeyType {
-    fn default() -> Self {
-        OctetKeyType::Octet
-    }
 }
 
 /// Parameters for an Octet Key
@@ -306,17 +285,12 @@ pub struct OctetKeyParameters {
 
 /// Key type value for an Octet Key Pair.
 /// This single value enum is a workaround for Rust not supporting associated constants.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum OctetKeyPairType {
     /// Key type value for an Octet Key Pair.
     #[serde(rename = "OKP")]
+    #[default]
     OctetKeyPair,
-}
-
-impl Default for OctetKeyPairType {
-    fn default() -> Self {
-        OctetKeyPairType::OctetKeyPair
-    }
 }
 
 /// Parameters for an Octet Key Pair
