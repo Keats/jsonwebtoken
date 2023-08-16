@@ -1,9 +1,10 @@
 #![allow(missing_docs)]
-//! This crate contains types only for working JWK and JWK Sets
-//! This is only meant to be used to deal with public JWK, not generate ones.
-//! Most of the code in this file is taken from https://github.com/lawliet89/biscuit but
-//! tweaked to remove the private bits as it's not the goal for this crate currently.
-use crate::Algorithm;
+///! This crate contains types only for working JWK and JWK Sets
+///! This is only meant to be used to deal with public JWK, not generate ones.
+///! Most of the code in this file is taken from https://github.com/lawliet89/biscuit but
+/// tweaked to remove the private bits as it's not the goal for this crate currently.
+///!
+use crate::{Algorithm, KeyAlgorithm};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
@@ -158,9 +159,9 @@ pub struct CommonParameters {
     #[serde(rename = "key_ops", skip_serializing_if = "Option::is_none", default)]
     pub key_operations: Option<Vec<KeyOperations>>,
 
-    /// The algorithm intended for use with the key
+    /// The algorithm keys intended for use with the key.
     #[serde(rename = "alg", skip_serializing_if = "Option::is_none", default)]
-    pub algorithm: Option<Algorithm>,
+    pub key_algorithm: Option<KeyAlgorithm>,
 
     /// The case sensitive Key ID for the key
     #[serde(rename = "kid", skip_serializing_if = "Option::is_none", default)]
@@ -326,6 +327,16 @@ pub struct Jwk {
     pub algorithm: AlgorithmParameters,
 }
 
+impl Jwk {
+    /// Find whether the Algorithm is implmented and supported
+    pub fn is_supported(&self) -> bool {
+        match Algorithm::frm_key_alogorithm(&self.common.key_algorithm.unwrap()) {
+            Ok(_) => true,
+            Err(_) => false,
+        }
+    }
+}
+
 /// A JWK set
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct JwkSet {
@@ -366,7 +377,9 @@ mod tests {
         assert_eq!(set.keys.len(), 1);
         let key = &set.keys[0];
         assert_eq!(key.common.key_id, Some("abc123".to_string()));
-        assert_eq!(key.common.algorithm, Some(Algorithm::HS256));
+        let algorithm = Algorithm::frm_key_alogorithm(&key.common.key_algorithm.unwrap()).unwrap();
+        assert_eq!(algorithm, Algorithm::HS256);
+
         match &key.algorithm {
             AlgorithmParameters::OctetKey(key) => {
                 assert_eq!(key.key_type, OctetKeyType::Octet);

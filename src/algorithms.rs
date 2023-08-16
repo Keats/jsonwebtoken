@@ -1,6 +1,7 @@
 use crate::errors::{Error, ErrorKind, Result};
+use ring::hmac::Key;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub(crate) enum AlgorithmFamily {
@@ -80,6 +81,86 @@ impl Algorithm {
             Algorithm::EdDSA => AlgorithmFamily::Ed,
         }
     }
+
+    /// Converting Key Algorithm to Algorithm
+    pub fn frm_key_alogorithm(s: &KeyAlgorithm) -> Result<Self> {
+        Algorithm::from_str(s.to_string().as_str())
+    }
+}
+
+/// The algorithms of the keys
+#[allow(clippy::upper_case_acronyms)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+pub enum KeyAlgorithm {
+    /// HMAC using SHA-256
+    HS256,
+    /// HMAC using SHA-384
+    HS384,
+    /// HMAC using SHA-512
+    HS512,
+
+    /// ECDSA using SHA-256
+    ES256,
+    /// ECDSA using SHA-384
+    ES384,
+
+    /// RSASSA-PKCS1-v1_5 using SHA-256
+    RS256,
+    /// RSASSA-PKCS1-v1_5 using SHA-384
+    RS384,
+    /// RSASSA-PKCS1-v1_5 using SHA-512
+    RS512,
+
+    /// RSASSA-PSS using SHA-256
+    PS256,
+    /// RSASSA-PSS using SHA-384
+    PS384,
+    /// RSASSA-PSS using SHA-512
+    PS512,
+
+    /// Edwards-curve Digital Signature Algorithm (EdDSA)
+    EdDSA,
+
+    /// RSAES-PKCS1-V1_5
+    RSA1_5,
+
+    /// RSAES-OAEP using SHA-1
+    #[serde(rename = "RSA-OAEP")]
+    RSA_OAEP,
+
+    /// RSAES-OAEP-256 using SHA-2
+    #[serde(rename = "RSA-OAEP-256")]
+    RSA_OAEP_256,
+}
+
+impl FromStr for KeyAlgorithm {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "HS256" => Ok(KeyAlgorithm::HS256),
+            "HS384" => Ok(KeyAlgorithm::HS384),
+            "HS512" => Ok(KeyAlgorithm::HS512),
+            "ES256" => Ok(KeyAlgorithm::ES256),
+            "ES384" => Ok(KeyAlgorithm::ES384),
+            "RS256" => Ok(KeyAlgorithm::RS256),
+            "RS384" => Ok(KeyAlgorithm::RS384),
+            "PS256" => Ok(KeyAlgorithm::PS256),
+            "PS384" => Ok(KeyAlgorithm::PS384),
+            "PS512" => Ok(KeyAlgorithm::PS512),
+            "RS512" => Ok(KeyAlgorithm::RS512),
+            "EdDSA" => Ok(KeyAlgorithm::EdDSA),
+            "RSA1_5" => Ok(KeyAlgorithm::RSA1_5),
+            "RSA-OAEP" => Ok(KeyAlgorithm::RSA_OAEP),
+            "RSA-OAEP-256" => Ok(KeyAlgorithm::RSA_OAEP_256),
+            _ => Err(ErrorKind::InvalidAlgorithmName.into()),
+        }
+    }
+}
+
+impl fmt::Display for KeyAlgorithm {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[cfg(test)]
@@ -98,5 +179,20 @@ mod tests {
         assert!(Algorithm::from_str("PS384").is_ok());
         assert!(Algorithm::from_str("PS512").is_ok());
         assert!(Algorithm::from_str("").is_err());
+    }
+
+    #[test]
+    fn algorithm_inorder_keyalgorithm_check() {
+        let supported_algs = [
+            "HS256", "HS384", "HS512", "ES256", "ES384", "RS256", "RS384", "PS256", "PS384",
+            "PS512", "RS512", "EdDSA",
+        ];
+
+        for s in supported_algs {
+            assert!(
+                Algorithm::from_str(s).unwrap() as isize
+                    == KeyAlgorithm::from_str(s).unwrap() as isize
+            );
+        }
     }
 }
