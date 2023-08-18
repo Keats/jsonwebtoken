@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AlgorithmParameters::RSA(rsa) => {
                 let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e).unwrap();
                 let algorithm =
-                    Algorithm::from_key_alogorithm(&j.common.key_algorithm.unwrap()).unwrap();
+                    Algorithm::from_key_algorithm(&j.common.key_algorithm.unwrap()).unwrap();
 
                 let mut validation = Validation::new(algorithm);
                 validation.validate_exp = false;

@@ -4,9 +4,12 @@
 ///! Most of the code in this file is taken from https://github.com/lawliet89/biscuit but
 /// tweaked to remove the private bits as it's not the goal for this crate currently.
 ///!
-use crate::{Algorithm, KeyAlgorithm};
+use crate::{
+    errors::{self, Error, ErrorKind},
+    Algorithm,
+};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 /// The intended usage of the public `KeyType`. This enum is serialized `untagged`
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -139,6 +142,81 @@ impl<'de> Deserialize<'de> for KeyOperations {
         }
 
         deserializer.deserialize_string(KeyOperationsVisitor)
+    }
+}
+
+/// The algorithms of the keys
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+pub enum KeyAlgorithm {
+    /// HMAC using SHA-256
+    HS256,
+    /// HMAC using SHA-384
+    HS384,
+    /// HMAC using SHA-512
+    HS512,
+
+    /// ECDSA using SHA-256
+    ES256,
+    /// ECDSA using SHA-384
+    ES384,
+
+    /// RSASSA-PKCS1-v1_5 using SHA-256
+    RS256,
+    /// RSASSA-PKCS1-v1_5 using SHA-384
+    RS384,
+    /// RSASSA-PKCS1-v1_5 using SHA-512
+    RS512,
+
+    /// RSASSA-PSS using SHA-256
+    PS256,
+    /// RSASSA-PSS using SHA-384
+    PS384,
+    /// RSASSA-PSS using SHA-512
+    PS512,
+
+    /// Edwards-curve Digital Signature Algorithm (EdDSA)
+    EdDSA,
+
+    /// RSAES-PKCS1-V1_5
+    RSA1_5,
+
+    /// RSAES-OAEP using SHA-1
+    #[serde(rename = "RSA-OAEP")]
+    RSA_OAEP,
+
+    /// RSAES-OAEP-256 using SHA-2
+    #[serde(rename = "RSA-OAEP-256")]
+    RSA_OAEP_256,
+}
+
+impl FromStr for KeyAlgorithm {
+    type Err = Error;
+    fn from_str(s: &str) -> errors::Result<Self> {
+        match s {
+            "HS256" => Ok(KeyAlgorithm::HS256),
+            "HS384" => Ok(KeyAlgorithm::HS384),
+            "HS512" => Ok(KeyAlgorithm::HS512),
+            "ES256" => Ok(KeyAlgorithm::ES256),
+            "ES384" => Ok(KeyAlgorithm::ES384),
+            "RS256" => Ok(KeyAlgorithm::RS256),
+            "RS384" => Ok(KeyAlgorithm::RS384),
+            "PS256" => Ok(KeyAlgorithm::PS256),
+            "PS384" => Ok(KeyAlgorithm::PS384),
+            "PS512" => Ok(KeyAlgorithm::PS512),
+            "RS512" => Ok(KeyAlgorithm::RS512),
+            "EdDSA" => Ok(KeyAlgorithm::EdDSA),
+            "RSA1_5" => Ok(KeyAlgorithm::RSA1_5),
+            "RSA-OAEP" => Ok(KeyAlgorithm::RSA_OAEP),
+            "RSA-OAEP-256" => Ok(KeyAlgorithm::RSA_OAEP_256),
+            _ => Err(ErrorKind::InvalidAlgorithmName.into()),
+        }
+    }
+}
+
+impl fmt::Display for KeyAlgorithm {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
@@ -330,7 +408,7 @@ pub struct Jwk {
 impl Jwk {
     /// Find whether the Algorithm is implmented and supported
     pub fn is_supported(&self) -> bool {
-        Algorithm::from_key_alogorithm(&self.common.key_algorithm.unwrap()).is_ok()
+        Algorithm::from_key_algorithm(&self.common.key_algorithm.unwrap()).is_ok()
     }
 }
 
@@ -374,7 +452,7 @@ mod tests {
         assert_eq!(set.keys.len(), 1);
         let key = &set.keys[0];
         assert_eq!(key.common.key_id, Some("abc123".to_string()));
-        let algorithm = Algorithm::from_key_alogorithm(&key.common.key_algorithm.unwrap()).unwrap();
+        let algorithm = Algorithm::from_key_algorithm(&key.common.key_algorithm.unwrap()).unwrap();
         assert_eq!(algorithm, Algorithm::HS256);
 
         match &key.algorithm {
