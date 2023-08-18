@@ -330,10 +330,7 @@ pub struct Jwk {
 impl Jwk {
     /// Find whether the Algorithm is implmented and supported
     pub fn is_supported(&self) -> bool {
-        match Algorithm::frm_key_alogorithm(&self.common.key_algorithm.unwrap()) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        Algorithm::from_key_alogorithm(&self.common.key_algorithm.unwrap()).is_ok()
     }
 }
 
@@ -377,7 +374,7 @@ mod tests {
         assert_eq!(set.keys.len(), 1);
         let key = &set.keys[0];
         assert_eq!(key.common.key_id, Some("abc123".to_string()));
-        let algorithm = Algorithm::frm_key_alogorithm(&key.common.key_algorithm.unwrap()).unwrap();
+        let algorithm = Algorithm::from_key_alogorithm(&key.common.key_algorithm.unwrap()).unwrap();
         assert_eq!(algorithm, Algorithm::HS256);
 
         match &key.algorithm {

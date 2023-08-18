@@ -1,5 +1,4 @@
 use crate::errors::{Error, ErrorKind, Result};
-use ring::hmac::Key;
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
 
@@ -83,13 +82,13 @@ impl Algorithm {
     }
 
     /// Converting Key Algorithm to Algorithm
-    pub fn frm_key_alogorithm(s: &KeyAlgorithm) -> Result<Self> {
+    pub fn from_key_alogorithm(s: &KeyAlgorithm) -> Result<Self> {
         Algorithm::from_str(s.to_string().as_str())
     }
 }
 
 /// The algorithms of the keys
-#[allow(clippy::upper_case_acronyms)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
 pub enum KeyAlgorithm {
     /// HMAC using SHA-256
