@@ -1,7 +1,4 @@
-use crate::{
-    errors::{Error, ErrorKind, Result},
-    jwk::KeyAlgorithm,
-};
+use crate::errors::{Error, ErrorKind, Result};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -83,15 +80,12 @@ impl Algorithm {
             Algorithm::EdDSA => AlgorithmFamily::Ed,
         }
     }
-
-    /// Converting Key Algorithm to Algorithm
-    pub fn from_key_algorithm(s: &KeyAlgorithm) -> Result<Self> {
-        Algorithm::from_str(s.to_string().as_str())
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::jwk::KeyAlgorithm;
+
     use super::*;
 
     #[test]

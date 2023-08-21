@@ -1,5 +1,6 @@
 /// Example for the backend to backend implementation
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use jsonwebtoken::jwk::AlgorithmParameters;
 use jsonwebtoken::{decode, decode_header, jwk, Algorithm, DecodingKey, Validation};
@@ -21,10 +22,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match &j.algorithm {
             AlgorithmParameters::RSA(rsa) => {
                 let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e).unwrap();
-                let algorithm =
-                    Algorithm::from_key_algorithm(&j.common.key_algorithm.unwrap()).unwrap();
 
-                let mut validation = Validation::new(algorithm);
+                let mut validation = Validation::new(
+                    Algorithm::from_str(j.common.key_algorithm.unwrap().to_string().as_str())
+                        .unwrap(),
+                );
                 validation.validate_exp = false;
                 let decoded_token =
                     decode::<HashMap<String, serde_json::Value>>(TOKEN, &decoding_key, &validation)

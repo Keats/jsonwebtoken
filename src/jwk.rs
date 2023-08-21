@@ -220,6 +220,12 @@ impl fmt::Display for KeyAlgorithm {
     }
 }
 
+impl KeyAlgorithm {
+    fn to_algorithm(self) -> errors::Result<Algorithm> {
+        Algorithm::from_str(self.to_string().as_str())
+    }
+}
+
 /// Common JWK parameters
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct CommonParameters {
@@ -408,7 +414,7 @@ pub struct Jwk {
 impl Jwk {
     /// Find whether the Algorithm is implmented and supported
     pub fn is_supported(&self) -> bool {
-        Algorithm::from_key_algorithm(&self.common.key_algorithm.unwrap()).is_ok()
+        self.common.key_algorithm.unwrap().to_algorithm().is_ok()
     }
 }
 
@@ -452,7 +458,7 @@ mod tests {
         assert_eq!(set.keys.len(), 1);
         let key = &set.keys[0];
         assert_eq!(key.common.key_id, Some("abc123".to_string()));
-        let algorithm = Algorithm::from_key_algorithm(&key.common.key_algorithm.unwrap()).unwrap();
+        let algorithm = key.common.key_algorithm.unwrap().to_algorithm().unwrap();
         assert_eq!(algorithm, Algorithm::HS256);
 
         match &key.algorithm {
