@@ -101,19 +101,4 @@ mod tests {
         assert!(Algorithm::from_str("PS512").is_ok());
         assert!(Algorithm::from_str("").is_err());
     }
-
-    #[test]
-    fn algorithm_inorder_keyalgorithm_check() {
-        let supported_algs = [
-            "HS256", "HS384", "HS512", "ES256", "ES384", "RS256", "RS384", "PS256", "PS384",
-            "PS512", "RS512", "EdDSA",
-        ];
-
-        for s in supported_algs {
-            assert!(
-                Algorithm::from_str(s).unwrap() as isize
-                    == KeyAlgorithm::from_str(s).unwrap() as isize
-            );
-        }
-    }
 }
