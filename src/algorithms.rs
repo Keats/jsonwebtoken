@@ -2,7 +2,7 @@ use crate::errors::{Error, ErrorKind, Result};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Hash, Serialize, Deserialize)]
 pub(crate) enum AlgorithmFamily {
     Hmac,
     Rsa,
