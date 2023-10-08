@@ -263,6 +263,9 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     }
 
     match (claims.aud, options.aud.as_ref()) {
+        (TryParse::Parsed(_), None) => {
+            return Err(new_error(ErrorKind::InvalidAudience));
+        }
         (TryParse::Parsed(Audience::Single(aud)), Some(correct_aud)) => {
             if !correct_aud.contains(&*aud) {
                 return Err(new_error(ErrorKind::InvalidAudience));
@@ -623,6 +626,22 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["None"]);
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::InvalidAudience => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    fn aud_none_fails() {
+        let claims = json!({"aud": ["Everyone"]});
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = false;
+        validation.required_spec_claims = HashSet::new();
+        validation.aud = None;
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
