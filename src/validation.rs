@@ -263,6 +263,11 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     }
 
     match (claims.aud, options.aud.as_ref()) {
+        // Each principal intended to process the JWT MUST
+        // identify itself with a value in the audience claim. If the principal
+        // processing the claim does not identify itself with a value in the
+        // "aud" claim when this claim is present, then the JWT MUST be
+        //  rejected.
         (TryParse::Parsed(_), None) => {
             return Err(new_error(ErrorKind::InvalidAudience));
         }
