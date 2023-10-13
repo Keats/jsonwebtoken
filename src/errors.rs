@@ -42,7 +42,7 @@ pub enum ErrorKind {
     /// When the secret given is not a valid ECDSA key
     InvalidEcdsaKey,
     /// When the secret given is not a valid RSA key
-    InvalidRsaKey(&'static str),
+    InvalidRsaKey(String),
     /// We could not sign with the given key
     RsaFailedSigning,
     /// When the algorithm from string doesn't match the one passed to `from_str`

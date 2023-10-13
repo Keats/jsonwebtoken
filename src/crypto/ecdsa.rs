@@ -31,8 +31,8 @@ pub fn sign(
     key: &[u8],
     message: &[u8],
 ) -> Result<String> {
-    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key)?;
     let rng = rand::SystemRandom::new();
+    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key, &rng)?;
     let out = signing_key.sign(&rng, message)?;
     Ok(b64_encode(out))
 }
