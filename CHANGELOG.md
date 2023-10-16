@@ -1,5 +1,10 @@
 # Changelog
 
+## 9.0.0 (2023-10-16)
+
+- Update ring
+- Rejects JWTs containing audiences when the Validation doesn't contain any
+
 ## 8.3.0 (2023-03-15)
 
 - Update base64

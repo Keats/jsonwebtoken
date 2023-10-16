@@ -8,9 +8,9 @@ See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more inf
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "8"
+jsonwebtoken = "9"
 # If you do not need pem decoding, you can disable the default feature `use_pem` that way:
-# jsonwebtoken = {version = "8", default-features = false }
+# jsonwebtoken = {version = "9", default-features = false }
 serde = {version = "1.0", features = ["derive"] }
 ```
 
@@ -157,7 +157,8 @@ openssl pkcs8 -topk8 -nocrypt -in sec1.pem -out pkcs8.pem
 
 ## Validation
 This library validates automatically the `exp` claim and `nbf` is validated if present. You can also validate the `sub`, `iss` and `aud` but
-those require setting the expected value in the `Validation` struct.
+those require setting the expected value in the `Validation` struct. In the case of `aud`, if there is a value set in the token but
+not in the `Validation`, the token will be rejected.
 
 Since validating time fields is always a bit tricky due to clock skew,
 you can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` field.
