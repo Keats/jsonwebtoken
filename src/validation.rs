@@ -263,6 +263,14 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     }
 
     match (claims.aud, options.aud.as_ref()) {
+        // Each principal intended to process the JWT MUST
+        // identify itself with a value in the audience claim. If the principal
+        // processing the claim does not identify itself with a value in the
+        // "aud" claim when this claim is present, then the JWT MUST be
+        //  rejected.
+        (TryParse::Parsed(_), None) => {
+            return Err(new_error(ErrorKind::InvalidAudience));
+        }
         (TryParse::Parsed(Audience::Single(aud)), Some(correct_aud)) => {
             if !correct_aud.contains(&*aud) {
                 return Err(new_error(ErrorKind::InvalidAudience));
@@ -623,6 +631,22 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["None"]);
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::InvalidAudience => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    fn aud_none_fails() {
+        let claims = json!({"aud": ["Everyone"]});
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = false;
+        validation.required_spec_claims = HashSet::new();
+        validation.aud = None;
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
