@@ -1,5 +1,10 @@
 # Changelog
 
+## 9.1.0 (2023-10-21)
+
+- Supports deserialization of unsupported algorithms for JWKs
+
+
 ## 9.0.0 (2023-10-16)
 
 - Update ring
