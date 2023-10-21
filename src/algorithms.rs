@@ -84,6 +84,8 @@ impl Algorithm {
 
 #[cfg(test)]
 mod tests {
+    use crate::jwk::KeyAlgorithm;
+
     use super::*;
 
     #[test]
