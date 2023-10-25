@@ -52,7 +52,13 @@ pub struct Validation {
     ///
     /// Defaults to `false`.
     pub validate_nbf: bool,
-    /// If it contains a value, the validation will check that the `aud` field is a member of the
+    /// Whether to validate the `aud` field.
+    ///
+    /// It will return an error if the `aud` field is not a member of the audience provided.
+    ///
+    /// Defaults to `true`. Very insecure to turn this off. Only do this if you know what you are doing.
+    pub validate_aud: bool,
+    /// Validation will check that the `aud` field is a member of the
     /// audience provided and will error otherwise.
     /// Use `set_audience` to set it
     ///
@@ -92,6 +98,7 @@ impl Validation {
 
             validate_exp: true,
             validate_nbf: false,
+            validate_aud: true,
 
             iss: None,
             sub: None,
@@ -262,6 +269,9 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         _ => {}
     }
 
+    if !options.validate_aud {
+        return Ok(());
+    }
     match (claims.aud, options.aud.as_ref()) {
         // Each principal intended to process the JWT MUST
         // identify itself with a value in the audience claim. If the principal
@@ -654,6 +664,18 @@ mod tests {
             ErrorKind::InvalidAudience => (),
             _ => unreachable!(),
         };
+    }
+
+    #[test]
+    fn aud_validation_skipped() {
+        let claims = json!({"aud": ["Everyone"]});
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = false;
+        validation.validate_aud = false;
+        validation.required_spec_claims = HashSet::new();
+        validation.aud = None;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
     }
 
     #[test]
