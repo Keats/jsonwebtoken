@@ -52,6 +52,11 @@ pub struct Validation {
     ///
     /// Defaults to `false`.
     pub validate_nbf: bool,
+    /// Supply a custom timestamp for checking `exp` and `nbf` claims.
+    /// If `None`, will use `SystemTime::now()`.
+    ///
+    /// Defaults to `None`.
+    pub current_timestamp: Option<u64>,
     /// If it contains a value, the validation will check that the `aud` field is a member of the
     /// audience provided and will error otherwise.
     /// Use `set_audience` to set it
@@ -92,6 +97,7 @@ impl Validation {
 
             validate_exp: true,
             validate_nbf: false,
+            current_timestamp: None,
 
             iss: None,
             sub: None,
@@ -229,7 +235,10 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     }
 
     if options.validate_exp || options.validate_nbf {
-        let now = get_current_timestamp();
+        let now = match options.current_timestamp {
+            Some(now) => now,
+            None => get_current_timestamp(),
+        };
 
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
         {
