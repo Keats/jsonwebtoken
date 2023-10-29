@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
@@ -259,12 +261,42 @@ pub fn decode<T: DeserializeOwned>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
+    let start = SystemTime::now();
+    let now = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs();
+
+    decode_with_timestamp(token, key, validation, now)
+}
+
+/// Decode and validate a JWT with a custom timestamp
+///
+/// If the token or its signature is invalid or the claims fail validation, it will return an error.
+///
+/// ```rust
+/// use serde::{Deserialize, Serialize};
+/// use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String
+/// }
+///
+/// let token = "a.jwt.token".to_string();
+/// // Claims is a struct that implements Deserialize
+/// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
+/// ```
+pub fn decode_with_timestamp<T: DeserializeOwned>(
+    token: &str,
+    key: &DecodingKey,
+    validation: &Validation,
+    now: u64,
+) -> Result<TokenData<T>> {
     match verify_signature(token, key, validation) {
         Err(e) => Err(e),
         Ok((header, claims)) => {
             let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
             let claims = decoded_claims.deserialize()?;
-            validate(decoded_claims.deserialize()?, validation)?;
+            validate(decoded_claims.deserialize()?, validation, now)?;
 
             Ok(TokenData { header, claims })
         }

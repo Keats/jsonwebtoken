@@ -212,7 +212,7 @@ fn is_subset(reference: &HashSet<String>, given: &HashSet<BorrowedCowIfPossible<
     }
 }
 
-pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Result<()> {
+pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation, now: u64) -> Result<()> {
     for required_claim in &options.required_spec_claims {
         let present = match required_claim.as_str() {
             "exp" => matches!(claims.exp, TryParse::Parsed(_)),
@@ -229,8 +229,6 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     }
 
     if options.validate_exp || options.validate_nbf {
-        let now = get_current_timestamp();
-
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
         {
             return Err(new_error(ErrorKind::ExpiredSignature));
@@ -341,22 +339,25 @@ mod tests {
 
     #[test]
     fn exp_in_future_ok() {
-        let claims = json!({ "exp": get_current_timestamp() + 10000 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let now = get_current_timestamp();
+        let claims = json!({ "exp": now + 10000 });
+        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256), now);
         assert!(res.is_ok());
     }
 
     #[test]
     fn exp_float_in_future_ok() {
-        let claims = json!({ "exp": (get_current_timestamp() as f64) + 10000.123 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let now = get_current_timestamp();
+        let claims = json!({ "exp": (now as f64) + 10000.123 });
+        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256), now);
         assert!(res.is_ok());
     }
 
     #[test]
     fn exp_in_past_fails() {
-        let claims = json!({ "exp": get_current_timestamp() - 100000 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let now = get_current_timestamp();
+        let claims = json!({ "exp": now - 100000 });
+        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256), now);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -367,8 +368,9 @@ mod tests {
 
     #[test]
     fn exp_float_in_past_fails() {
-        let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let now = get_current_timestamp();
+        let claims = json!({ "exp": (now as f64) - 100000.1234 });
+        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256), now);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -379,95 +381,104 @@ mod tests {
 
     #[test]
     fn exp_in_past_but_in_leeway_ok() {
-        let claims = json!({ "exp": get_current_timestamp() - 500 });
+        let now = get_current_timestamp();
+        let claims = json!({ "exp": now - 500 });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.leeway = 1000 * 60;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_ok());
     }
 
     // https://github.com/Keats/jsonwebtoken/issues/51
     #[test]
     fn validate_required_fields_are_present() {
+        let now = get_current_timestamp();
         for spec_claim in ["exp", "nbf", "aud", "iss", "sub"] {
             let claims = json!({});
             let mut validation = Validation::new(Algorithm::HS256);
             validation.set_required_spec_claims(&[spec_claim]);
-            let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
+            let res = validate(deserialize_claims(&claims), &validation, now).unwrap_err();
             assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim(spec_claim.to_owned()));
         }
     }
 
     #[test]
     fn exp_validated_but_not_required_ok() {
+        let now = get_current_timestamp();
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_ok());
     }
 
     #[test]
     fn exp_validated_but_not_required_fails() {
-        let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
+        let now = get_current_timestamp();
+        let claims = json!({ "exp": (now as f64) - 100000.1234 });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_err());
     }
 
     #[test]
     fn exp_required_but_not_validated_ok() {
-        let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
+        let now = get_current_timestamp();
+        let claims = json!({ "exp": (now as f64) - 100000.1234 });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["exp"]);
         validation.validate_exp = false;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_ok());
     }
 
     #[test]
     fn exp_required_but_not_validated_fails() {
+        let now = get_current_timestamp();
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["exp"]);
         validation.validate_exp = false;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_err());
     }
 
     #[test]
     fn nbf_in_past_ok() {
-        let claims = json!({ "nbf": get_current_timestamp() - 10000 });
+        let now = get_current_timestamp();
+        let claims = json!({ "nbf": now - 10000 });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_ok());
     }
 
     #[test]
     fn nbf_float_in_past_ok() {
-        let claims = json!({ "nbf": (get_current_timestamp() as f64) - 10000.1234 });
+        let now = get_current_timestamp();
+        let claims = json!({ "nbf": (now as f64) - 10000.1234 });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_ok());
     }
 
     #[test]
     fn nbf_in_future_fails() {
-        let claims = json!({ "nbf": get_current_timestamp() + 100000 });
+        let now = get_current_timestamp();
+        let claims = json!({ "nbf": now + 100000 });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -478,13 +489,14 @@ mod tests {
 
     #[test]
     fn nbf_in_future_but_in_leeway_ok() {
-        let claims = json!({ "nbf": get_current_timestamp() + 500 });
+        let now = get_current_timestamp();
+        let claims = json!({ "nbf": now + 500 });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
         validation.leeway = 1000 * 60;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         assert!(res.is_ok());
     }
 
@@ -495,7 +507,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.set_issuer(&["Keats"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_ok());
     }
 
@@ -506,7 +518,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.set_issuer(&["UserA", "UserB"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_ok());
     }
 
@@ -518,7 +530,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.set_issuer(&["Keats"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -535,7 +547,7 @@ mod tests {
         validation.set_required_spec_claims(&["iss"]);
         validation.validate_exp = false;
         validation.set_issuer(&["Keats"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
 
         match res.unwrap_err().kind() {
             ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "iss"),
@@ -550,7 +562,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.sub = Some("Keats".to_owned());
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_ok());
     }
 
@@ -561,7 +573,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.sub = Some("Keats".to_owned());
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -577,7 +589,7 @@ mod tests {
         validation.validate_exp = false;
         validation.set_required_spec_claims(&["sub"]);
         validation.sub = Some("Keats".to_owned());
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -593,7 +605,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["Everyone"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_ok());
     }
 
@@ -604,7 +616,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["UserA", "UserB"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_ok());
     }
 
@@ -615,7 +627,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["UserA", "UserB"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -631,7 +643,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["None"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -647,7 +659,7 @@ mod tests {
         validation.validate_exp = false;
         validation.required_spec_claims = HashSet::new();
         validation.aud = None;
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -663,7 +675,7 @@ mod tests {
         validation.validate_exp = false;
         validation.set_required_spec_claims(&["aud"]);
         validation.set_audience(&["None"]);
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -675,7 +687,8 @@ mod tests {
     // https://github.com/Keats/jsonwebtoken/issues/51
     #[test]
     fn does_validation_in_right_order() {
-        let claims = json!({ "exp": get_current_timestamp() + 10000 });
+        let now = get_current_timestamp();
+        let claims = json!({ "exp": now + 10000 });
 
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["exp", "iss"]);
@@ -683,7 +696,7 @@ mod tests {
         validation.set_issuer(&["iss no check"]);
         validation.set_audience(&["iss no check"]);
 
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, now);
         // It errors because it needs to validate iss/sub which are missing
         assert!(res.is_err());
         match res.unwrap_err().kind() {
@@ -705,7 +718,7 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.set_audience(&["my-googleclientid1234.apps.googleusercontent.com"]);
 
-        let res = validate(deserialize_claims(&claims), &validation);
+        let res = validate(deserialize_claims(&claims), &validation, get_current_timestamp());
         assert!(res.is_ok());
     }
 }
