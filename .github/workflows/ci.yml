@@ -60,3 +60,18 @@ jobs:
 
     - name: Run tests no features
       run: cargo test --no-default-features
+
+  wasm:
+    name: Run tests in wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Run tests default features
+        run: cargo test --target wasm32-unknown-unknown
+
+      - name: Run tests no features
+        run: cargo test --no-default-features --target wasm32-unknown-unknown
