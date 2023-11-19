@@ -9,16 +9,23 @@ homepage = "https://github.com/Keats/jsonwebtoken"
 repository = "https://github.com/Keats/jsonwebtoken"
 keywords = ["jwt", "api", "token", "jwk"]
 edition = "2021"
-include = ["src/**/*", "benches/**/*", "tests/**/*", "LICENSE", "README.md", "CHANGELOG.md"]
+include = [
+    "src/**/*",
+    "benches/**/*",
+    "tests/**/*",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+]
 rust-version = "1.67.0"
 
 [dependencies]
 serde_json = "1.0"
-serde = {version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
 base64 = "0.21.0"
 # For PEM decoding
-pem = {version = "3", optional = true}
-simple_asn1 = {version = "0.6", optional = true}
+pem = { version = "3", optional = true }
+simple_asn1 = { version = "0.6", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ring = { version = "0.17.4", features = ["std"] }
@@ -31,11 +38,20 @@ ring = { version = "0.17.4", features = ["std", "wasm32_unknown_unknown_js"] }
 [dev-dependencies]
 # For the custom time example
 time = "0.3"
+wasm-bindgen-test = "0.3.1"
+
+[target.'cfg(not(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi")))))'.dev-dependencies]
 criterion = "0.4"
+
+[target.'cfg(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi"))))'.dev-dependencies]
+criterion = { version = "0.4", default-features = false }
 
 [features]
 default = ["use_pem"]
 use_pem = ["pem", "simple_asn1"]
+
+# Enable wasm support.
+wasm = ["time/wasm-bindgen", "ring/wasm32_unknown_unknown_js"]
 
 [[bench]]
 name = "jwt"
