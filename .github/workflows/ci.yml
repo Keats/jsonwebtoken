@@ -71,7 +71,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Run tests default features
-        run: wasm-pack test --node --features "wasm"
+        run: wasm-pack test --node
 
       - name: Run tests no features
-        run: wasm-pack test --node --no-default-features --features "wasm"
+        run: wasm-pack test --node --no-default-features

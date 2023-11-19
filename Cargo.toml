@@ -30,28 +30,26 @@ simple_asn1 = { version = "0.6", optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ring = { version = "0.17.4", features = ["std"] }
 
-
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
 ring = { version = "0.17.4", features = ["std", "wasm32_unknown_unknown_js"] }
 
 [dev-dependencies]
-# For the custom time example
-time = "0.3"
 wasm-bindgen-test = "0.3.1"
 
 [target.'cfg(not(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi")))))'.dev-dependencies]
+# For the custom time example
+time = "0.3"
 criterion = "0.4"
 
 [target.'cfg(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi"))))'.dev-dependencies]
+# For the custom time example
+time = { version = "0.3", features = ["wasm-bindgen"] }
 criterion = { version = "0.4", default-features = false }
 
 [features]
 default = ["use_pem"]
 use_pem = ["pem", "simple_asn1"]
-
-# Enable wasm support.
-wasm = ["time/wasm-bindgen", "ring/wasm32_unknown_unknown_js"]
 
 [[bench]]
 name = "jwt"
