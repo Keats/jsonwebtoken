@@ -75,3 +75,4 @@ jobs:
 
       - name: Run tests no features
         run: wasm-pack test --node --no-default-features
+

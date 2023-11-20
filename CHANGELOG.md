@@ -1,5 +1,10 @@
 # Changelog
 
+## 9.2.0 (2023-11-07)
+
+- Add an option to not validate `aud` in the Validation struct
+- Get the current timestamp in wasm without using std
+
 ## 9.1.0 (2023-10-21)
 
 - Supports deserialization of unsupported algorithms for JWKs
