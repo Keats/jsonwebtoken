@@ -6,6 +6,7 @@ use jsonwebtoken::{
 };
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+use wasm_bindgen_test::wasm_bindgen_test;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -15,6 +16,7 @@ pub struct Claims {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn sign_hs256() {
     let result =
         sign(b"hello world", &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
@@ -23,6 +25,7 @@ fn sign_hs256() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn verify_hs256() {
     let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
     let valid = verify(sig, b"hello world", &DecodingKey::from_secret(b"secret"), Algorithm::HS256)
@@ -31,6 +34,7 @@ fn verify_hs256() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn encode_with_custom_header() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
@@ -50,6 +54,7 @@ fn encode_with_custom_header() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn round_trip_claim() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
@@ -69,6 +74,7 @@ fn round_trip_claim() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn decode_token() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
     let claims = decode::<Claims>(
@@ -81,6 +87,7 @@ fn decode_token() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 #[should_panic(expected = "InvalidToken")]
 fn decode_token_missing_parts() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
@@ -93,6 +100,7 @@ fn decode_token_missing_parts() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 #[should_panic(expected = "InvalidSignature")]
 fn decode_token_invalid_signature() {
     let token =
@@ -106,6 +114,7 @@ fn decode_token_invalid_signature() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 #[should_panic(expected = "InvalidAlgorithm")]
 fn decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
@@ -118,6 +127,7 @@ fn decode_token_wrong_algorithm() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 #[should_panic(expected = "InvalidAlgorithm")]
 fn encode_wrong_alg_family() {
     let my_claims = Claims {
@@ -130,6 +140,7 @@ fn encode_wrong_alg_family() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn decode_token_with_bytes_secret() {
     let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
     let claims = decode::<Claims>(
@@ -141,6 +152,7 @@ fn decode_token_with_bytes_secret() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn decode_header_only() {
     let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjb21wYW55IjoiMTIzNDU2Nzg5MCIsInN1YiI6IkpvaG4gRG9lIn0.S";
     let header = decode_header(token).unwrap();
@@ -149,6 +161,7 @@ fn decode_header_only() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn dangerous_insecure_decode_valid_token() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
     let mut validation = Validation::new(Algorithm::HS256);
@@ -158,6 +171,7 @@ fn dangerous_insecure_decode_valid_token() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn dangerous_insecure_decode_token_invalid_signature() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.wrong";
     let mut validation = Validation::new(Algorithm::HS256);
@@ -167,6 +181,7 @@ fn dangerous_insecure_decode_token_invalid_signature() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn dangerous_insecure_decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
     let mut validation = Validation::new(Algorithm::HS256);
@@ -176,6 +191,7 @@ fn dangerous_insecure_decode_token_wrong_algorithm() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjk1MzI1MjQ4OX0.ONtEUTtP1QmyksYH9ijtPCaXoHjZVHcHKZGX1DuJyPiSyKlT93Y-oKgrp_OSkHSu4huxCcVObLzwsdwF-xwiAQ";
     let mut validation = Validation::new(Algorithm::HS256);
@@ -186,6 +202,7 @@ fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn verify_hs256_rfc7517_appendix_a1() {
     #[derive(Debug, PartialEq, Eq, Clone, Deserialize)]
     struct C {
