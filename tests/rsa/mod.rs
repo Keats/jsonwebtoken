@@ -30,7 +30,6 @@ pub struct Claims {
 #[test]
 #[wasm_bindgen_test]
 fn round_trip_sign_verification_pem_pkcs1() {
-
     let privkey_pem = include_bytes!("private_rsa_key_pkcs1.pem");
     let pubkey_pem = include_bytes!("public_rsa_key_pkcs1.pem");
     let certificate_pem = include_bytes!("certificate_rsa_key_pkcs1.crt");
