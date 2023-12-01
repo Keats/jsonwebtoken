@@ -1,6 +1,6 @@
 # Changelog
 
-## 9.2.0 (2023-11-07)
+## 9.2.0 (2023-12-01)
 
 - Add an option to not validate `aud` in the Validation struct
 - Get the current timestamp in wasm without using std
