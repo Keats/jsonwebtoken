@@ -4,6 +4,7 @@
 
 - Add an option to not validate `aud` in the Validation struct
 - Get the current timestamp in wasm without using std
+- Update ring to 0.17
 
 ## 9.1.0 (2023-10-21)
 
