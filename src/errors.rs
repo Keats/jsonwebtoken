@@ -179,9 +179,12 @@ impl From<ErrorKind> for Error {
 
 #[cfg(test)]
 mod tests {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use super::*;
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_error_rendering() {
         assert_eq!(
             "InvalidAlgorithmName",

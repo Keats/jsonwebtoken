@@ -84,9 +84,12 @@ impl Algorithm {
 
 #[cfg(test)]
 mod tests {
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use super::*;
 
     #[test]
+    #[wasm_bindgen_test]
     fn generate_algorithm_enum_from_str() {
         assert!(Algorithm::from_str("HS256").is_ok());
         assert!(Algorithm::from_str("HS384").is_ok());

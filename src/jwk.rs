@@ -439,8 +439,10 @@ mod tests {
     use crate::serialization::b64_encode;
     use crate::Algorithm;
     use serde_json::json;
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     #[test]
+    #[wasm_bindgen_test]
     fn check_hs256() {
         let key = b64_encode("abcdefghijklmnopqrstuvwxyz012345");
         let jwks_json = json!({

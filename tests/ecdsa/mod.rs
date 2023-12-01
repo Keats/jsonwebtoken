@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use jsonwebtoken::{decode, encode, Header, Validation};
 #[cfg(feature = "use_pem")]
 use time::OffsetDateTime;
+use wasm_bindgen_test::wasm_bindgen_test;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -17,6 +18,7 @@ pub struct Claims {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn round_trip_sign_verification_pk8() {
     let privkey = include_bytes!("private_ecdsa_key.pk8");
     let pubkey = include_bytes!("public_ecdsa_key.pk8");
@@ -31,6 +33,7 @@ fn round_trip_sign_verification_pk8() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn round_trip_sign_verification_pem() {
     let privkey_pem = include_bytes!("private_ecdsa_key.pem");
     let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
@@ -49,6 +52,7 @@ fn round_trip_sign_verification_pem() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn round_trip_claim() {
     let privkey_pem = include_bytes!("private_ecdsa_key.pem");
     let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
@@ -74,6 +78,7 @@ fn round_trip_claim() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn ec_x_y() {
     let privkey = include_str!("private_ecdsa_key.pem");
     let my_claims = Claims {
@@ -100,6 +105,7 @@ fn ec_x_y() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn ed_jwk() {
     use jsonwebtoken::jwk::Jwk;
     use serde_json::json;
@@ -138,6 +144,7 @@ fn ed_jwk() {
 // https://jwt.io/ is often used for examples so ensure their example works with jsonwebtoken
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn roundtrip_with_jwtio_example() {
     // We currently do not support SEC1 so we use the converted PKCS8 formatted
     let privkey_pem = include_bytes!("private_jwtio_pkcs8.pem");

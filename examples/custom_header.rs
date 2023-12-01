@@ -7,7 +7,7 @@ use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, 
 struct Claims {
     sub: String,
     company: String,
-    exp: usize,
+    exp: u64,
 }
 
 fn main() {
