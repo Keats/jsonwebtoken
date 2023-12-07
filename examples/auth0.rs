@@ -27,6 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Algorithm::from_str(j.common.key_algorithm.unwrap().to_string().as_str())
                         .unwrap(),
                 );
+                validation.set_audience(&["https://dev-duzyayk4.eu.auth0.com/api/v2/"]);
                 validation.validate_exp = false;
                 let decoded_token =
                     decode::<HashMap<String, serde_json::Value>>(TOKEN, &decoding_key, &validation)
