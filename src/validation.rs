@@ -286,6 +286,11 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         // processing the claim does not identify itself with a value in the
         // "aud" claim when this claim is present, then the JWT MUST be
         //  rejected.
+        (TryParse::Parsed(Audience::Multiple(aud)), None) => {
+            if !aud.is_empty() {
+                return Err(new_error(ErrorKind::InvalidAudience));
+            }
+        }
         (TryParse::Parsed(_), None) => {
             return Err(new_error(ErrorKind::InvalidAudience));
         }
