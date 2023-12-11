@@ -18,6 +18,7 @@ pub struct EncodingKey {
 }
 
 impl EncodingKey {
+    /// The algorithm family this key is for.
     pub fn family(&self) -> AlgorithmFamily {
         self.family
     }

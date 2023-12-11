@@ -14,12 +14,22 @@ impl AlgorithmFamily {
     pub fn algorithms(&self) -> &[Algorithm] {
         match self {
             Self::Hmac => &[Algorithm::HS256, Algorithm::HS384, Algorithm::HS512],
-            Self::Rsa => &[Algorithm::RS256, Algorithm::RS384, Algorithm::RS512, Algorithm::PS256, Algorithm::PS384, Algorithm::PS384, Algorithm::PS512],
+            Self::Rsa => &[
+                Algorithm::RS256,
+                Algorithm::RS384,
+                Algorithm::RS512,
+                Algorithm::PS256,
+                Algorithm::PS384,
+                Algorithm::PS384,
+                Algorithm::PS512,
+            ],
             Self::Ec => &[Algorithm::ES256, Algorithm::ES384],
             Self::Ed => &[Algorithm::EdDSA],
         }
     }
 }
+
+
 
 /// The algorithms supported for signing/verifying JWTs
 #[allow(clippy::upper_case_acronyms)]

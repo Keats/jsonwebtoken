@@ -56,6 +56,7 @@ pub struct DecodingKey {
 }
 
 impl DecodingKey {
+    /// The algorithm family this key is for.
     pub fn family(&self) -> AlgorithmFamily {
         self.family
     }
