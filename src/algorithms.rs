@@ -11,6 +11,7 @@ pub enum AlgorithmFamily {
 }
 
 impl AlgorithmFamily {
+    /// A list of all possible Algorithms that are part of the family.
     pub fn algorithms(&self) -> &[Algorithm] {
         match self {
             Self::Hmac => &[Algorithm::HS256, Algorithm::HS384, Algorithm::HS512],
