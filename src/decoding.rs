@@ -56,6 +56,10 @@ pub struct DecodingKey {
 }
 
 impl DecodingKey {
+    pub fn family(&self) -> AlgorithmFamily {
+        self.family
+    }
+    
     /// If you're using HMAC, use this.
     pub fn from_secret(secret: &[u8]) -> Self {
         DecodingKey {

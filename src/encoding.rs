@@ -18,6 +18,10 @@ pub struct EncodingKey {
 }
 
 impl EncodingKey {
+    pub fn family(&self) -> AlgorithmFamily {
+        self.family
+    }
+    
     /// If you're using a HMAC secret that is not base64, use that.
     pub fn from_secret(secret: &[u8]) -> Self {
         EncodingKey { family: AlgorithmFamily::Hmac, content: secret.to_vec() }
