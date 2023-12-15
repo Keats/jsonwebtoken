@@ -251,7 +251,7 @@ pub struct CommonParameters {
     #[serde(rename = "kid", skip_serializing_if = "Option::is_none", default)]
     pub key_id: Option<String>,
 
-    /// X.509 Public key cerfificate URL. This is currently not implemented (correctly).
+    /// X.509 Public key certificate URL. This is currently not implemented (correctly).
     ///
     /// Serialized to `x5u`.
     #[serde(rename = "x5u", skip_serializing_if = "Option::is_none")]
@@ -412,7 +412,7 @@ pub struct Jwk {
 }
 
 impl Jwk {
-    /// Find whether the Algorithm is implmented and supported
+    /// Find whether the Algorithm is implemented and supported
     pub fn is_supported(&self) -> bool {
         self.common.key_algorithm.unwrap().to_algorithm().is_ok()
     }
