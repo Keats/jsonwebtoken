@@ -64,6 +64,16 @@ pub struct Header {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "x5t#S256")]
     pub x5t_s256: Option<String>,
+    /// ACME: The URL to which this JWS object is directed
+    ///
+    /// Defined in [RFC8555#6.4](https://datatracker.ietf.org/doc/html/rfc8555#section-6.4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    /// ACME: Random data for preventing replay attacks.
+    ///
+    /// Defined in [RFC8555#6.5.2](https://datatracker.ietf.org/doc/html/rfc8555#section-6.5.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
 }
 
 impl Header {
@@ -80,6 +90,8 @@ impl Header {
             x5c: None,
             x5t: None,
             x5t_s256: None,
+            url: None,
+            nonce: None,
         }
     }
 

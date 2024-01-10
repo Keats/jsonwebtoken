@@ -6,6 +6,7 @@ use crate::crypto::verify;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 use crate::jwk::{AlgorithmParameters, Jwk};
+use crate::jws::Jws;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, DecodedJwtPartClaims};
@@ -285,4 +286,59 @@ pub fn decode_header(token: &str) -> Result<Header> {
     let (_, message) = expect_two!(token.rsplitn(2, '.'));
     let (_, header) = expect_two!(message.rsplitn(2, '.'));
     Header::from_encoded(header)
+}
+
+/// Verify signature of a JWS, and return the header object
+///
+/// If the token or its signature is invalid, it will return an error.
+fn verify_jws_signature<T>(
+    jws: &Jws<T>,
+    key: &DecodingKey,
+    validation: &Validation,
+) -> Result<Header> {
+    if validation.validate_signature && validation.algorithms.is_empty() {
+        return Err(new_error(ErrorKind::MissingAlgorithm));
+    }
+
+    if validation.validate_signature {
+        for alg in &validation.algorithms {
+            if key.family != alg.family() {
+                return Err(new_error(ErrorKind::InvalidAlgorithm));
+            }
+        }
+    }
+
+    let header = Header::from_encoded(&jws.protected)?;
+
+    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+
+    let message = [jws.protected.as_str(), jws.payload.as_str()].join(".");
+
+    if validation.validate_signature
+        && !verify(&jws.signature, message.as_bytes(), key, header.alg)?
+    {
+        return Err(new_error(ErrorKind::InvalidSignature));
+    }
+
+    Ok(header)
+}
+
+/// Validate a received JWS and decode into the header and claims.
+pub fn decode_jws<T: DeserializeOwned>(
+    jws: &Jws<T>,
+    key: &DecodingKey,
+    validation: &Validation,
+) -> Result<TokenData<T>> {
+    match verify_jws_signature(jws, key, validation) {
+        Err(e) => Err(e),
+        Ok(header) => {
+            let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(&jws.payload)?;
+            let claims = decoded_claims.deserialize()?;
+            validate(decoded_claims.deserialize()?, validation)?;
+
+            Ok(TokenData { header, claims })
+        }
+    }
 }
