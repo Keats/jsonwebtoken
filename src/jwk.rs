@@ -423,12 +423,25 @@ impl Jwk {
         self.common.key_algorithm.unwrap().to_algorithm().is_ok()
     }
 
-    pub fn from_encoding_key(
-        key: &EncodingKey,
-        algorithm: Algorithm,
-    ) -> crate::errors::Result<Self> {
+    pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> crate::errors::Result<Self> {
         Ok(Self {
-            common: CommonParameters::default(),
+            common: CommonParameters {
+                key_algorithm: Some(match alg {
+                    Algorithm::HS256 => KeyAlgorithm::HS256,
+                    Algorithm::HS384 => KeyAlgorithm::HS384,
+                    Algorithm::HS512 => KeyAlgorithm::HS512,
+                    Algorithm::ES256 => KeyAlgorithm::ES256,
+                    Algorithm::ES384 => KeyAlgorithm::ES384,
+                    Algorithm::RS256 => KeyAlgorithm::RS256,
+                    Algorithm::RS384 => KeyAlgorithm::RS384,
+                    Algorithm::RS512 => KeyAlgorithm::RS512,
+                    Algorithm::PS256 => KeyAlgorithm::PS256,
+                    Algorithm::PS384 => KeyAlgorithm::PS384,
+                    Algorithm::PS512 => KeyAlgorithm::PS512,
+                    Algorithm::EdDSA => KeyAlgorithm::EdDSA,
+                }),
+                ..Default::default()
+            },
             algorithm: match key.family {
                 crate::algorithms::AlgorithmFamily::Hmac => {
                     AlgorithmParameters::OctetKey(OctetKeyParameters {
@@ -451,7 +464,7 @@ impl Jwk {
                 crate::algorithms::AlgorithmFamily::Ec => {
                     let rng = rand::SystemRandom::new();
                     let key_pair = signature::EcdsaKeyPair::from_pkcs8(
-                        alg_to_ec_signing(algorithm),
+                        alg_to_ec_signing(alg),
                         &key.content,
                         &rng,
                     )?;
@@ -459,7 +472,7 @@ impl Jwk {
                     // it's private and not exposed via any methods AFAICT.
                     let pub_elem_bytes;
                     let curve;
-                    match algorithm {
+                    match alg {
                         Algorithm::ES256 => {
                             pub_elem_bytes = 32;
                             curve = EllipticCurve::P256;
