@@ -202,14 +202,13 @@ impl DecodingKey {
     }
 }
 
-/// Verify signature of a JWT, and return header object and raw payload
-///
-/// If the token or its signature is invalid, it will return an error.
-fn verify_signature<'a>(
-    token: &'a str,
+fn verify_signature_body(
+    header: &Header,
+    message: &str,
+    signature: &str,
     key: &DecodingKey,
     validation: &Validation,
-) -> Result<(Header, &'a str)> {
+) -> Result<()> {
     if validation.validate_signature && validation.algorithms.is_empty() {
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
@@ -222,10 +221,6 @@ fn verify_signature<'a>(
         }
     }
 
-    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
-    let header = Header::from_encoded(header)?;
-
     if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
@@ -233,6 +228,23 @@ fn verify_signature<'a>(
     if validation.validate_signature && !verify(signature, message.as_bytes(), key, header.alg)? {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
+
+    return Ok(());
+}
+
+/// Verify signature of a JWT, and return header object and raw payload
+///
+/// If the token or its signature is invalid, it will return an error.
+fn verify_signature<'a>(
+    token: &'a str,
+    key: &DecodingKey,
+    validation: &Validation,
+) -> Result<(Header, &'a str)> {
+    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
+    let header = Header::from_encoded(header)?;
+
+    verify_signature_body(&header, message, signature, key, validation)?;
 
     Ok((header, payload))
 }
@@ -296,31 +308,10 @@ fn verify_jws_signature<T>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<Header> {
-    if validation.validate_signature && validation.algorithms.is_empty() {
-        return Err(new_error(ErrorKind::MissingAlgorithm));
-    }
-
-    if validation.validate_signature {
-        for alg in &validation.algorithms {
-            if key.family != alg.family() {
-                return Err(new_error(ErrorKind::InvalidAlgorithm));
-            }
-        }
-    }
-
     let header = Header::from_encoded(&jws.protected)?;
-
-    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
-        return Err(new_error(ErrorKind::InvalidAlgorithm));
-    }
-
     let message = [jws.protected.as_str(), jws.payload.as_str()].join(".");
 
-    if validation.validate_signature
-        && !verify(&jws.signature, message.as_bytes(), key, header.alg)?
-    {
-        return Err(new_error(ErrorKind::InvalidSignature));
-    }
+    verify_signature_body(&header, &message, &jws.signature, key, validation)?;
 
     Ok(header)
 }
