@@ -22,3 +22,7 @@ pub use decoding::{decode, decode_header, DecodingKey, TokenData};
 pub use encoding::{encode, EncodingKey};
 pub use header::Header;
 pub use validation::{get_current_timestamp, Validation};
+
+pub use ring::digest::SHA256 as DIGEST_SHA256;
+pub use ring::digest::SHA384 as DIGEST_SHA384;
+pub use ring::digest::SHA512 as DIGEST_SHA512;

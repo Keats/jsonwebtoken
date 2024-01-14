@@ -6,9 +6,11 @@
 
 use crate::{
     errors::{self, Error, ErrorKind},
+    serialization::b64_encode,
     Algorithm,
 };
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::json;
 use std::{fmt, str::FromStr};
 
 /// The intended usage of the public `KeyType`. This enum is serialized `untagged`
@@ -416,6 +418,55 @@ impl Jwk {
     pub fn is_supported(&self) -> bool {
         self.common.key_algorithm.unwrap().to_algorithm().is_ok()
     }
+
+    /// Compute the thumbprint of the JWK.
+    ///
+    /// Per (RFC-7638)[https://datatracker.ietf.org/doc/html/rfc7638]
+    pub fn thumbprint(&self, hash_function: &'static ring::digest::Algorithm) -> String {
+        let pre = match &self.algorithm {
+            AlgorithmParameters::EllipticCurve(a) => match a.curve {
+                EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
+                    format!(
+                        r#"{{"crv":{},"kty":{},"x":"{}","y":"{}"}}"#,
+                        serde_json::to_string(&a.curve).unwrap(),
+                        serde_json::to_string(&a.key_type).unwrap(),
+                        a.x,
+                        a.y,
+                    )
+                }
+                EllipticCurve::Ed25519 => panic!("EllipticCurve can't contain this curve type"),
+            },
+            AlgorithmParameters::RSA(a) => {
+                format!(
+                    r#"{{"e":"{}","kty":{},"n":"{}"}}"#,
+                    a.e,
+                    serde_json::to_string(&a.key_type).unwrap(),
+                    a.n,
+                )
+            }
+            AlgorithmParameters::OctetKey(a) => {
+                format!(
+                    r#"{{"k":"{}","kty":{}}}"#,
+                    a.value,
+                    serde_json::to_string(&a.key_type).unwrap()
+                )
+            }
+            AlgorithmParameters::OctetKeyPair(a) => match a.curve {
+                EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
+                    panic!("OctetKeyPair can't contain this curve type")
+                }
+                EllipticCurve::Ed25519 => {
+                    format!(
+                        r#"{{crv:{},"kty":{},"x":"{}"}}"#,
+                        serde_json::to_string(&a.curve).unwrap(),
+                        serde_json::to_string(&a.key_type).unwrap(),
+                        a.x,
+                    )
+                }
+            },
+        };
+        return b64_encode(ring::digest::digest(hash_function, &pre.as_bytes()));
+    }
 }
 
 /// A JWK set
@@ -435,7 +486,7 @@ impl JwkSet {
 
 #[cfg(test)]
 mod tests {
-    use crate::jwk::{AlgorithmParameters, JwkSet, OctetKeyType};
+    use crate::jwk::{AlgorithmParameters, Jwk, JwkSet, OctetKeyType, RSAKeyParameters};
     use crate::serialization::b64_encode;
     use crate::Algorithm;
     use serde_json::json;
@@ -470,5 +521,20 @@ mod tests {
             }
             _ => panic!("Unexpected key algorithm"),
         }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn check_thumbprint() {
+        let tp = Jwk {
+            common: crate::jwk::CommonParameters { key_id: Some("2011-04-29".to_string()), ..Default::default() },
+            algorithm: AlgorithmParameters::RSA(RSAKeyParameters {
+                key_type: crate::jwk::RSAKeyType::RSA,
+                n: "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw".to_string(),
+                e: "AQAB".to_string(),
+            }),
+        }
+        .thumbprint(&ring::digest::SHA256);
+        assert_eq!(tp.as_str(), "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
     }
 }

@@ -146,6 +146,14 @@ let token = decode::<Claims>(&token, &DecodingKey::from_rsa_components(jwk["n"],
 If your key is in PEM format, it is better performance wise to generate the `DecodingKey` once in a `lazy_static` or
 something similar and reuse it.
 
+### JWK Thumbprints
+
+If you have a JWK object, you can generate a thumbprint like
+
+```
+let tp = my_jwk.thumbprint(&jsonwebtoken::DIGEST_SHA256);
+```
+
 ### Convert SEC1 private key to PKCS8
 `jsonwebtoken` currently only supports PKCS8 format for private EC keys. If your key has `BEGIN EC PRIVATE KEY` at the top,
 this is a SEC1 type and can be converted to PKCS8 like so:
