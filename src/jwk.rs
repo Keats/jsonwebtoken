@@ -10,7 +10,6 @@ use crate::{
     Algorithm,
 };
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::json;
 use std::{fmt, str::FromStr};
 
 /// The intended usage of the public `KeyType`. This enum is serialized `untagged`
@@ -404,6 +403,13 @@ pub enum AlgorithmParameters {
     OctetKeyPair(OctetKeyPairParameters),
 }
 
+/// The function to use to hash the intermediate thumbprint data.
+pub enum ThumbprintHash {
+    SHA256,
+    SHA384,
+    SHA512
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct Jwk {
     #[serde(flatten)]
@@ -422,7 +428,12 @@ impl Jwk {
     /// Compute the thumbprint of the JWK.
     ///
     /// Per (RFC-7638)[https://datatracker.ietf.org/doc/html/rfc7638]
-    pub fn thumbprint(&self, hash_function: &'static ring::digest::Algorithm) -> String {
+    pub fn thumbprint(&self, hash_function: ThumbprintHash) -> String {
+        let hash_function = match hash_function {
+            ThumbprintHash::SHA256 => &ring::digest::SHA256,
+            ThumbprintHash::SHA384 => &ring::digest::SHA384,
+            ThumbprintHash::SHA512 => &ring::digest::SHA512,
+        };
         let pre = match &self.algorithm {
             AlgorithmParameters::EllipticCurve(a) => match a.curve {
                 EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
@@ -465,7 +476,7 @@ impl Jwk {
                 }
             },
         };
-        return b64_encode(ring::digest::digest(hash_function, &pre.as_bytes()));
+        return b64_encode(ring::digest::digest(hash_function, pre.as_bytes()));
     }
 }
 
@@ -486,7 +497,7 @@ impl JwkSet {
 
 #[cfg(test)]
 mod tests {
-    use crate::jwk::{AlgorithmParameters, Jwk, JwkSet, OctetKeyType, RSAKeyParameters};
+    use crate::jwk::{AlgorithmParameters, Jwk, JwkSet, OctetKeyType, RSAKeyParameters, ThumbprintHash};
     use crate::serialization::b64_encode;
     use crate::Algorithm;
     use serde_json::json;
@@ -534,7 +545,7 @@ mod tests {
                 e: "AQAB".to_string(),
             }),
         }
-        .thumbprint(&ring::digest::SHA256);
+        .thumbprint(ThumbprintHash::SHA256);
         assert_eq!(tp.as_str(), "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
     }
 }
