@@ -229,7 +229,7 @@ fn verify_signature_body(
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// Verify signature of a JWT, and return header object and raw payload

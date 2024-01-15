@@ -153,7 +153,7 @@ pub fn encode_jws<T: Serialize>(
     Ok(Jws {
         protected: encoded_header,
         payload: encoded_claims,
-        signature: signature,
+        signature,
         _pd: Default::default(),
     })
 }

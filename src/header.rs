@@ -8,13 +8,13 @@ use crate::errors::Result;
 use crate::jwk::Jwk;
 use crate::serialization::b64_decode;
 
-const ZIP_SERIAL_DEFLATE: &'static str = "DEF";
-const ENC_A128CBC_HS256: &'static str = "A128CBC-HS256";
-const ENC_A192CBC_HS384: &'static str = "A192CBC-HS384";
-const ENC_A256CBC_HS512: &'static str = "A256CBC-HS512";
-const ENC_A128GCM: &'static str = "A128GCM";
-const ENC_A192GCM: &'static str = "A192GCM";
-const ENC_A256GCM: &'static str = "A256GCM";
+const ZIP_SERIAL_DEFLATE: &str = "DEF";
+const ENC_A128CBC_HS256: &str = "A128CBC-HS256";
+const ENC_A192CBC_HS384: &str = "A192CBC-HS384";
+const ENC_A256CBC_HS512: &str = "A256CBC-HS512";
+const ENC_A128GCM: &str = "A128GCM";
+const ENC_A192GCM: &str = "A192GCM";
+const ENC_A256GCM: &str = "A256GCM";
 
 /// Encryption algorithm for encrypted payloads.
 ///
@@ -22,7 +22,7 @@ const ENC_A256GCM: &'static str = "A256GCM";
 ///
 /// Values defined in [RFC7518#5.1](https://datatracker.ietf.org/doc/html/rfc7518#section-5.1).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[allow(clippy::upper_case_acronyms)]
+#[allow(clippy::upper_case_acronyms, non_camel_case_types)]
 pub enum Enc {
     A128CBC_HS256,
     A192CBC_HS384,
@@ -98,10 +98,9 @@ impl<'de> Deserialize<'de> for Zip {
     {
         let s = String::deserialize(deserializer)?;
         match s.as_str() {
-            ZIP_SERIAL_DEFLATE => return Ok(Zip::Deflate),
-            _ => (),
+            ZIP_SERIAL_DEFLATE => Ok(Zip::Deflate),
+            _ => Ok(Zip::Other(s)),
         }
-        Ok(Zip::Other(s))
     }
 }
 
