@@ -490,7 +490,7 @@ impl Jwk {
                     let (x, y) = pub_bytes[1..].split_at(pub_elem_bytes);
                     AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
                         key_type: EllipticCurveKeyType::EC,
-                        curve: curve,
+                        curve,
                         x: b64_encode(x),
                         y: b64_encode(y),
                     })
