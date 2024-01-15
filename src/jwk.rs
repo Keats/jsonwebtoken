@@ -407,7 +407,7 @@ pub enum AlgorithmParameters {
 pub enum ThumbprintHash {
     SHA256,
     SHA384,
-    SHA512
+    SHA512,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
@@ -497,7 +497,9 @@ impl JwkSet {
 
 #[cfg(test)]
 mod tests {
-    use crate::jwk::{AlgorithmParameters, Jwk, JwkSet, OctetKeyType, RSAKeyParameters, ThumbprintHash};
+    use crate::jwk::{
+        AlgorithmParameters, Jwk, JwkSet, OctetKeyType, RSAKeyParameters, ThumbprintHash,
+    };
     use crate::serialization::b64_encode;
     use crate::Algorithm;
     use serde_json::json;
