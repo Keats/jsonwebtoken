@@ -5,6 +5,7 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
+use crate::jws::Jws;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::b64_encode_part;
@@ -128,4 +129,31 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
     let signature = crypto::sign(message.as_bytes(), key, header.alg)?;
 
     Ok([message, signature].join("."))
+}
+
+/// Encode the header and claims given and sign the payload using the algorithm from the header and the key.
+/// If the algorithm given is RSA or EC, the key needs to be in the PEM format. This produces a JWS instead of
+/// a JWT -- usage is similar to `encode`, see that for more details.
+pub fn encode_jws<T: Serialize>(
+    header: &Header,
+    claims: Option<&T>,
+    key: &EncodingKey,
+) -> Result<Jws<T>> {
+    if key.family != header.alg.family() {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+    let encoded_header = b64_encode_part(header)?;
+    let encoded_claims = match claims {
+        Some(claims) => b64_encode_part(claims)?,
+        None => "".to_string(),
+    };
+    let message = [encoded_header.as_str(), encoded_claims.as_str()].join(".");
+    let signature = crypto::sign(message.as_bytes(), key, header.alg)?;
+
+    Ok(Jws {
+        protected: encoded_header,
+        payload: encoded_claims,
+        signature,
+        _pd: Default::default(),
+    })
 }
