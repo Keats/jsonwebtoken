@@ -160,6 +160,14 @@ my_claims = decode_jws(&encoded, &DecodingKey::from_secret("secret".as_ref()), &
 The generic parameter in `Jws<C>` indicates the claims type and prevents accidentally encoding or decoding the wrong claims type
 when the Jws is nested in another struct.
 
+### JWK Thumbprints
+
+If you have a JWK object, you can generate a thumbprint like
+
+```
+let tp = my_jwk.thumbprint(&jsonwebtoken::DIGEST_SHA256);
+```
+
 ### Convert SEC1 private key to PKCS8
 `jsonwebtoken` currently only supports PKCS8 format for private EC keys. If your key has `BEGIN EC PRIVATE KEY` at the top,
 this is a SEC1 type and can be converted to PKCS8 like so:
