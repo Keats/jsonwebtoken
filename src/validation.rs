@@ -17,7 +17,8 @@ use crate::errors::{new_error, ErrorKind, Result};
 /// use jsonwebtoken::{Validation, Algorithm};
 ///
 /// let mut validation = Validation::new(Algorithm::HS256);
-/// validation.leeway = 5;
+/// validation.exp_leeway = 5;
+/// validation.nbf_leeway = 5;
 /// // Setting audience
 /// validation.set_audience(&["Me"]); // a single string
 /// validation.set_audience(&["Me", "You"]); // array of strings
@@ -34,11 +35,16 @@ pub struct Validation {
     ///
     /// Defaults to `{"exp"}`
     pub required_spec_claims: HashSet<String>,
-    /// Add some leeway (in seconds) to the `exp` and `nbf` validation to
+    /// Add some leeway (in seconds) to the `exp` validation to
     /// account for clock skew.
     ///
     /// Defaults to `60`.
-    pub leeway: u64,
+    pub exp_leeway: i64,
+    /// Add some leeway (in seconds) to the `nbf` validation to
+    /// account for clock skew.
+    ///
+    /// Defaults to `60`.
+    pub nbf_leeway: i64,
     /// Whether to validate the `exp` field.
     ///
     /// It will return an error if the time in the `exp` field is past.
@@ -93,7 +99,8 @@ impl Validation {
         Validation {
             required_spec_claims: required_claims,
             algorithms: vec![alg],
-            leeway: 60,
+            exp_leeway: 60,
+            nbf_leeway: 60,
 
             validate_exp: true,
             validate_nbf: false,
@@ -246,13 +253,23 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     if options.validate_exp || options.validate_nbf {
         let now = get_current_timestamp();
 
-        if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
-        {
+        let exp_bound = if options.exp_leeway.is_positive() {
+            now - (options.exp_leeway.abs() as u64)
+        } else {
+            now + (options.exp_leeway.abs() as u64)
+        };
+
+        let nbf_bound = if options.nbf_leeway.is_positive() {
+            now + (options.nbf_leeway.abs() as u64)
+        } else {
+            now - (options.nbf_leeway.abs() as u64)
+        };
+
+        if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < exp_bound) {
             return Err(new_error(ErrorKind::ExpiredSignature));
         }
 
-        if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway)
-        {
+        if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > nbf_bound) {
             return Err(new_error(ErrorKind::ImmatureSignature));
         }
     }
@@ -376,6 +393,56 @@ mod tests {
 
     #[test]
     #[wasm_bindgen_test]
+    fn exp_in_future_in_leeway_ok() {
+        let claims = json!({ "exp": get_current_timestamp() + 500 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.exp_leeway = 1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_float_in_future_in_leeway_ok() {
+        let claims = json!({ "exp": (get_current_timestamp() as f64) + 500.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.exp_leeway = 1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_in_future_outside_leeway_fails() {
+        let claims = json!({ "exp": get_current_timestamp() + 10000 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.exp_leeway = -1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ExpiredSignature => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_float_in_future_outside_leeway_fails() {
+        let claims = json!({ "exp": (get_current_timestamp() as f64) + 10000.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.exp_leeway = -1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ExpiredSignature => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn exp_in_past_fails() {
         let claims = json!({ "exp": get_current_timestamp() - 100000 });
         let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
@@ -405,9 +472,49 @@ mod tests {
     fn exp_in_past_but_in_leeway_ok() {
         let claims = json!({ "exp": get_current_timestamp() - 500 });
         let mut validation = Validation::new(Algorithm::HS256);
-        validation.leeway = 1000 * 60;
+        validation.exp_leeway = 1000 * 60;
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_float_in_past_but_in_leeway_ok() {
+        let claims = json!({ "exp": (get_current_timestamp() as f64) - 500.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.exp_leeway = 1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_in_past_but_outside_leeway_fails() {
+        let claims = json!({ "exp": get_current_timestamp() - 500 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.exp_leeway = 250;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ExpiredSignature => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_float_in_past_but_outside_leeway_fails() {
+        let claims = json!({ "exp": (get_current_timestamp() as f64) - 500.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.exp_leeway = 250;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ExpiredSignature => (),
+            _ => unreachable!(),
+        };
     }
 
     // https://github.com/Keats/jsonwebtoken/issues/51
@@ -493,8 +600,87 @@ mod tests {
 
     #[test]
     #[wasm_bindgen_test]
+    fn nbf_in_past_in_leeway_fails() {
+        let claims = json!({ "nbf": get_current_timestamp() - 10000 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = false;
+        validation.validate_nbf = true;
+        validation.nbf_leeway = 1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn nbf_float_in_past_in_leeway_fails() {
+        let claims = json!({ "nbf": (get_current_timestamp() as f64) - 10000.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = false;
+        validation.validate_nbf = true;
+        validation.nbf_leeway = 1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn nbf_in_past_outside_leeway_fails() {
+        let claims = json!({ "nbf": get_current_timestamp() - 10000 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = false;
+        validation.validate_nbf = true;
+        validation.nbf_leeway = -1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ImmatureSignature => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn nbf_float_in_past_outside_leeway_fails() {
+        let claims = json!({ "nbf": (get_current_timestamp() as f64) - 10000.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = false;
+        validation.validate_nbf = true;
+        validation.nbf_leeway = -1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ImmatureSignature => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn nbf_in_future_fails() {
         let claims = json!({ "nbf": get_current_timestamp() + 100000 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = false;
+        validation.validate_nbf = true;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ImmatureSignature => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn nbf_float_in_future_fails() {
+        let claims = json!({ "nbf": (get_current_timestamp() as f64) + 100000.123 });
         let mut validation = Validation::new(Algorithm::HS256);
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
@@ -516,9 +702,58 @@ mod tests {
         validation.required_spec_claims = HashSet::new();
         validation.validate_exp = false;
         validation.validate_nbf = true;
-        validation.leeway = 1000 * 60;
+        validation.nbf_leeway = 1000 * 60;
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn nbf_float_in_future_but_in_leeway_ok() {
+        let claims = json!({ "nbf": (get_current_timestamp() as f64) + 500.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = false;
+        validation.validate_nbf = true;
+        validation.nbf_leeway = 1000 * 60;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn nbf_in_future_but_outside_leeway_fails() {
+        let claims = json!({ "nbf": get_current_timestamp() + 500 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = false;
+        validation.validate_nbf = true;
+        validation.nbf_leeway = 250;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ImmatureSignature => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn nbf_float_in_future_but_outside_leeway_fails() {
+        let claims = json!({ "nbf": (get_current_timestamp() as f64) + 500.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.required_spec_claims = HashSet::new();
+        validation.validate_exp = false;
+        validation.validate_nbf = true;
+        validation.nbf_leeway = 250;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ImmatureSignature => (),
+            _ => unreachable!(),
+        };
     }
 
     #[test]
@@ -739,7 +974,8 @@ mod tests {
 
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["exp", "iss"]);
-        validation.leeway = 5;
+        validation.exp_leeway = 5;
+        validation.nbf_leeway = 5;
         validation.set_issuer(&["iss no check"]);
         validation.set_audience(&["iss no check"]);
 
