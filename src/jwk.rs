@@ -5,9 +5,14 @@
 //! tweaked to remove the private bits as it's not the goal for this crate currently.
 
 use crate::{
+    crypto::ecdsa::alg_to_ec_signing,
     errors::{self, Error, ErrorKind},
     serialization::b64_encode,
-    Algorithm,
+    Algorithm, EncodingKey,
+};
+use ring::{
+    rand,
+    signature::{self, KeyPair},
 };
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::{fmt, str::FromStr};
@@ -423,6 +428,85 @@ impl Jwk {
     /// Find whether the Algorithm is implemented and supported
     pub fn is_supported(&self) -> bool {
         self.common.key_algorithm.unwrap().to_algorithm().is_ok()
+    }
+
+    pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> crate::errors::Result<Self> {
+        Ok(Self {
+            common: CommonParameters {
+                key_algorithm: Some(match alg {
+                    Algorithm::HS256 => KeyAlgorithm::HS256,
+                    Algorithm::HS384 => KeyAlgorithm::HS384,
+                    Algorithm::HS512 => KeyAlgorithm::HS512,
+                    Algorithm::ES256 => KeyAlgorithm::ES256,
+                    Algorithm::ES384 => KeyAlgorithm::ES384,
+                    Algorithm::RS256 => KeyAlgorithm::RS256,
+                    Algorithm::RS384 => KeyAlgorithm::RS384,
+                    Algorithm::RS512 => KeyAlgorithm::RS512,
+                    Algorithm::PS256 => KeyAlgorithm::PS256,
+                    Algorithm::PS384 => KeyAlgorithm::PS384,
+                    Algorithm::PS512 => KeyAlgorithm::PS512,
+                    Algorithm::EdDSA => KeyAlgorithm::EdDSA,
+                }),
+                ..Default::default()
+            },
+            algorithm: match key.family {
+                crate::algorithms::AlgorithmFamily::Hmac => {
+                    AlgorithmParameters::OctetKey(OctetKeyParameters {
+                        key_type: OctetKeyType::Octet,
+                        value: b64_encode(&key.content),
+                    })
+                }
+                crate::algorithms::AlgorithmFamily::Rsa => {
+                    let key_pair = signature::RsaKeyPair::from_der(&key.content)
+                        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+                    let public = key_pair.public();
+                    let components =
+                        ring::signature::RsaPublicKeyComponents::<Vec<u8>>::from(public);
+                    AlgorithmParameters::RSA(RSAKeyParameters {
+                        key_type: RSAKeyType::RSA,
+                        n: b64_encode(components.n),
+                        e: b64_encode(components.e),
+                    })
+                }
+                crate::algorithms::AlgorithmFamily::Ec => {
+                    let rng = rand::SystemRandom::new();
+                    let key_pair = signature::EcdsaKeyPair::from_pkcs8(
+                        alg_to_ec_signing(alg),
+                        &key.content,
+                        &rng,
+                    )?;
+                    // Ring has this as `ring::ec::suite_b::curve::P384.elem_scalar_seed_len` but
+                    // it's private and not exposed via any methods AFAICT.
+                    let pub_elem_bytes;
+                    let curve;
+                    match alg {
+                        Algorithm::ES256 => {
+                            pub_elem_bytes = 32;
+                            curve = EllipticCurve::P256;
+                        }
+                        Algorithm::ES384 => {
+                            pub_elem_bytes = 48;
+                            curve = EllipticCurve::P384;
+                        }
+                        _ => unreachable!(),
+                    };
+                    let pub_bytes = key_pair.public_key().as_ref();
+                    if pub_bytes[0] != 4 {
+                        panic!("Compressed coordinates in public key!");
+                    }
+                    let (x, y) = pub_bytes[1..].split_at(pub_elem_bytes);
+                    AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
+                        key_type: EllipticCurveKeyType::EC,
+                        curve,
+                        x: b64_encode(x),
+                        y: b64_encode(y),
+                    })
+                }
+                crate::algorithms::AlgorithmFamily::Ed => {
+                    unimplemented!();
+                }
+            },
+        })
     }
 
     /// Compute the thumbprint of the JWK.

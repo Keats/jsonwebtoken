@@ -18,7 +18,7 @@ use crate::serialization::b64_encode_part;
 #[derive(Clone)]
 pub struct EncodingKey {
     pub(crate) family: AlgorithmFamily,
-    content: Vec<u8>,
+    pub(crate) content: Vec<u8>,
 }
 
 impl EncodingKey {
