@@ -1,5 +1,5 @@
 [package]
-name = "jwt_custom_header"
+name = "jsonwebtoken_for_jws"
 version = "0.0.1"
 authors = ["Vincent Prouillet <hello@vincentprouillet.com>", "Jeremiah Devine <jeremiah.devine@gmail.com"]
 license = "MIT"
