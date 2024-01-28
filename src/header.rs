@@ -64,6 +64,16 @@ pub struct Header {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "x5t#S256")]
     pub x5t_s256: Option<String>,
+    /// JWS nonce
+    ///
+    /// Defined in [RFC8555#6.5.2](https://datatracker.ietf.org/doc/html/rfc8555#autoid-14).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+    /// JWS url
+    ///
+    /// Defined in [RFC8555#6.5.1](https://datatracker.ietf.org/doc/html/rfc8555#autoid-11).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
 }
 
 impl Header {
@@ -80,6 +90,8 @@ impl Header {
             x5c: None,
             x5t: None,
             x5t_s256: None,
+            nonce: None,
+            url: None,
         }
     }
 
