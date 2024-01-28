@@ -1,13 +1,13 @@
 [package]
 name = "jsonwebtoken_for_jws"
 version = "0.0.1"
-authors = ["Vincent Prouillet <hello@vincentprouillet.com>", "Jeremiah Devine <jeremiah.devine@gmail.com"]
+authors = ["Jeremiah Devine <jeremiah.devine@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-description = "Create and decode JWTs in a strongly typed way."
-homepage = "https://github.com/Keats/jsonwebtoken"
-repository = "https://github.com/Keats/jsonwebtoken"
-keywords = ["jwt", "api", "token", "jwk"]
+description = "Create and decode JWTs with support for JWS in a strongly typed way."
+homepage = "https://github.com/drath3000/jsonwebtoken_for_jws"
+repository = "https://github.com/drath3000/jsonwebtoken_for_jws"
+keywords = ["jwt", "api", "token", "jwk", "jws"]
 edition = "2021"
 include = [
     "src/**/*",
