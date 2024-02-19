@@ -42,6 +42,8 @@ pub struct Validation {
     /// Reject a token some time (in seconds) before the `exp` to prevent
     /// expiration in transit over the network.
     ///
+    /// The value is the inverse of `leeway`, subtracting from the validation time.
+    ///
     /// Defaults to `0`.
     pub reject_tokens_expiring_in_less_than: u64,
     /// Whether to validate the `exp` field.
