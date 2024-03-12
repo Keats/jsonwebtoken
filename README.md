@@ -166,3 +166,7 @@ you can add some leeway to the `iat`, `exp`, and `nbf` validation by setting the
 Last but not least, you will need to set the algorithm(s) allowed for this token if you are not using `HS256`.
 
 Look at `examples/validation.rs` for a full working example.
+
+## FIPS compliance
+
+This library exports a feature that replaces `ring` with `aws_lc_rs` to achieve FIPS compliance. The name of the feature is `fips`.

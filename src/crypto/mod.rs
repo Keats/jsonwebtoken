@@ -1,3 +1,9 @@
+#[cfg(feature = "fips")]
+use aws_lc_rs as ring;
+
+#[cfg(not(feature = "fips"))]
+use ring;
+
 use ring::constant_time::verify_slices_are_equal;
 use ring::{hmac, signature};
 

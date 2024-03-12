@@ -1,3 +1,9 @@
+#[cfg(feature = "fips")]
+use aws_lc_rs as ring;
+
+#[cfg(not(feature = "fips"))]
+use ring;
+
 use ring::{rand, signature};
 
 use crate::algorithms::Algorithm;
@@ -41,7 +47,8 @@ pub(crate) fn sign(
     let key_pair = signature::RsaKeyPair::from_der(key)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
 
-    let mut signature = vec![0; key_pair.public().modulus_len()];
+    let mut signature = get_signature(&key_pair);
+
     let rng = rand::SystemRandom::new();
     key_pair.sign(alg, &rng, message, &mut signature).map_err(|_| ErrorKind::RsaFailedSigning)?;
 
@@ -59,4 +66,14 @@ pub(crate) fn verify_from_components(
     let pubkey = signature::RsaPublicKeyComponents { n: components.0, e: components.1 };
     let res = pubkey.verify(alg, message, &signature_bytes);
     Ok(res.is_ok())
+}
+
+#[cfg(feature = "fips")]
+fn get_signature(key_pair: &signature::RsaKeyPair) -> Vec<u8> {
+    vec![0; key_pair.public_modulus_len()]
+}
+
+#[cfg(not(feature = "fips"))]
+fn get_signature(key_pair: &signature::RsaKeyPair) -> Vec<u8> {
+    vec![0; key_pair.public().modulus_len()]
 }

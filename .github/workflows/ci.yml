@@ -60,6 +60,9 @@ jobs:
       - name: Run tests no features
         run: cargo test --no-default-features
 
+      - name: Run tests no features
+        run: cargo test --features fips
+
   wasm:
     name: Run tests in wasm
     runs-on: ubuntu-latest
