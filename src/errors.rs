@@ -41,6 +41,8 @@ pub enum ErrorKind {
     InvalidSignature,
     /// When the secret given is not a valid ECDSA key
     InvalidEcdsaKey,
+    /// When the secret given is not a valid EDDSA key
+    InvalidEddsaKey,
     /// When the secret given is not a valid RSA key
     InvalidRsaKey(String),
     /// We could not sign with the given key
@@ -76,9 +78,6 @@ pub enum ErrorKind {
     Json(Arc<serde_json::Error>),
     /// Some of the text was invalid UTF-8
     Utf8(::std::string::FromUtf8Error),
-    /// Something unspecified went wrong with crypto
-    #[cfg(not(target_arch = "wasm32"))]
-    Crypto(::ring::error::Unspecified),
 }
 
 impl StdError for Error {
@@ -102,8 +101,7 @@ impl StdError for Error {
             ErrorKind::Base64(err) => Some(err),
             ErrorKind::Json(err) => Some(err.as_ref()),
             ErrorKind::Utf8(err) => Some(err),
-            #[cfg(not(target_arch = "wasm32"))]
-            ErrorKind::Crypto(err) => Some(err),
+            ErrorKind::InvalidEddsaKey => None,
         }
     }
 }
@@ -123,13 +121,12 @@ impl fmt::Display for Error {
             | ErrorKind::ImmatureSignature
             | ErrorKind::InvalidAlgorithm
             | ErrorKind::InvalidKeyFormat
+            | ErrorKind::InvalidEddsaKey
             | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
             ErrorKind::MissingRequiredClaim(c) => write!(f, "Missing required claim: {}", c),
             ErrorKind::InvalidRsaKey(msg) => write!(f, "RSA key invalid: {}", msg),
             ErrorKind::Json(err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(err) => write!(f, "UTF-8 error: {}", err),
-            #[cfg(not(target_arch = "wasm32"))]
-            ErrorKind::Crypto(err) => write!(f, "Crypto error: {}", err),
             ErrorKind::Base64(err) => write!(f, "Base64 error: {}", err),
         }
     }
@@ -159,20 +156,6 @@ impl From<serde_json::Error> for Error {
 impl From<::std::string::FromUtf8Error> for Error {
     fn from(err: ::std::string::FromUtf8Error) -> Error {
         new_error(ErrorKind::Utf8(err))
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl From<::ring::error::Unspecified> for Error {
-    fn from(err: ::ring::error::Unspecified) -> Error {
-        new_error(ErrorKind::Crypto(err))
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl From<::ring::error::KeyRejected> for Error {
-    fn from(_err: ::ring::error::KeyRejected) -> Error {
-        new_error(ErrorKind::InvalidEcdsaKey)
     }
 }
 

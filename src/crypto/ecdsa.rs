@@ -1,38 +1,74 @@
-use ring::{rand, signature};
-
 use crate::algorithms::Algorithm;
 use crate::errors::Result;
-use crate::serialization::b64_encode;
-
-/// Only used internally when validating EC, to map from our enum to the Ring EcdsaVerificationAlgorithm structs.
-pub(crate) fn alg_to_ec_verification(
-    alg: Algorithm,
-) -> &'static signature::EcdsaVerificationAlgorithm {
-    match alg {
-        Algorithm::ES256 => &signature::ECDSA_P256_SHA256_FIXED,
-        Algorithm::ES384 => &signature::ECDSA_P384_SHA384_FIXED,
-        _ => unreachable!("Tried to get EC alg for a non-EC algorithm"),
-    }
-}
-
-/// Only used internally when signing EC, to map from our enum to the Ring EcdsaVerificationAlgorithm structs.
-pub(crate) fn alg_to_ec_signing(alg: Algorithm) -> &'static signature::EcdsaSigningAlgorithm {
-    match alg {
-        Algorithm::ES256 => &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
-        Algorithm::ES384 => &signature::ECDSA_P384_SHA384_FIXED_SIGNING,
-        _ => unreachable!("Tried to get EC alg for a non-EC algorithm"),
-    }
-}
+use crate::serialization::{b64_decode, b64_encode};
 
 /// The actual ECDSA signing + encoding
 /// The key needs to be in PKCS8 format
-pub fn sign(
-    alg: &'static signature::EcdsaSigningAlgorithm,
-    key: &[u8],
-    message: &[u8],
-) -> Result<String> {
-    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key)?;
-    let rng = rand::SystemRandom::new();
-    let out = signing_key.sign(&rng, message)?;
-    Ok(b64_encode(out))
+pub(crate) fn sign(alg: Algorithm, key: &[u8], message: &[u8]) -> Result<String> {
+    match alg {
+        Algorithm::ES256 => es256_sign(key, message),
+        Algorithm::ES384 => es384_sign(key, message),
+
+        _ => unreachable!("Tried to get EC alg for a non-EC algorithm"),
+    }
+}
+
+fn es256_sign(key: &[u8], message: &[u8]) -> Result<String> {
+    use p256::ecdsa::signature::Signer;
+    use p256::ecdsa::{Signature, SigningKey};
+    use p256::pkcs8::DecodePrivateKey;
+    use p256::SecretKey;
+    let secret_key = SecretKey::from_pkcs8_der(key)
+        .map_err(|_e| crate::errors::ErrorKind::InvalidEcdsaKey)?;
+    let signing_key: SigningKey = secret_key.into();
+
+    let signature: Signature = signing_key.sign(message);
+    let bytes = signature.to_bytes();
+    Ok(b64_encode(bytes))
+}
+
+fn es384_sign(key: &[u8], message: &[u8]) -> Result<String> {
+    use p384::ecdsa::signature::Signer;
+    use p384::ecdsa::{Signature, SigningKey};
+    use p384::pkcs8::DecodePrivateKey;
+    use p384::SecretKey;
+    let secret_key = SecretKey::from_pkcs8_der(key)
+        .map_err(|_e| crate::errors::ErrorKind::InvalidEcdsaKey)?;
+    let signing_key: SigningKey = secret_key.into();
+    let signature: Signature = signing_key.sign(message);
+    let bytes = signature.to_bytes();
+    Ok(b64_encode(bytes))
+}
+
+pub(crate) fn verify(alg: Algorithm, signature: &str, message: &[u8], key: &[u8]) -> Result<bool> {
+    match alg {
+        Algorithm::ES256 => es256_verify(signature, message, key),
+        Algorithm::ES384 => es384_verify(signature, message, key),
+        _ => unreachable!("Tried to get EC alg for a non-EC algorithm"),
+    }
+}
+
+fn es384_verify(signature: &str, message: &[u8], key: &[u8]) -> Result<bool> {
+    use p384::ecdsa::signature::Verifier;
+    use p384::ecdsa::{Signature, VerifyingKey};
+    use p384::PublicKey;
+
+    let public_key = PublicKey::from_sec1_bytes(key)
+        .map_err(|_e| crate::errors::ErrorKind::InvalidEcdsaKey)?;
+    let verifying_key: VerifyingKey = public_key.into();
+    let signature = Signature::from_slice(&b64_decode(signature)?)
+        .map_err(|_e| crate::errors::ErrorKind::InvalidSignature)?;
+    Ok(verifying_key.verify(message, &signature).is_ok())
+}
+
+fn es256_verify(signature: &str, message: &[u8], key: &[u8]) -> Result<bool> {
+    use p256::ecdsa::signature::Verifier;
+    use p256::ecdsa::{Signature, VerifyingKey};
+    use p256::PublicKey;
+    let public_key = PublicKey::from_sec1_bytes(key)
+        .map_err(|_e| crate::errors::ErrorKind::InvalidEcdsaKey)?;
+    let verifying_key: VerifyingKey = public_key.into();
+    let signature = Signature::from_slice(&b64_decode(signature)?)
+        .map_err(|_e| crate::errors::ErrorKind::InvalidSignature)?;
+    Ok(verifying_key.verify(message, &signature).is_ok())
 }

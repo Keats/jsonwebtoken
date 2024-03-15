@@ -96,7 +96,7 @@ fn decode_token_missing_parts() {
 #[should_panic(expected = "InvalidSignature")]
 fn decode_token_invalid_signature() {
     let token =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"secret"),

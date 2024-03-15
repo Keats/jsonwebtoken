@@ -7,7 +7,7 @@ struct Claims {
     aud: String,
     sub: String,
     company: String,
-    exp: usize,
+    exp: i64,
 }
 
 fn main() {
