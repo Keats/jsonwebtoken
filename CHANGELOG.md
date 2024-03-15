@@ -1,5 +1,21 @@
 # Changelog
 
+## 9.2.0 (2023-12-01)
+
+- Add an option to not validate `aud` in the Validation struct
+- Get the current timestamp in wasm without using std
+- Update ring to 0.17
+
+## 9.1.0 (2023-10-21)
+
+- Supports deserialization of unsupported algorithms for JWKs
+
+
+## 9.0.0 (2023-10-16)
+
+- Update ring
+- Rejects JWTs containing audiences when the Validation doesn't contain any
+
 ## 8.3.0 (2023-03-15)
 
 - Update base64

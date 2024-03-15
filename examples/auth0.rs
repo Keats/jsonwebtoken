@@ -1,8 +1,8 @@
 /// Example for the backend to backend implementation
 use std::collections::HashMap;
 
-use jsonwebtoken::jwk::AlgorithmParameters;
-use jsonwebtoken::{decode, decode_header, jwk, DecodingKey, Validation};
+use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet};
+use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
 
 const TOKEN: &str = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjFaNTdkX2k3VEU2S1RZNTdwS3pEeSJ9.eyJpc3MiOiJodHRwczovL2Rldi1kdXp5YXlrNC5ldS5hdXRoMC5jb20vIiwic3ViIjoiNDNxbW44c281R3VFU0U1N0Fkb3BhN09jYTZXeVNidmRAY2xpZW50cyIsImF1ZCI6Imh0dHBzOi8vZGV2LWR1enlheWs0LmV1LmF1dGgwLmNvbS9hcGkvdjIvIiwiaWF0IjoxNjIzNTg1MzAxLCJleHAiOjE2MjM2NzE3MDEsImF6cCI6IjQzcW1uOHNvNUd1RVNFNTdBZG9wYTdPY2E2V3lTYnZkIiwic2NvcGUiOiJyZWFkOnVzZXJzIiwiZ3R5IjoiY2xpZW50LWNyZWRlbnRpYWxzIn0.0MpewU1GgvRqn4F8fK_-Eu70cUgWA5JJrdbJhkCPCxXP-8WwfI-qx1ZQg2a7nbjXICYAEl-Z6z4opgy-H5fn35wGP0wywDqZpqL35IPqx6d0wRvpPMjJM75zVXuIjk7cEhDr2kaf1LOY9auWUwGzPiDB_wM-R0uvUMeRPMfrHaVN73xhAuQWVjCRBHvNscYS5-i6qBQKDMsql87dwR72DgHzMlaC8NnaGREBC-xiSamesqhKPVyGzSkFSaF3ZKpGrSDapqmHkNW9RDBE3GQ9OHM33vzUdVKOjU1g9Leb9PDt0o1U4p3NQoGJPShQ6zgWSUEaqvUZTfkbpD_DoYDRxA";
 const JWKS_REPLY: &str = r#"
@@ -10,29 +10,33 @@ const JWKS_REPLY: &str = r#"
 "#;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let jwks: jwk::JwkSet = serde_json::from_str(JWKS_REPLY).unwrap();
+    let jwks: JwkSet = serde_json::from_str(JWKS_REPLY).unwrap();
+    let header = decode_header(TOKEN).unwrap();
 
-    let header = decode_header(TOKEN)?;
-    let kid = match header.kid {
-        Some(k) => k,
-        None => return Err("Token doesn't have a `kid` header field".into()),
+    let Some(kid) = header.kid else {
+        return Err("Token doesn't have a `kid` header field".into());
     };
-    if let Some(j) = jwks.find(&kid) {
-        match &j.algorithm {
-            AlgorithmParameters::RSA(rsa) => {
-                let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e).unwrap();
-                let mut validation = Validation::new(j.common.algorithm.unwrap());
-                validation.validate_exp = false;
-                let decoded_token =
-                    decode::<HashMap<String, serde_json::Value>>(TOKEN, &decoding_key, &validation)
-                        .unwrap();
-                println!("{:?}", decoded_token);
-            }
-            _ => unreachable!("this should be a RSA"),
-        }
-    } else {
+
+    let Some(jwk) = jwks.find(&kid) else {
         return Err("No matching JWK found for the given kid".into());
-    }
+    };
+
+    let decoding_key = match &jwk.algorithm {
+        AlgorithmParameters::RSA(rsa) => DecodingKey::from_rsa_components(&rsa.n, &rsa.e)?,
+        _ => unreachable!("algorithm should be a RSA in this example"),
+    };
+
+    let validation = {
+        let mut validation = Validation::new(header.alg);
+        validation.set_audience(&["https://dev-duzyayk4.eu.auth0.com/api/v2/"]);
+        validation.validate_exp = false;
+        validation
+    };
+
+    let decoded_token =
+        decode::<HashMap<String, serde_json::Value>>(TOKEN, &decoding_key, &validation)?;
+
+    println!("{:#?}", decoded_token);
 
     Ok(())
 }

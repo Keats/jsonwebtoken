@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
 use std::marker::PhantomData;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -52,7 +51,13 @@ pub struct Validation {
     ///
     /// Defaults to `false`.
     pub validate_nbf: bool,
-    /// If it contains a value, the validation will check that the `aud` field is a member of the
+    /// Whether to validate the `aud` field.
+    ///
+    /// It will return an error if the `aud` field is not a member of the audience provided.
+    ///
+    /// Defaults to `true`. Very insecure to turn this off. Only do this if you know what you are doing.
+    pub validate_aud: bool,
+    /// Validation will check that the `aud` field is a member of the
     /// audience provided and will error otherwise.
     /// Use `set_audience` to set it
     ///
@@ -92,6 +97,7 @@ impl Validation {
 
             validate_exp: true,
             validate_nbf: false,
+            validate_aud: true,
 
             iss: None,
             sub: None,
@@ -137,9 +143,18 @@ impl Default for Validation {
 }
 
 /// Gets the current timestamp in the format expected by JWTs.
+#[cfg(not(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi")))))]
+#[must_use]
 pub fn get_current_timestamp() -> u64 {
-    let start = SystemTime::now();
-    start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs()
+    let start = std::time::SystemTime::now();
+    start.duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs()
+}
+
+/// Gets the current timestamp in the format expected by JWTs.
+#[cfg(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi"))))]
+#[must_use]
+pub fn get_current_timestamp() -> u64 {
+    js_sys::Date::new_0().get_time() as u64 / 1000
 }
 
 #[derive(Deserialize)]
@@ -262,7 +277,18 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         _ => {}
     }
 
+    if !options.validate_aud {
+        return Ok(());
+    }
     match (claims.aud, options.aud.as_ref()) {
+        // Each principal intended to process the JWT MUST
+        // identify itself with a value in the audience claim. If the principal
+        // processing the claim does not identify itself with a value in the
+        // "aud" claim when this claim is present, then the JWT MUST be
+        //  rejected.
+        (TryParse::Parsed(_), None) => {
+            return Err(new_error(ErrorKind::InvalidAudience));
+        }
         (TryParse::Parsed(Audience::Single(aud)), Some(correct_aud)) => {
             if !correct_aud.contains(&*aud) {
                 return Err(new_error(ErrorKind::InvalidAudience));
@@ -320,6 +346,7 @@ where
 #[cfg(test)]
 mod tests {
     use serde_json::json;
+    use wasm_bindgen_test::wasm_bindgen_test;
 
     use super::{get_current_timestamp, validate, ClaimsForValidation, Validation};
 
@@ -332,6 +359,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_in_future_ok() {
         let claims = json!({ "exp": get_current_timestamp() + 10000 });
         let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
@@ -339,6 +367,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_float_in_future_ok() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) + 10000.123 });
         let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
@@ -346,6 +375,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_in_past_fails() {
         let claims = json!({ "exp": get_current_timestamp() - 100000 });
         let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
@@ -358,6 +388,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_float_in_past_fails() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
         let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
@@ -370,6 +401,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_in_past_but_in_leeway_ok() {
         let claims = json!({ "exp": get_current_timestamp() - 500 });
         let mut validation = Validation::new(Algorithm::HS256);
@@ -380,6 +412,7 @@ mod tests {
 
     // https://github.com/Keats/jsonwebtoken/issues/51
     #[test]
+    #[wasm_bindgen_test]
     fn validate_required_fields_are_present() {
         for spec_claim in ["exp", "nbf", "aud", "iss", "sub"] {
             let claims = json!({});
@@ -391,6 +424,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_validated_but_not_required_ok() {
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -401,6 +435,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_validated_but_not_required_fails() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
         let mut validation = Validation::new(Algorithm::HS256);
@@ -411,6 +446,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_required_but_not_validated_ok() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
         let mut validation = Validation::new(Algorithm::HS256);
@@ -421,6 +457,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn exp_required_but_not_validated_fails() {
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -431,6 +468,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn nbf_in_past_ok() {
         let claims = json!({ "nbf": get_current_timestamp() - 10000 });
         let mut validation = Validation::new(Algorithm::HS256);
@@ -442,6 +480,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn nbf_float_in_past_ok() {
         let claims = json!({ "nbf": (get_current_timestamp() as f64) - 10000.1234 });
         let mut validation = Validation::new(Algorithm::HS256);
@@ -453,6 +492,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn nbf_in_future_fails() {
         let claims = json!({ "nbf": get_current_timestamp() + 100000 });
         let mut validation = Validation::new(Algorithm::HS256);
@@ -469,6 +509,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn nbf_in_future_but_in_leeway_ok() {
         let claims = json!({ "nbf": get_current_timestamp() + 500 });
         let mut validation = Validation::new(Algorithm::HS256);
@@ -481,6 +522,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn iss_string_ok() {
         let claims = json!({"iss": ["Keats"]});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -492,6 +534,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn iss_array_of_string_ok() {
         let claims = json!({"iss": ["UserA", "UserB"]});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -503,6 +546,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn iss_not_matching_fails() {
         let claims = json!({"iss": "Hacked"});
 
@@ -520,6 +564,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn iss_missing_fails() {
         let claims = json!({});
 
@@ -536,6 +581,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn sub_ok() {
         let claims = json!({"sub": "Keats"});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -547,6 +593,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn sub_not_matching_fails() {
         let claims = json!({"sub": "Hacked"});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -563,6 +610,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn sub_missing_fails() {
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -579,6 +627,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn aud_string_ok() {
         let claims = json!({"aud": "Everyone"});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -590,6 +639,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn aud_array_of_string_ok() {
         let claims = json!({"aud": ["UserA", "UserB"]});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -601,6 +651,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn aud_type_mismatch_fails() {
         let claims = json!({"aud": ["Everyone"]});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -617,6 +668,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn aud_correct_type_not_matching_fails() {
         let claims = json!({"aud": ["Everyone"]});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -633,6 +685,37 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
+    fn aud_none_fails() {
+        let claims = json!({"aud": ["Everyone"]});
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = false;
+        validation.required_spec_claims = HashSet::new();
+        validation.aud = None;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::InvalidAudience => (),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn aud_validation_skipped() {
+        let claims = json!({"aud": ["Everyone"]});
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = false;
+        validation.validate_aud = false;
+        validation.required_spec_claims = HashSet::new();
+        validation.aud = None;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn aud_missing_fails() {
         let claims = json!({});
         let mut validation = Validation::new(Algorithm::HS256);
@@ -650,6 +733,7 @@ mod tests {
 
     // https://github.com/Keats/jsonwebtoken/issues/51
     #[test]
+    #[wasm_bindgen_test]
     fn does_validation_in_right_order() {
         let claims = json!({ "exp": get_current_timestamp() + 10000 });
 
@@ -670,6 +754,7 @@ mod tests {
 
     // https://github.com/Keats/jsonwebtoken/issues/110
     #[test]
+    #[wasm_bindgen_test]
     fn aud_use_validation_struct() {
         let claims = json!({"aud": "my-googleclientid1234.apps.googleusercontent.com"});
 

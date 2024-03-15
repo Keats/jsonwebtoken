@@ -3,6 +3,7 @@ use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey,
 };
 use serde::{Deserialize, Serialize};
+use wasm_bindgen_test::wasm_bindgen_test;
 
 #[cfg(feature = "use_pem")]
 use jsonwebtoken::{decode, encode, Header, Validation};
@@ -27,6 +28,7 @@ pub struct Claims {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn round_trip_sign_verification_pem_pkcs1() {
     let privkey_pem = include_bytes!("private_rsa_key_pkcs1.pem");
     let pubkey_pem = include_bytes!("public_rsa_key_pkcs1.pem");
@@ -58,6 +60,7 @@ fn round_trip_sign_verification_pem_pkcs1() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn round_trip_sign_verification_pem_pkcs8() {
     let privkey_pem = include_bytes!("private_rsa_key_pkcs8.pem");
     let pubkey_pem = include_bytes!("public_rsa_key_pkcs8.pem");
@@ -88,6 +91,7 @@ fn round_trip_sign_verification_pem_pkcs8() {
 }
 
 #[test]
+#[wasm_bindgen_test]
 fn round_trip_sign_verification_der() {
     let privkey_der = include_bytes!("private_rsa_key.der");
     let pubkey_der = include_bytes!("public_rsa_key.der");
@@ -103,6 +107,7 @@ fn round_trip_sign_verification_der() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn round_trip_claim() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
@@ -139,6 +144,7 @@ fn round_trip_claim() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn rsa_modulus_exponent() {
     let privkey = include_str!("private_rsa_key_pkcs1.pem");
     let my_claims = Claims {
@@ -165,6 +171,7 @@ fn rsa_modulus_exponent() {
 
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn rsa_jwk() {
     use jsonwebtoken::jwk::Jwk;
     use serde_json::json;
@@ -201,6 +208,7 @@ fn rsa_jwk() {
 // https://jwt.io/ is often used for examples so ensure their example works with jsonwebtoken
 #[cfg(feature = "use_pem")]
 #[test]
+#[wasm_bindgen_test]
 fn roundtrip_with_jwtio_example_jey() {
     let privkey_pem = include_bytes!("private_jwtio.pem");
     let pubkey_pem = include_bytes!("public_jwtio.pem");

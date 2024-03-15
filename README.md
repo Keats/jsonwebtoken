@@ -8,13 +8,13 @@ See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more inf
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "8"
+jsonwebtoken = "9"
 # If you do not need pem decoding, you can disable the default feature `use_pem` that way:
-# jsonwebtoken = {version = "8", default-features = false }
+# jsonwebtoken = {version = "9", default-features = false }
 serde = {version = "1.0", features = ["derive"] }
 ```
 
-The minimum required Rust version is 1.56.
+The minimum required Rust version (MSRV) is 1.67.
 
 ## Algorithms
 This library currently supports the following:
@@ -97,8 +97,8 @@ Encoding a JWT takes 3 parameters:
 - some claims: your own struct
 - a key/secret
 
-When using HS256, HS384 or HS512, the key is always a shared secret like in the example above. When using
-RSA/EC, the key should always be the content of the private key in the PEM or DER format.
+When using HS256, HS384, or HS512, the key is always a shared secret like in the example above. When using
+RSA/EC, the key should always be the content of the private key in PEM or DER format.
 
 If your key is in PEM format, it is better performance wise to generate the `EncodingKey` once in a `lazy_static` or
 something similar and reuse it.
@@ -109,14 +109,14 @@ something similar and reuse it.
 // `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
 let token = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::default())?;
 ```
-`decode` can error for a variety of reasons:
+`decode` can result in errors for a variety of reasons:
 
 - the token or its signature is invalid
 - the token had invalid base64
 - validation of at least one reserved claim failed
 
-As with encoding, when using HS256, HS2384 or HS512, the key is always a shared secret like in the example above. When using
-RSA/EC, the key should always be the content of the public key in the PEM (or certificate in this case) or DER format.
+As with encoding, when using HS256, HS384, or HS512, the key is always a shared secret like in the example above. When using
+RSA/EC, the key should always be the content of the public key in PEM (or certificate in this case) or DER format.
 
 In some cases, for example if you don't know the algorithm used or need to grab the `kid`, you can choose to decode only the header:
 
@@ -156,11 +156,12 @@ openssl pkcs8 -topk8 -nocrypt -in sec1.pem -out pkcs8.pem
 
 
 ## Validation
-This library validates automatically the `exp` claim and `nbf` is validated if present. You can also validate the `sub`, `iss` and `aud` but
-those require setting the expected value in the `Validation` struct.
+This library automatically validates the `exp` claim, and `nbf` is validated if present. You can also validate the `sub`, `iss`, and `aud` but
+those require setting the expected values in the `Validation` struct. In the case of `aud`, if there is a value set in the token but
+not in the `Validation`, the token will be rejected.
 
 Since validating time fields is always a bit tricky due to clock skew,
-you can add some leeway to the `iat`, `exp` and `nbf` validation by setting the `leeway` field.
+you can add some leeway to the `iat`, `exp`, and `nbf` validation by setting the `leeway` field.
 
 Last but not least, you will need to set the algorithm(s) allowed for this token if you are not using `HS256`.
 

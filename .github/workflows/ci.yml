@@ -5,19 +5,18 @@ on:
       - master
   pull_request:
 
-
 jobs:
   style:
     name: Format
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: rustfmt
-    - name: Check format
-      run: cargo fmt --check
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check format
+        run: cargo fmt --check
 
   clippy:
     name: Clippy
@@ -36,27 +35,49 @@ jobs:
       matrix:
         build: [pinned, stable, nightly]
         include:
-        - build: pinned
-          os: ubuntu-20.04
-          rust: 1.59.0
-        - build: stable
-          os: ubuntu-20.04
-          rust: stable
-        - build: nightly
-          os: ubuntu-20.04
-          rust: nightly
+          - build: pinned
+            os: ubuntu-20.04
+            rust: 1.67.0
+          - build: stable
+            os: ubuntu-20.04
+            rust: stable
+          - build: nightly
+            os: ubuntu-20.04
+            rust: nightly
     steps:
-    - uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
 
-    - name: Build System Info
-      run: rustc --version
+      - name: Build System Info
+        run: rustc --version
 
-    - name: Run tests default features
-      run: cargo test
+      - name: Run tests default features
+        run: cargo test
 
-    - name: Run tests no features
-      run: cargo test --no-default-features
+      - name: Run tests no features
+        run: cargo test --no-default-features
+
+  wasm:
+    name: Run tests in wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: actions/setup-node@v4
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Run tests default features
+        run: wasm-pack test --node
+
+      - name: Run tests no features
+        run: wasm-pack test --node --no-default-features
+
