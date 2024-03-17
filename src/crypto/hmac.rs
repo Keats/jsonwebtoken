@@ -1,9 +1,9 @@
 use hmac::{Hmac, Mac};
 use sha2::{Sha256, Sha384, Sha512};
 
-use crate::Algorithm;
 use crate::errors::Result;
 use crate::serialization::{b64_decode, b64_encode};
+use crate::Algorithm;
 
 type HmacSha256 = Hmac<Sha256>;
 type HmacSha384 = Hmac<Sha384>;
@@ -66,7 +66,6 @@ impl HmacAlgorithm for Box<dyn HmacAlgorithm + '_> {
 }
 
 impl HmacAlgorithm for HmacSha256 {
-
     fn sign(&mut self, message: &[u8]) -> Vec<u8> {
         self.reset();
         self.update(message);
@@ -80,7 +79,6 @@ impl HmacAlgorithm for HmacSha256 {
 }
 
 impl HmacAlgorithm for HmacSha384 {
-
     fn sign(&mut self, message: &[u8]) -> Vec<u8> {
         self.reset();
         self.update(message);
@@ -94,7 +92,6 @@ impl HmacAlgorithm for HmacSha384 {
 }
 
 impl HmacAlgorithm for HmacSha512 {
-
     fn sign(&mut self, message: &[u8]) -> Vec<u8> {
         self.reset();
         self.update(message);

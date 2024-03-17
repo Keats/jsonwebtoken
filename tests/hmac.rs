@@ -1,12 +1,13 @@
+use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
+use wasm_bindgen_test::wasm_bindgen_test;
+
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{
     crypto::{sign, verify},
     decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
-use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
-use wasm_bindgen_test::wasm_bindgen_test;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {

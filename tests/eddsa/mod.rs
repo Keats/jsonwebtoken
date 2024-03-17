@@ -1,14 +1,14 @@
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "use_pem")]
+use time::OffsetDateTime;
+use wasm_bindgen_test::wasm_bindgen_test;
+
 use jsonwebtoken::{
     crypto::{sign, verify},
     Algorithm, DecodingKey, EncodingKey,
 };
-use serde::{Deserialize, Serialize};
-use wasm_bindgen_test::wasm_bindgen_test;
-
 #[cfg(feature = "use_pem")]
 use jsonwebtoken::{decode, encode, Header, Validation};
-#[cfg(feature = "use_pem")]
-use time::OffsetDateTime;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {

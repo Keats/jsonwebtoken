@@ -1,6 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use jsonwebtoken::Header;
 use wasm_bindgen_test::wasm_bindgen_test;
+
+use jsonwebtoken::Header;
 
 static CERT_CHAIN: [&str; 3] = include!("cert_chain.json");
 

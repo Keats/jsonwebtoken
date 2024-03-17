@@ -16,7 +16,7 @@ pub struct Claims {
 fn main() {
     let secret_key = SecretKey::random(&mut OsRng);
     let pkcs8 = secret_key.to_pkcs8_pem(Default::default()).unwrap();
-    let pkcs8=   pkcs8.as_bytes();
+    let pkcs8 = pkcs8.as_bytes();
 
     let encoding_key = EncodingKey::from_ed_der(pkcs8);
 
@@ -45,7 +45,7 @@ mod tests {
         fn new() -> Jot {
             let secret_key = SecretKey::random(&mut OsRng);
             let pkcs8 = secret_key.to_pkcs8_pem(Default::default()).unwrap();
-            let pkcs8=   pkcs8.as_bytes();
+            let pkcs8 = pkcs8.as_bytes();
             let encoding_key = EncodingKey::from_ed_der(pkcs8);
 
             let public_key_der = secret_key.public_key().to_public_key_der().unwrap();
