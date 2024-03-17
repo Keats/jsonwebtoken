@@ -1,11 +1,10 @@
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 
-use crate::errors::{ErrorKind, new_error, Result};
+use crate::errors::{new_error, ErrorKind, Result};
 use crate::serialization::{b64_decode, b64_encode};
 
 fn parse_key(key: &[u8]) -> Result<SigningKey> {
-    let key = key.try_into()
-        .map_err(|_| new_error(ErrorKind::InvalidEddsaKey))?;
+    let key = key.try_into().map_err(|_| new_error(ErrorKind::InvalidEddsaKey))?;
     let signing_key = SigningKey::from_bytes(key);
     Ok(signing_key)
 }
@@ -15,7 +14,8 @@ pub(crate) fn verify(signature: &str, message: &[u8], key: &[u8]) -> Result<bool
     let signature =
         Signature::from_slice(&signature).map_err(|_e| new_error(ErrorKind::InvalidSignature))?;
     let key = key.try_into().map_err(|_| new_error(ErrorKind::InvalidEddsaKey))?;
-    let verifying_key = VerifyingKey::from_bytes(key).map_err(|_| new_error(ErrorKind::InvalidEddsaKey))?;
+    let verifying_key =
+        VerifyingKey::from_bytes(key).map_err(|_| new_error(ErrorKind::InvalidEddsaKey))?;
     Ok(verifying_key.verify(message, &signature).is_ok())
 }
 

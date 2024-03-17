@@ -65,8 +65,8 @@ fn es256_verify(signature: &str, message: &[u8], key: &[u8]) -> Result<bool> {
     use p256::ecdsa::signature::Verifier;
     use p256::ecdsa::{Signature, VerifyingKey};
     use p256::PublicKey;
-    let public_key = PublicKey::from_sec1_bytes(key)
-        .map_err(|_e| crate::errors::ErrorKind::InvalidEcdsaKey)?;
+    let public_key =
+        PublicKey::from_sec1_bytes(key).map_err(|_e| crate::errors::ErrorKind::InvalidEcdsaKey)?;
     let verifying_key: VerifyingKey = public_key.into();
     let signature = Signature::from_slice(&b64_decode(signature)?)
         .map_err(|_e| crate::errors::ErrorKind::InvalidSignature)?;

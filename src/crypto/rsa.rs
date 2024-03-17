@@ -1,8 +1,11 @@
-use rsa::{BigUint, pkcs1::DecodeRsaPrivateKey, pkcs1::DecodeRsaPublicKey, Pkcs1v15Sign, pss::Pss, RsaPrivateKey, RsaPublicKey, traits::SignatureScheme};
+use rsa::{
+    pkcs1::DecodeRsaPrivateKey, pkcs1::DecodeRsaPublicKey, pss::Pss, traits::SignatureScheme,
+    BigUint, Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey,
+};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
 use crate::algorithms::Algorithm;
-use crate::errors::{ErrorKind, new_error, Result};
+use crate::errors::{new_error, ErrorKind, Result};
 use crate::serialization::{b64_decode, b64_encode};
 
 fn alg_to_pss(alg: Algorithm, digest_len: usize) -> Option<Pss> {
@@ -47,20 +50,20 @@ fn message_digest(alg: Algorithm, message: &[u8]) -> Result<Vec<u8>> {
     }
 }
 
-pub(crate) fn sign(alg: Algorithm,
-                   key: &[u8],
-                   message: &[u8]) -> Result<String> {
+pub(crate) fn sign(alg: Algorithm, key: &[u8], message: &[u8]) -> Result<String> {
     let digest = message_digest(alg, message)?;
     let signatures_scheme_pkcs = alg_to_pkcs1_v15(alg);
     let signatures_scheme_pss = alg_to_pss(alg, digest.len());
-    let private_key = RsaPrivateKey::from_pkcs1_der(key)
-        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+    let private_key =
+        RsaPrivateKey::from_pkcs1_der(key).map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let mut rng = rand::thread_rng();
     let signature = if let Some(signatures_scheme) = signatures_scheme_pkcs {
-        signatures_scheme.sign(Some(&mut rng), &private_key, &digest)
+        signatures_scheme
+            .sign(Some(&mut rng), &private_key, &digest)
             .map_err(|_e| ErrorKind::RsaFailedSigning)?
     } else if let Some(signatures_scheme) = signatures_scheme_pss {
-        signatures_scheme.sign(Some(&mut rng), &private_key, &digest)
+        signatures_scheme
+            .sign(Some(&mut rng), &private_key, &digest)
             .map_err(|_e| ErrorKind::RsaFailedSigning)?
     } else {
         return Err(new_error(ErrorKind::InvalidAlgorithmName));
@@ -76,8 +79,7 @@ pub(crate) fn verify_from_components(
 ) -> Result<bool> {
     let n = BigUint::from_bytes_be(components.0);
     let e = BigUint::from_bytes_be(components.1);
-    let pub_key =
-        RsaPublicKey::new(n, e).map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+    let pub_key = RsaPublicKey::new(n, e).map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
 
     verify(alg, signature, message, &pub_key)
 }

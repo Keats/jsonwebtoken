@@ -1,4 +1,3 @@
-
 use crate::algorithms::Algorithm;
 use crate::decoding::{DecodingKey, DecodingKeyKind};
 use crate::encoding::EncodingKey;
@@ -6,9 +5,8 @@ use crate::errors::Result;
 
 pub(crate) mod ecdsa;
 pub(crate) mod eddsa;
-pub(crate) mod rsa;
 pub(crate) mod hmac;
-
+pub(crate) mod rsa;
 
 /// Take the payload of a JWT, sign it using the algorithm given and return
 /// the base64 url safe encoded of the result.
@@ -16,21 +14,17 @@ pub(crate) mod hmac;
 /// If you just want to encode a JWT, use `encode` instead.
 pub fn sign(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
     match algorithm {
-        Algorithm::ES256 | Algorithm::ES384 => {
-            ecdsa::sign(algorithm, key.inner(), message)
-        }
+        Algorithm::ES256 | Algorithm::ES384 => ecdsa::sign(algorithm, key.inner(), message),
         Algorithm::EdDSA => eddsa::sign(key.inner(), message),
-        Algorithm::HS256
-        | Algorithm::HS384
-        | Algorithm::HS512 => hmac::sign_hmac(algorithm, key.inner(), message),
+        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
+            hmac::sign_hmac(algorithm, key.inner(), message)
+        }
         Algorithm::RS256
         | Algorithm::RS384
         | Algorithm::RS512
         | Algorithm::PS256
         | Algorithm::PS384
-        | Algorithm::PS512 => {
-            rsa::sign(algorithm, key.inner(), message)
-        }
+        | Algorithm::PS512 => rsa::sign(algorithm, key.inner(), message),
     }
 }
 
@@ -49,21 +43,25 @@ pub fn verify(
     algorithm: Algorithm,
 ) -> Result<bool> {
     match algorithm {
-        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => hmac::hmac_verify(algorithm, signature, key.as_bytes(), message),
-        Algorithm::ES256 | Algorithm::ES384 => ecdsa::verify(algorithm, signature, message, key.as_bytes()),
+        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
+            hmac::hmac_verify(algorithm, signature, key.as_bytes(), message)
+        }
+        Algorithm::ES256 | Algorithm::ES384 => {
+            ecdsa::verify(algorithm, signature, message, key.as_bytes())
+        }
         Algorithm::EdDSA => eddsa::verify(signature, message, key.as_bytes()),
         Algorithm::RS256
         | Algorithm::RS384
         | Algorithm::RS512
         | Algorithm::PS256
         | Algorithm::PS384
-        | Algorithm::PS512 => {
-            match &key.kind {
-                DecodingKeyKind::SecretOrDer(bytes) => rsa::verify_der(algorithm, signature, message, bytes),
-                DecodingKeyKind::RsaModulusExponent { n, e } => {
-                    rsa::verify_from_components(algorithm, signature, message, (n, e))
-                }
+        | Algorithm::PS512 => match &key.kind {
+            DecodingKeyKind::SecretOrDer(bytes) => {
+                rsa::verify_der(algorithm, signature, message, bytes)
             }
-        }
+            DecodingKeyKind::RsaModulusExponent { n, e } => {
+                rsa::verify_from_components(algorithm, signature, message, (n, e))
+            }
+        },
     }
 }

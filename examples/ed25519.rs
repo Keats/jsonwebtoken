@@ -4,7 +4,7 @@ use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
 use jsonwebtoken::{
-    Algorithm, decode, DecodingKey, encode, EncodingKey, get_current_timestamp, Validation,
+    decode, encode, get_current_timestamp, Algorithm, DecodingKey, EncodingKey, Validation,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
