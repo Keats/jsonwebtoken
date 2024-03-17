@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - wasm_support
   pull_request:
 
 jobs:
