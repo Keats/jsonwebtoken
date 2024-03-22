@@ -1,3 +1,9 @@
+#[cfg(feature = "fips")]
+use aws_lc_rs as ring;
+
+#[cfg(not(feature = "fips"))]
+use ring;
+
 use ring::{rand, signature};
 
 use crate::algorithms::Algorithm;
@@ -26,6 +32,7 @@ pub(crate) fn alg_to_ec_signing(alg: Algorithm) -> &'static signature::EcdsaSign
 
 /// The actual ECDSA signing + encoding
 /// The key needs to be in PKCS8 format
+#[cfg(not(feature = "fips"))]
 pub fn sign(
     alg: &'static signature::EcdsaSigningAlgorithm,
     key: &[u8],
@@ -33,6 +40,20 @@ pub fn sign(
 ) -> Result<String> {
     let rng = rand::SystemRandom::new();
     let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key, &rng)?;
+    let out = signing_key.sign(&rng, message)?;
+    Ok(b64_encode(out))
+}
+
+/// The actual ECDSA signing + encoding
+/// The key needs to be in PKCS8 format
+#[cfg(feature = "fips")]
+pub fn sign(
+    alg: &'static signature::EcdsaSigningAlgorithm,
+    key: &[u8],
+    message: &[u8],
+) -> Result<String> {
+    let rng = rand::SystemRandom::new();
+    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key)?;
     let out = signing_key.sign(&rng, message)?;
     Ok(b64_encode(out))
 }

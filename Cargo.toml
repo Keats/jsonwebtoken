@@ -26,6 +26,7 @@ base64 = "0.21.0"
 # For PEM decoding
 pem = { version = "3", optional = true }
 simple_asn1 = { version = "0.6", optional = true }
+aws-lc-rs = { version = "1.6.2", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ring = { version = "0.17.4", features = ["std"] }
@@ -50,6 +51,7 @@ criterion = { version = "0.4", default-features = false }
 [features]
 default = ["use_pem"]
 use_pem = ["pem", "simple_asn1"]
+fips = ["aws-lc-rs"]
 
 [[bench]]
 name = "jwt"
