@@ -1,10 +1,14 @@
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{
+    engine::general_purpose::{STANDARD, URL_SAFE},
+    Engine,
+};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
+use crate::jws::Jws;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::b64_encode_part;
@@ -14,7 +18,7 @@ use crate::serialization::b64_encode_part;
 #[derive(Clone)]
 pub struct EncodingKey {
     pub(crate) family: AlgorithmFamily,
-    content: Vec<u8>,
+    pub(crate) content: Vec<u8>,
 }
 
 impl EncodingKey {
@@ -26,6 +30,12 @@ impl EncodingKey {
     /// If you have a base64 HMAC secret, use that.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
         let out = STANDARD.decode(secret)?;
+        Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
+    }
+
+    /// For loading websafe base64 HMAC secrets, ex: ACME EAB credentials.
+    pub fn from_urlsafe_base64_secret(secret: &str) -> Result<Self> {
+        let out = URL_SAFE.decode(secret)?;
         Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
     }
 
@@ -128,4 +138,31 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
     let signature = crypto::sign(message.as_bytes(), key, header.alg)?;
 
     Ok([message, signature].join("."))
+}
+
+/// Encode the header and claims given and sign the payload using the algorithm from the header and the key.
+/// If the algorithm given is RSA or EC, the key needs to be in the PEM format. This produces a JWS instead of
+/// a JWT -- usage is similar to `encode`, see that for more details.
+pub fn encode_jws<T: Serialize>(
+    header: &Header,
+    claims: Option<&T>,
+    key: &EncodingKey,
+) -> Result<Jws<T>> {
+    if key.family != header.alg.family() {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+    let encoded_header = b64_encode_part(header)?;
+    let encoded_claims = match claims {
+        Some(claims) => b64_encode_part(claims)?,
+        None => "".to_string(),
+    };
+    let message = [encoded_header.as_str(), encoded_claims.as_str()].join(".");
+    let signature = crypto::sign(message.as_bytes(), key, header.alg)?;
+
+    Ok(Jws {
+        protected: encoded_header,
+        payload: encoded_claims,
+        signature,
+        _pd: Default::default(),
+    })
 }
