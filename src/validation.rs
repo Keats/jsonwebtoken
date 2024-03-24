@@ -39,6 +39,13 @@ pub struct Validation {
     ///
     /// Defaults to `60`.
     pub leeway: u64,
+    /// Reject a token some time (in seconds) before the `exp` to prevent
+    /// expiration in transit over the network.
+    ///
+    /// The value is the inverse of `leeway`, subtracting from the validation time.
+    ///
+    /// Defaults to `0`.
+    pub reject_tokens_expiring_in_less_than: u64,
     /// Whether to validate the `exp` field.
     ///
     /// It will return an error if the time in the `exp` field is past.
@@ -94,6 +101,7 @@ impl Validation {
             required_spec_claims: required_claims,
             algorithms: vec![alg],
             leeway: 60,
+            reject_tokens_expiring_in_less_than: 0,
 
             validate_exp: true,
             validate_nbf: false,
@@ -246,7 +254,8 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     if options.validate_exp || options.validate_nbf {
         let now = get_current_timestamp();
 
-        if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
+        if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp
+            && exp - options.reject_tokens_expiring_in_less_than < now - options.leeway )
         {
             return Err(new_error(ErrorKind::ExpiredSignature));
         }
@@ -368,10 +377,32 @@ mod tests {
 
     #[test]
     #[wasm_bindgen_test]
+    fn exp_in_future_but_in_rejection_period_fails() {
+        let claims = json!({ "exp": get_current_timestamp() + 500 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.leeway = 0;
+        validation.reject_tokens_expiring_in_less_than = 501;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn exp_float_in_future_ok() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) + 10000.123 });
         let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
         assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_float_in_future_but_in_rejection_period_fails() {
+        let claims = json!({ "exp": (get_current_timestamp() as f64) + 500.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.leeway = 0;
+        validation.reject_tokens_expiring_in_less_than = 501;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
     }
 
     #[test]
