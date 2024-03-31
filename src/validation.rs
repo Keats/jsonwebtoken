@@ -24,6 +24,8 @@ use crate::errors::{new_error, ErrorKind, Result};
 /// // or issuer
 /// validation.set_issuer(&["Me"]); // a single string
 /// validation.set_issuer(&["Me", "You"]); // array of strings
+/// // Setting required claims
+/// validation.set_required_spec_claims(&["exp", "iss", "aud"]);
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Validation {
@@ -49,11 +51,17 @@ pub struct Validation {
     ///
     /// It will return an error if the current timestamp is before the time in the `nbf` field.
     ///
+    /// Validation only happens if `nbf` claim is present in the token.
+    /// Adding `nbf` to `required_spec_claims` will make it required.
+    ///
     /// Defaults to `false`.
     pub validate_nbf: bool,
     /// Whether to validate the `aud` field.
     ///
     /// It will return an error if the `aud` field is not a member of the audience provided.
+    ///
+    /// Validation only happens if `aud` claim is present in the token.
+    /// Adding `aud` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `true`. Very insecure to turn this off. Only do this if you know what you are doing.
     pub validate_aud: bool,
@@ -61,16 +69,25 @@ pub struct Validation {
     /// audience provided and will error otherwise.
     /// Use `set_audience` to set it
     ///
+    /// Validation only happens if `aud` claim is present in the token.
+    /// Adding `aud` to `required_spec_claims` will make it required.
+    ///
     /// Defaults to `None`.
     pub aud: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `iss` field is a member of the
     /// iss provided and will error otherwise.
     /// Use `set_issuer` to set it
     ///
+    /// Validation only happens if `iss` claim is present in the token.
+    /// Adding `iss` to `required_spec_claims` will make it required.
+    ///
     /// Defaults to `None`.
     pub iss: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `sub` field is the same as the
     /// one provided and will error otherwise.
+    ///
+    /// Validation only happens if `sub` claim is present in the token.
+    /// Adding `sub` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `None`.
     pub sub: Option<String>,
