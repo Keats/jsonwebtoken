@@ -26,6 +26,7 @@ fn main() {
     let mut validation = Validation::new(Algorithm::HS256);
     validation.sub = Some("b@b.com".to_string());
     validation.set_audience(&["me"]);
+    validation.set_required_spec_claims(&["exp", "sub", "aud"]);
     let token_data = match decode::<Claims>(&token, &DecodingKey::from_secret(key), &validation) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
