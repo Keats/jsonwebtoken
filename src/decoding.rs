@@ -204,11 +204,11 @@ impl DecodingKey {
 /// Verify signature of a JWT, and return header object and raw payload
 ///
 /// If the token or its signature is invalid, it will return an error.
-fn verify_signature<'a>(
-    token: &'a str,
+fn verify_signature_bytes<'a>(
+    token: &'a [u8],
     key: &DecodingKey,
     validation: &Validation,
-) -> Result<(Header, &'a str)> {
+) -> Result<(Header, &'a [u8])> {
     if validation.validate_signature && validation.algorithms.is_empty() {
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
@@ -221,15 +221,15 @@ fn verify_signature<'a>(
         }
     }
 
-    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
+    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (header, payload) = expect_two!(message.splitn(2, |b| *b == b'.'));
     let header = Header::from_encoded(header)?;
 
     if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    if validation.validate_signature && !verify(signature, message.as_bytes(), key, header.alg)? {
+    if validation.validate_signature && !verify(signature, message, key, header.alg)? {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
@@ -259,7 +259,38 @@ pub fn decode<T: DeserializeOwned>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
-    match verify_signature(token, key, validation) {
+    decode_bytes(token.as_bytes(), key, validation)
+}
+
+/// Decode and validate a JWT
+///
+/// If the token or its signature is invalid or the claims fail validation, it will return an error.
+///
+/// This differs from decode() in the case that you only have bytes. By decoding as bytes you can
+/// avoid taking a pass over your bytes to validate them as a utf-8 string. Since the decoding and
+/// validation is all done in terms of bytes, the &str step is unnecessary.
+/// If you already have a &str, decode is more convenient. If you have bytes, consider using this.
+///
+/// ```rust
+/// use serde::{Deserialize, Serialize};
+/// use jsonwebtoken::{decode_bytes, DecodingKey, Validation, Algorithm};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String
+/// }
+///
+/// let token = b"a.jwt.token";
+/// // Claims is a struct that implements Deserialize
+/// let token_message = decode_bytes::<Claims>(token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
+/// ```
+pub fn decode_bytes<T: DeserializeOwned>(
+    token: &[u8],
+    key: &DecodingKey,
+    validation: &Validation,
+) -> Result<TokenData<T>> {
+    match verify_signature_bytes(token, key, validation) {
         Err(e) => Err(e),
         Ok((header, claims)) => {
             let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
@@ -284,5 +315,21 @@ pub fn decode<T: DeserializeOwned>(
 pub fn decode_header(token: &str) -> Result<Header> {
     let (_, message) = expect_two!(token.rsplitn(2, '.'));
     let (_, header) = expect_two!(message.rsplitn(2, '.'));
+    Header::from_encoded(header)
+}
+
+/// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
+///
+/// If the token has an invalid format (ie 3 parts separated by a `.`), it will return an error.
+///
+/// ```rust
+/// use jsonwebtoken::decode_header_bytes;
+///
+/// let token = b"a.jwt.token";
+/// let header = decode_header_bytes(token);
+/// ```
+pub fn decode_header_bytes(token: &[u8]) -> Result<Header> {
+    let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (_, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
     Header::from_encoded(header)
 }

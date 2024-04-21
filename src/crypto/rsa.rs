@@ -51,7 +51,7 @@ pub(crate) fn sign(
 /// Checks that a signature is valid based on the (n, e) RSA pubkey components
 pub(crate) fn verify_from_components(
     alg: &'static signature::RsaParameters,
-    signature: &str,
+    signature: impl AsRef<[u8]>,
     message: &[u8],
     components: (&[u8], &[u8]),
 ) -> Result<bool> {
