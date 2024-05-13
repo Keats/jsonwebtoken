@@ -1,5 +1,8 @@
 # Changelog
+## 9.4.0 (2024-05-12)
 
+- Add id field to header struct
+  
 ## 9.3.0 (2024-03-12)
 
 - Add `Validation.reject_tokens_expiring_in_less_than`, the opposite of leeway
