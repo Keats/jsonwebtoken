@@ -64,7 +64,9 @@ pub struct Header {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "x5t#S256")]
     pub x5t_s256: Option<String>,
-
+    /// Used by Apple WeatherKit
+    ///
+    /// Defined in https://developer.apple.com/documentation/weatherkitrestapi/request_authentication_for_weatherkit_rest_api.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 }
