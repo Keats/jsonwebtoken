@@ -73,6 +73,7 @@ impl Header {
     /// Returns a JWT header with the algorithm given
     pub fn new(algorithm: Algorithm) -> Self {
         Header {
+            id: None,
             typ: Some("JWT".to_string()),
             alg: algorithm,
             cty: None,
