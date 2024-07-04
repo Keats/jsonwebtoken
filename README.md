@@ -14,7 +14,7 @@ jsonwebtoken = "9"
 serde = {version = "1.0", features = ["derive"] }
 ```
 
-The minimum required Rust version (MSRV) is 1.67.
+The minimum required Rust version (MSRV) is specified in the `rust-version` field in this project's [Cargo.toml](Cargo.toml).
 
 ## Algorithms
 This library currently supports the following:
