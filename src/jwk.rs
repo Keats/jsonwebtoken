@@ -188,6 +188,10 @@ pub enum KeyAlgorithm {
     /// RSAES-OAEP-256 using SHA-2
     #[serde(rename = "RSA-OAEP-256")]
     RSA_OAEP_256,
+
+    /// Catch-All for when the key algorithm can not be determined
+    #[serde(other)]
+    UNKNOWN_ALGORITHM
 }
 
 impl FromStr for KeyAlgorithm {
@@ -435,7 +439,7 @@ impl JwkSet {
 
 #[cfg(test)]
 mod tests {
-    use crate::jwk::{AlgorithmParameters, JwkSet, OctetKeyType};
+    use crate::jwk::{AlgorithmParameters, JwkSet, KeyAlgorithm, OctetKeyType};
     use crate::serialization::b64_encode;
     use crate::Algorithm;
     use serde_json::json;
@@ -470,5 +474,12 @@ mod tests {
             }
             _ => panic!("Unexpected key algorithm"),
         }
+    }
+
+    #[test]
+    fn deserialize_unknown_key_algorithm(){
+        let key_alg_json = json!("");
+        let key_alg_result: KeyAlgorithm = serde_json::from_value(key_alg_json).expect("Could not deserialize json");
+        assert_eq!(key_alg_result,KeyAlgorithm::UNKNOWN_ALGORITHM);
     }
 }
