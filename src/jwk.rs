@@ -482,4 +482,12 @@ mod tests {
         let key_alg_result: KeyAlgorithm = serde_json::from_value(key_alg_json).expect("Could not deserialize json");
         assert_eq!(key_alg_result,KeyAlgorithm::UNKNOWN_ALGORITHM);
     }
+
+    #[test]
+    fn deserialize_unsupported_key_algorithm(){
+        // as of time of writing this algorithm is not supported but this could change in the future
+        let key_alg_json = json!("ES512"); 
+        let key_alg_result: KeyAlgorithm = serde_json::from_value(key_alg_json).expect("Could not deserialize json");
+        assert_eq!(key_alg_result,KeyAlgorithm::UNKNOWN_ALGORITHM);
+    }
 }
