@@ -189,7 +189,7 @@ pub enum KeyAlgorithm {
     #[serde(rename = "RSA-OAEP-256")]
     RSA_OAEP_256,
 
-    /// Catch-All for when the key algorithm can not be determined
+    /// Catch-All for when the key algorithm can not be determined or is not supported
     #[serde(other)]
     UNKNOWN_ALGORITHM
 }
