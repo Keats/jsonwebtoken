@@ -191,7 +191,7 @@ pub enum KeyAlgorithm {
 
     /// Catch-All for when the key algorithm can not be determined or is not supported
     #[serde(other)]
-    UNKNOWN_ALGORITHM
+    UNKNOWN_ALGORITHM,
 }
 
 impl FromStr for KeyAlgorithm {
@@ -442,6 +442,7 @@ mod tests {
     use crate::jwk::{AlgorithmParameters, JwkSet, KeyAlgorithm, OctetKeyType};
     use crate::serialization::b64_encode;
     use crate::Algorithm;
+    use proptest::proptest;
     use serde_json::json;
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -477,17 +478,21 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_unknown_key_algorithm(){
+    fn deserialize_unknown_key_algorithm() {
         let key_alg_json = json!("");
-        let key_alg_result: KeyAlgorithm = serde_json::from_value(key_alg_json).expect("Could not deserialize json");
-        assert_eq!(key_alg_result,KeyAlgorithm::UNKNOWN_ALGORITHM);
+        let key_alg_result: KeyAlgorithm =
+            serde_json::from_value(key_alg_json).expect("Could not deserialize json");
+        assert_eq!(key_alg_result, KeyAlgorithm::UNKNOWN_ALGORITHM);
     }
 
-    #[test]
-    fn deserialize_unsupported_key_algorithm(){
-        // as of time of writing this algorithm is not supported but this could change in the future
-        let key_alg_json = json!("ES512"); 
-        let key_alg_result: KeyAlgorithm = serde_json::from_value(key_alg_json).expect("Could not deserialize json");
-        assert_eq!(key_alg_result,KeyAlgorithm::UNKNOWN_ALGORITHM);
+    // Rather than testing against a particular case, test against a sampling of random strings
+    proptest! {
+        #[test]
+        fn deserialize_arbitrary_key_algorithm(s in ".*"){
+            // as of time of writing this algorithm is not supported but this could change in the future
+            let key_alg_json = json!(s);
+            let _key_alg_result: KeyAlgorithm = serde_json::from_value(key_alg_json).expect("Could not deserialize json");
+            // We don't need to assert a specific variant - we only care that the above line does not panic
+        }
     }
 }
