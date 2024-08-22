@@ -489,7 +489,6 @@ mod tests {
     proptest! {
         #[test]
         fn deserialize_arbitrary_key_algorithm(s in ".*"){
-            // as of time of writing this algorithm is not supported but this could change in the future
             let key_alg_json = json!(s);
             let _key_alg_result: KeyAlgorithm = serde_json::from_value(key_alg_json).expect("Could not deserialize json");
             // We don't need to assert a specific variant - we only care that the above line does not panic
