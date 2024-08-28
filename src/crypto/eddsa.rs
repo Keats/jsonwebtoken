@@ -1,6 +1,5 @@
-use ring::signature;
-
 use crate::algorithms::Algorithm;
+use crate::crypto::core::signature;
 use crate::errors::Result;
 use crate::serialization::b64_encode;
 
