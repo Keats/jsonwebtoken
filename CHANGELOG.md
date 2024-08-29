@@ -1,5 +1,11 @@
 # Changelog
 
+## 10.0.0 (unreleased)
+
+## 9.3.0 (2024-03-12)
+
+- Add `Validation.reject_tokens_expiring_in_less_than`, the opposite of leeway
+
 ## 9.2.0 (2023-12-01)
 
 - Add an option to not validate `aud` in the Validation struct
