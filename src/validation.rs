@@ -24,6 +24,8 @@ use crate::errors::{new_error, ErrorKind, Result};
 /// // or issuer
 /// validation.set_issuer(&["Me"]); // a single string
 /// validation.set_issuer(&["Me", "You"]); // array of strings
+/// // Setting required claims
+/// validation.set_required_spec_claims(&["exp", "iss", "aud"]);
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Validation {
@@ -39,6 +41,13 @@ pub struct Validation {
     ///
     /// Defaults to `60`.
     pub leeway: u64,
+    /// Reject a token some time (in seconds) before the `exp` to prevent
+    /// expiration in transit over the network.
+    ///
+    /// The value is the inverse of `leeway`, subtracting from the validation time.
+    ///
+    /// Defaults to `0`.
+    pub reject_tokens_expiring_in_less_than: u64,
     /// Whether to validate the `exp` field.
     ///
     /// It will return an error if the time in the `exp` field is past.
@@ -49,11 +58,17 @@ pub struct Validation {
     ///
     /// It will return an error if the current timestamp is before the time in the `nbf` field.
     ///
+    /// Validation only happens if `nbf` claim is present in the token.
+    /// Adding `nbf` to `required_spec_claims` will make it required.
+    ///
     /// Defaults to `false`.
     pub validate_nbf: bool,
     /// Whether to validate the `aud` field.
     ///
     /// It will return an error if the `aud` field is not a member of the audience provided.
+    ///
+    /// Validation only happens if `aud` claim is present in the token.
+    /// Adding `aud` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `true`. Very insecure to turn this off. Only do this if you know what you are doing.
     pub validate_aud: bool,
@@ -61,16 +76,25 @@ pub struct Validation {
     /// audience provided and will error otherwise.
     /// Use `set_audience` to set it
     ///
+    /// Validation only happens if `aud` claim is present in the token.
+    /// Adding `aud` to `required_spec_claims` will make it required.
+    ///
     /// Defaults to `None`.
     pub aud: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `iss` field is a member of the
     /// iss provided and will error otherwise.
     /// Use `set_issuer` to set it
     ///
+    /// Validation only happens if `iss` claim is present in the token.
+    /// Adding `iss` to `required_spec_claims` will make it required.
+    ///
     /// Defaults to `None`.
     pub iss: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `sub` field is the same as the
     /// one provided and will error otherwise.
+    ///
+    /// Validation only happens if `sub` claim is present in the token.
+    /// Adding `sub` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `None`.
     pub sub: Option<String>,
@@ -94,6 +118,7 @@ impl Validation {
             required_spec_claims: required_claims,
             algorithms: vec![alg],
             leeway: 60,
+            reject_tokens_expiring_in_less_than: 0,
 
             validate_exp: true,
             validate_nbf: false,
@@ -250,7 +275,8 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     if options.validate_exp || options.validate_nbf {
         let now = get_current_timestamp();
 
-        if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp && exp < now - options.leeway)
+        if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp
+            && exp - options.reject_tokens_expiring_in_less_than < now - options.leeway )
         {
             return Err(new_error(ErrorKind::ExpiredSignature));
         }
@@ -373,10 +399,32 @@ mod tests {
 
     #[test]
     #[wasm_bindgen_test]
+    fn exp_in_future_but_in_rejection_period_fails() {
+        let claims = json!({ "exp": get_current_timestamp() + 500 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.leeway = 0;
+        validation.reject_tokens_expiring_in_less_than = 501;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn exp_float_in_future_ok() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) + 10000.123 });
         let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
         assert!(res.is_ok());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_float_in_future_but_in_rejection_period_fails() {
+        let claims = json!({ "exp": (get_current_timestamp() as f64) + 500.123 });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.leeway = 0;
+        validation.reject_tokens_expiring_in_less_than = 501;
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
     }
 
     #[test]

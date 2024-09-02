@@ -14,7 +14,7 @@ jsonwebtoken = "9"
 serde = {version = "1.0", features = ["derive"] }
 ```
 
-The minimum required Rust version (MSRV) is 1.67.
+The minimum required Rust version (MSRV) is specified in the `rust-version` field in this project's [Cargo.toml](Cargo.toml).
 
 ## Algorithms
 This library currently supports the following:
@@ -159,6 +159,8 @@ openssl pkcs8 -topk8 -nocrypt -in sec1.pem -out pkcs8.pem
 This library automatically validates the `exp` claim, and `nbf` is validated if present. You can also validate the `sub`, `iss`, and `aud` but
 those require setting the expected values in the `Validation` struct. In the case of `aud`, if there is a value set in the token but
 not in the `Validation`, the token will be rejected.
+
+Validation is only made on present fields in the claims. It is possible to define the required claims, hence verifying that a JWT has a value for each of these claims before it is considered for validation. The required claims can be set in the `Validation` struct. The default option requires the `exp` claim to be present.
 
 Since validating time fields is always a bit tricky due to clock skew,
 you can add some leeway to the `iat`, `exp`, and `nbf` validation by setting the `leeway` field.
