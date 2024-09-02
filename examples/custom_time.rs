@@ -1,6 +1,7 @@
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
+
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 const SECRET: &str = "some-secret";
 
@@ -60,13 +61,15 @@ mod jwt_numeric_date {
 
     #[cfg(test)]
     mod tests {
-        const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gT2Zmc2V0RGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.BcPipupP9oIV6uFRI6Acn7FMLws_wA3oo6CrfeFF3Gg";
+        use time::{Duration, OffsetDateTime};
 
-        use super::super::{Claims, SECRET};
         use jsonwebtoken::{
             decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
         };
-        use time::{Duration, OffsetDateTime};
+
+        use super::super::{Claims, SECRET};
+
+        const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gT2Zmc2V0RGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.BcPipupP9oIV6uFRI6Acn7FMLws_wA3oo6CrfeFF3Gg";
 
         #[test]
         fn round_trip() {

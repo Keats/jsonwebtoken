@@ -4,12 +4,14 @@
 //! Most of the code in this file is taken from https://github.com/lawliet89/biscuit but
 //! tweaked to remove the private bits as it's not the goal for this crate currently.
 
+use std::{fmt, str::FromStr};
+
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+
 use crate::{
     errors::{self, Error, ErrorKind},
     Algorithm,
 };
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use std::{fmt, str::FromStr};
 
 /// The intended usage of the public `KeyType`. This enum is serialized `untagged`
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -435,11 +437,12 @@ impl JwkSet {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
     use crate::jwk::{AlgorithmParameters, JwkSet, OctetKeyType};
     use crate::serialization::b64_encode;
     use crate::Algorithm;
-    use serde_json::json;
-    use wasm_bindgen_test::wasm_bindgen_test;
 
     #[test]
     #[wasm_bindgen_test]
