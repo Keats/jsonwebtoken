@@ -54,12 +54,6 @@ jobs:
       - name: Build System Info
         run: rustc --version
 
-      - name: Downgrade bumpalo
-        run: cargo update -p bumpalo@3.15.4 --precise 3.14.0
-
-      - name: Downgrade half
-        run: cargo update -p half@2.4.0  --precise 2.2.1
-
       - name: Run tests default features
         run: cargo test
 
