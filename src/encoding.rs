@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Formatter};
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::ser::Serialize;
 
@@ -93,6 +95,15 @@ impl EncodingKey {
 
     pub(crate) fn inner(&self) -> &[u8] {
         &self.content
+    }
+}
+
+impl Debug for EncodingKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EncodingKey")
+            .field("family", &self.family)
+            .field("content", &"[redacted]")
+            .finish()
     }
 }
 
