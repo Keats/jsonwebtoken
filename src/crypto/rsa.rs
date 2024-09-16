@@ -1,6 +1,5 @@
-use ring::{rand, signature};
-
 use crate::algorithms::Algorithm;
+use crate::crypto::core::{rand, signature};
 use crate::errors::{ErrorKind, Result};
 use crate::serialization::{b64_decode, b64_encode};
 
@@ -41,7 +40,7 @@ pub(crate) fn sign(
     let key_pair = signature::RsaKeyPair::from_der(key)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
 
-    let mut signature = vec![0; key_pair.public().modulus_len()];
+    let mut signature = vec![0; signature::rsa_key_pair_public_modulus_len(&key_pair)];
     let rng = rand::SystemRandom::new();
     key_pair.sign(alg, &rng, message, &mut signature).map_err(|_| ErrorKind::RsaFailedSigning)?;
 
