@@ -52,6 +52,7 @@ criterion = { version = "0.4", default-features = false }
 default = ["use_pem"]
 use_pem = ["pem", "simple_asn1"]
 aws_lc_rs = ["dep:aws-lc-rs"]
+fips = ["aws-lc-rs/fips"]
 
 [[bench]]
 name = "jwt"
