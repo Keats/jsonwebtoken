@@ -2,12 +2,15 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto;
+use crate::builder::JwtEncoder;
+use crate::crypto::hmac::{HmacSecret, Hs256, Hs384};
+use crate::crypto::JwtSigner;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::b64_encode_part;
+use crate::{crypto, Algorithm};
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
@@ -122,10 +125,27 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
     if key.family != header.alg.family() {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
-    let encoded_header = b64_encode_part(header)?;
-    let encoded_claims = b64_encode_part(claims)?;
-    let message = [encoded_header, encoded_claims].join(".");
-    let signature = crypto::sign(message.as_bytes(), key, header.alg)?;
 
-    Ok([message, signature].join("."))
+    let jwt_encoder = encoder_factory(&header.alg, key)?;
+
+    jwt_encoder.encode(claims)
+}
+
+fn encoder_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<JwtEncoder> {
+    let jwt_encoder = match algorithm {
+        Algorithm::HS256 => JwtEncoder::hs_256(HmacSecret::from_secret(&key.content))?,
+        Algorithm::HS384 => JwtEncoder::hs_384(HmacSecret::from_secret(&key.content))?,
+        Algorithm::HS512 => todo!(),
+        Algorithm::ES256 => todo!(),
+        Algorithm::ES384 => todo!(),
+        Algorithm::RS256 => todo!(),
+        Algorithm::RS384 => todo!(),
+        Algorithm::RS512 => todo!(),
+        Algorithm::PS256 => todo!(),
+        Algorithm::PS384 => todo!(),
+        Algorithm::PS512 => todo!(),
+        Algorithm::EdDSA => todo!(),
+    };
+
+    Ok(jwt_encoder)
 }

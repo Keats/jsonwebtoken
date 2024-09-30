@@ -5,7 +5,10 @@
 use serde::Serialize;
 
 use crate::{
-    crypto::JwtSigner,
+    crypto::{
+        hmac::{HmacSecret, Hs256, Hs384},
+        JwtSigner,
+    },
     errors::{new_error, Result},
     serialization::{b64_encode, b64_encode_part},
     Header,
@@ -14,14 +17,19 @@ use crate::{
 /// # Todo
 ///
 /// - Documentation
-pub struct JwtEncoder<C: JwtSigner> {
-    signing_provider: C,
+pub struct JwtEncoder {
+    signing_provider: Box<dyn JwtSigner>,
     header: Header,
 }
 
-impl<C: JwtSigner> JwtEncoder<C> {
+impl JwtEncoder {
+    /// Todo
+    pub fn from_signer<S: JwtSigner + 'static>(signing_provider: S) -> Self {
+        Self::from_boxed_signer(Box::new(signing_provider))
+    }
+
     /// Create a new [`JwtEncoder`] with any crypto provider that implements the [`CryptoProvider`] trait.
-    pub fn new(signing_provider: C) -> Self {
+    pub fn from_boxed_signer(signing_provider: Box<dyn JwtSigner>) -> Self {
         // Determine a default header
         let mut header = Header::new(signing_provider.algorithm());
         header.typ = Some("JWT".to_owned());
@@ -60,11 +68,24 @@ impl<C: JwtSigner> JwtEncoder<C> {
 
         Ok([message, signature].join("."))
     }
+
+    /// Create new [`JwtEncoder`] with the `HS256` algorithm.
+    pub fn hs_256(secret: HmacSecret) -> Result<JwtEncoder> {
+        let signing_provider = Box::new(Hs256::new(secret)?);
+
+        Ok(JwtEncoder::from_boxed_signer(signing_provider))
+    }
+
+    /// Create new [`JwtEncoder`] with the `HS384` algorithm.
+    pub fn hs_384(secret: HmacSecret) -> Result<JwtEncoder> {
+        let signing_provider = Box::new(Hs384::new(secret)?);
+
+        Ok(JwtEncoder::from_boxed_signer(signing_provider))
+    }
 }
 
 #[cfg(test)]
 mod builder_tests {
-    use crate::crypto::hmac::HmacSha256Trait;
 
     use super::*;
 
@@ -78,10 +99,10 @@ mod builder_tests {
     fn test_builder() {
         // Arrange
         let claims = Claims { sub: "123345".to_owned(), age: 25 };
-        let signer = HmacSha256Trait::new("k3XTGsWiuO0stzhwPkuF2R6FdFY2crfyAVDjSBX34bW41ektItjp340PNXz1UvLkaq4CcT6ZMl7GXzfTvCvpkFXJbMni1wj40g423FbUxI7ZclVyzIrVFywrB5trt94Rv9AkTpShXzpnEWKGhZdD0MIOrQlg".as_ref()).unwrap();
+        let secret = HmacSecret::from_secret("test".as_ref());
 
         // Act
-        let jwt = JwtEncoder::new(signer).encode(&claims).unwrap();
+        let jwt = JwtEncoder::hs_256(secret).unwrap().encode(&claims).unwrap();
 
         dbg!(&jwt);
 
