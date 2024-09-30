@@ -1,13 +1,41 @@
 use hmac::{Hmac, Mac};
 use sha2::{Sha256, Sha384, Sha512};
+use signature::Signer;
 
 use crate::errors::Result;
 use crate::serialization::{b64_decode, b64_encode};
 use crate::Algorithm;
 
+use super::JwtSigner;
+
 type HmacSha256 = Hmac<Sha256>;
 type HmacSha384 = Hmac<Sha384>;
 type HmacSha512 = Hmac<Sha512>;
+
+pub(crate) struct HmacSha256Trait(HmacSha256);
+
+impl HmacSha256Trait {
+    pub(crate) fn new(key: &[u8]) -> Result<Self> {
+        let inner = HmacSha256::new_from_slice(key)
+            .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
+
+        Ok(Self(inner))
+    }
+}
+
+impl Signer<Vec<u8>> for HmacSha256Trait {
+    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
+        let mut signer = self.0.clone();
+
+        Ok(signer.sign(msg))
+    }
+}
+
+impl JwtSigner for HmacSha256Trait {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::HS256
+    }
+}
 
 pub(crate) fn sign_hmac(alg: Algorithm, key: &[u8], message: &[u8]) -> Result<String> {
     let mut hmac = create_hmac(alg, key)?;

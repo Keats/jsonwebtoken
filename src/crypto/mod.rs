@@ -8,6 +8,24 @@ pub(crate) mod eddsa;
 pub(crate) mod hmac;
 pub(crate) mod rsa;
 
+use signature::{Signer, Verifier};
+
+/// Trait providing the functionality to sign a JWT.
+///
+/// Allows an arbitrary crypto backend to be provided.
+pub trait JwtSigner: Signer<Vec<u8>> {
+    /// Return the [`Algorithm`] corresponding to the signing module.
+    fn algorithm(&self) -> Algorithm;
+}
+
+/// Trait providing the functionality to verify a JWT.
+///
+/// Allows an arbitrary crypto backend to be provided.
+pub trait JwtVerifier: Verifier<Vec<u8>> {
+    /// Return the [`Algorithm`] corresponding to the signing module.
+    fn algorithm(&self) -> Algorithm;
+}
+
 /// Take the payload of a JWT, sign it using the algorithm given and return
 /// the base64 url safe encoded of the result.
 ///
