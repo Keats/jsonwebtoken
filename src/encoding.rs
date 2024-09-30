@@ -126,7 +126,7 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    let jwt_encoder = encoder_factory(&header.alg, key)?;
+    let jwt_encoder = encoder_factory(&header.alg, key)?.with_header(header)?;
 
     jwt_encoder.encode(claims)
 }

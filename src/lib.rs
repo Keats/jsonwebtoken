@@ -4,7 +4,7 @@
 #![deny(missing_docs)]
 
 pub use algorithms::Algorithm;
-// pub use decoding::{decode, decode_header, DecodingKey, TokenData};
+pub use decoding::{decode, decode_header, DecodingKey, TokenData};
 pub use encoding::{encode, EncodingKey};
 pub use header::Header;
 pub use validation::{get_current_timestamp, Validation};
@@ -13,7 +13,7 @@ mod algorithms;
 pub mod builder;
 /// Lower level functions, if you want to do something other than JWTs
 pub mod crypto;
-// mod decoding;
+mod decoding;
 mod encoding;
 /// All the errors that can be encountered while encoding/decoding JWTs
 pub mod errors;

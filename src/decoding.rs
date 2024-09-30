@@ -2,6 +2,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
+use crate::builder::JwtDecoder;
 use crate::crypto::verify;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
@@ -269,6 +270,25 @@ pub fn decode<T: DeserializeOwned>(
             Ok(TokenData { header, claims })
         }
     }
+}
+
+fn decoder_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<JwtDecoder> {
+    let jwt_encoder = match algorithm {
+        Algorithm::HS256 => JwtDecoder::hs_256(HmacSecret::from_secret(&key.content))?,
+        Algorithm::HS384 => JwtDecoder::hs_384(HmacSecret::from_secret(&key.content))?,
+        Algorithm::HS512 => todo!(),
+        Algorithm::ES256 => todo!(),
+        Algorithm::ES384 => todo!(),
+        Algorithm::RS256 => todo!(),
+        Algorithm::RS384 => todo!(),
+        Algorithm::RS512 => todo!(),
+        Algorithm::PS256 => todo!(),
+        Algorithm::PS384 => todo!(),
+        Algorithm::PS512 => todo!(),
+        Algorithm::EdDSA => todo!(),
+    };
+
+    Ok(jwt_encoder)
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
