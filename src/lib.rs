@@ -10,7 +10,6 @@ pub use header::Header;
 pub use validation::{get_current_timestamp, Validation};
 
 mod algorithms;
-pub mod builder;
 /// Lower level functions, if you want to do something other than JWTs
 pub mod crypto;
 mod decoding;

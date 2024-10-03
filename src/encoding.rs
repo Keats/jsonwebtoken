@@ -2,15 +2,14 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::builder::JwtEncoder;
 use crate::crypto::hmac::{HmacSecret, Hs256, Hs384};
 use crate::crypto::JwtSigner;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
-use crate::serialization::b64_encode_part;
-use crate::{crypto, Algorithm};
+use crate::serialization::{b64_encode, b64_encode_part};
+use crate::Algorithm;
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
@@ -133,6 +132,7 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
 
 fn encoder_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<JwtEncoder> {
     let jwt_encoder = match algorithm {
+        // Todo: Need to implement `TryInto<HmacSecret> for &EncodingKey`
         Algorithm::HS256 => JwtEncoder::hs_256(HmacSecret::from_secret(&key.content))?,
         Algorithm::HS384 => JwtEncoder::hs_384(HmacSecret::from_secret(&key.content))?,
         Algorithm::HS512 => todo!(),
@@ -148,4 +148,74 @@ fn encoder_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<JwtEncode
     };
 
     Ok(jwt_encoder)
+}
+
+/// # Todo
+///
+/// - Documentation
+pub struct JwtEncoder {
+    signing_provider: Box<dyn JwtSigner>,
+    header: Header,
+}
+
+impl JwtEncoder {
+    /// Todo
+    pub fn from_signer<S: JwtSigner + 'static>(signing_provider: S) -> Self {
+        Self::from_boxed_signer(Box::new(signing_provider))
+    }
+
+    /// Create a new [`JwtEncoder`] with any crypto provider that implements the [`CryptoProvider`] trait.
+    pub fn from_boxed_signer(signing_provider: Box<dyn JwtSigner>) -> Self {
+        // Determine a default header
+        let mut header = Header::new(signing_provider.algorithm());
+        header.typ = Some("JWT".to_owned());
+
+        Self { signing_provider, header }
+    }
+
+    /// Provide a custom header.
+    ///
+    /// This would be used in the rare cases that fields other than `algorithm` and `type` need to be populated.
+    ///
+    /// # Todo
+    ///
+    /// - Test the the error checking works
+    pub fn with_header(mut self, header: &Header) -> Result<Self> {
+        // Check that the header makes use of the correct algorithm
+        if header.alg != self.signing_provider.algorithm() {
+            return Err(new_error(crate::errors::ErrorKind::InvalidAlgorithm));
+        }
+
+        self.header = header.clone();
+        Ok(self)
+    }
+
+    /// Encode and sign the `claims` as a JWT.
+    ///
+    /// # Todo
+    ///
+    /// - Put in example usage.
+    pub fn encode<T: Serialize>(&self, claims: &T) -> Result<String> {
+        let encoded_header = b64_encode_part(&self.header)?;
+        let encoded_claims = b64_encode_part(claims)?;
+        let message = [encoded_header, encoded_claims].join(".");
+
+        let signature = b64_encode(&self.signing_provider.sign(message.as_bytes()));
+
+        Ok([message, signature].join("."))
+    }
+
+    /// Create new [`JwtEncoder`] with the `HS256` algorithm.
+    pub fn hs_256(secret: HmacSecret) -> Result<JwtEncoder> {
+        let signing_provider = Box::new(Hs256::new(secret)?);
+
+        Ok(JwtEncoder::from_boxed_signer(signing_provider))
+    }
+
+    /// Create new [`JwtEncoder`] with the `HS384` algorithm.
+    pub fn hs_384(secret: HmacSecret) -> Result<JwtEncoder> {
+        let signing_provider = Box::new(Hs384::new(secret)?);
+
+        Ok(JwtEncoder::from_boxed_signer(signing_provider))
+    }
 }
