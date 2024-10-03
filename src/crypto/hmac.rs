@@ -1,3 +1,6 @@
+//! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
+//! HMAC family of algorithms.
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use hmac::{Hmac, Mac};
 use sha2::{Sha256, Sha384, Sha512};
@@ -12,8 +15,9 @@ type HmacSha256 = Hmac<Sha256>;
 type HmacSha384 = Hmac<Sha384>;
 type HmacSha512 = Hmac<Sha512>;
 
+/// The shared secret used for the HMAC family of algorithms.
 #[derive(Debug)]
-pub(crate) struct HmacSecret(Vec<u8>);
+pub struct HmacSecret(Vec<u8>);
 
 impl HmacSecret {
     /// If you're using an HMAC secret that is not base64, use that.

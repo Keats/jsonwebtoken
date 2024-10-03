@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::hmac::{HmacSecret, Hs256, Hs384};
+use crate::crypto::hmac::{HmacSecret, Hs256, Hs384, Hs512};
 use crate::crypto::JwtSigner;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
@@ -130,12 +130,12 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
     jwt_encoder.encode(claims)
 }
 
+/// Return the correct [`JwtEncoder`] based on the `algorithm`.
 fn encoder_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<JwtEncoder> {
     let jwt_encoder = match algorithm {
-        // Todo: Need to implement `TryInto<HmacSecret> for &EncodingKey`
-        Algorithm::HS256 => JwtEncoder::hs_256(HmacSecret::from_secret(&key.content))?,
-        Algorithm::HS384 => JwtEncoder::hs_384(HmacSecret::from_secret(&key.content))?,
-        Algorithm::HS512 => todo!(),
+        Algorithm::HS256 => JwtEncoder::hs_256(key.into())?,
+        Algorithm::HS384 => JwtEncoder::hs_384(key.into())?,
+        Algorithm::HS512 => JwtEncoder::hs_512(key.into())?,
         Algorithm::ES256 => todo!(),
         Algorithm::ES384 => todo!(),
         Algorithm::RS256 => todo!(),
@@ -150,21 +150,51 @@ fn encoder_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<JwtEncode
     Ok(jwt_encoder)
 }
 
-/// # Todo
+/// Convert an [`&EncodingKey`] to an [`HmacSecret`].
+impl From<&EncodingKey> for HmacSecret {
+    fn from(key: &EncodingKey) -> Self {
+        HmacSecret::from_secret(&key.content)
+    }
+}
+
+/// A builder style JWT encoder.
 ///
-/// - Documentation
+/// # Examples
+///
+/// ```
+/// use serde::{Deserialize, Serialize};
+/// use jsonwebtoken::{JwtEncoder, HmacSecret};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String
+/// }
+///
+/// let my_claims = Claims {
+///     sub: "b@b.com".to_owned(),
+///     company: "ACME".to_owned()
+/// };
+///
+/// let hmac_secret = HmacSecret::from_secret(b"secret");
+///
+/// let token = JwtEncoder::hs_256(hmac_secret)
+///     .unwrap()
+///     .encode(&my_claims)
+///     .unwrap();
+/// ```
 pub struct JwtEncoder {
     signing_provider: Box<dyn JwtSigner>,
     header: Header,
 }
 
 impl JwtEncoder {
-    /// Todo
+    /// Create a new [`JwtEncoder`] with any `signing_provider` that implements the [`JwtSigner`] trait.
     pub fn from_signer<S: JwtSigner + 'static>(signing_provider: S) -> Self {
         Self::from_boxed_signer(Box::new(signing_provider))
     }
 
-    /// Create a new [`JwtEncoder`] with any crypto provider that implements the [`CryptoProvider`] trait.
+    /// Create a new [`JwtEncoder`] with any `signing_provider` that implements the [`JwtSigner`] trait.
     pub fn from_boxed_signer(signing_provider: Box<dyn JwtSigner>) -> Self {
         // Determine a default header
         let mut header = Header::new(signing_provider.algorithm());
@@ -177,9 +207,34 @@ impl JwtEncoder {
     ///
     /// This would be used in the rare cases that fields other than `algorithm` and `type` need to be populated.
     ///
-    /// # Todo
+    /// # Examples
     ///
-    /// - Test the the error checking works
+    /// ```
+    /// use serde::{Deserialize, Serialize};
+    /// use jsonwebtoken::{JwtEncoder, HmacSecret, Header, Algorithm};
+    ///
+    /// #[derive(Debug, Serialize, Deserialize)]
+    /// struct Claims {
+    ///    sub: String,
+    ///    company: String
+    /// }
+    ///
+    /// let my_claims = Claims {
+    ///     sub: "b@b.com".to_owned(),
+    ///     company: "ACME".to_owned()
+    /// };
+    ///
+    /// let hmac_secret = HmacSecret::from_secret(b"secret");
+    /// let mut header = Header::new(Algorithm::HS256);
+    /// header.cty = Some("content-type".to_owned());
+    ///
+    /// let token = JwtEncoder::hs_256(hmac_secret)
+    ///     .unwrap()
+    ///     .with_header(&header)
+    ///     .unwrap()
+    ///     .encode(&my_claims)
+    ///     .unwrap();
+    /// ```
     pub fn with_header(mut self, header: &Header) -> Result<Self> {
         // Check that the header makes use of the correct algorithm
         if header.alg != self.signing_provider.algorithm() {
@@ -190,11 +245,7 @@ impl JwtEncoder {
         Ok(self)
     }
 
-    /// Encode and sign the `claims` as a JWT.
-    ///
-    /// # Todo
-    ///
-    /// - Put in example usage.
+    /// Encode and sign the `claims` as a JWT using the `signing_provider` of the [`JwtEncoder`].
     pub fn encode<T: Serialize>(&self, claims: &T) -> Result<String> {
         let encoded_header = b64_encode_part(&self.header)?;
         let encoded_claims = b64_encode_part(claims)?;
@@ -215,6 +266,13 @@ impl JwtEncoder {
     /// Create new [`JwtEncoder`] with the `HS384` algorithm.
     pub fn hs_384(secret: HmacSecret) -> Result<JwtEncoder> {
         let signing_provider = Box::new(Hs384::new(secret)?);
+
+        Ok(JwtEncoder::from_boxed_signer(signing_provider))
+    }
+
+    /// Create new [`JwtEncoder`] with the `HS512` algorithm.
+    pub fn hs_512(secret: HmacSecret) -> Result<JwtEncoder> {
+        let signing_provider = Box::new(Hs512::new(secret)?);
 
         Ok(JwtEncoder::from_boxed_signer(signing_provider))
     }

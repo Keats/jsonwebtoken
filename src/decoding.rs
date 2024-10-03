@@ -194,13 +194,6 @@ impl DecodingKey {
             }
         }
     }
-
-    pub(crate) fn as_bytes(&self) -> &[u8] {
-        match &self.kind {
-            DecodingKeyKind::SecretOrDer(b) => b,
-            DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
-        }
-    }
 }
 
 /// Decode and validate a JWT
@@ -238,6 +231,7 @@ pub fn decode<T: DeserializeOwned>(
     decoder.decode(token)
 }
 
+/// Return the correct decoder based on the `algorithm`.
 fn decoder_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<JwtDecoder> {
     let jwt_encoder = match algorithm {
         Algorithm::HS256 => JwtDecoder::hs_256(key.try_into()?)?,
@@ -287,26 +281,64 @@ pub fn decode_header(token: &str) -> Result<Header> {
     Header::from_encoded(header)
 }
 
-/// Todo
+/// A builder style JWT decoder
+///
+/// # Examples
+///
+/// ```
+/// use jsonwebtoken::{JwtDecoder, HmacSecret};
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: String,
+///    company: String,
+///    exp: usize,
+/// }
+///
+/// let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
+///
+/// let hmac_secret = HmacSecret::from_secret(b"secret");
+///
+/// let claims = JwtDecoder::hs_256(hmac_secret)
+///     .unwrap()
+///     .decode::<Claims>(&token)
+///     .unwrap();
+/// ```
 pub struct JwtDecoder {
     verifying_provider: Box<dyn JwtVerifier>,
     validation: Validation,
 }
 
 impl JwtDecoder {
-    /// Todo
+    /// Create a new [`JwtDecoder`] with any `verifying_provider` that implements the [`JwtVerifier`] trait.
     pub fn from_verifier<V: JwtVerifier + 'static>(verifying_provider: V) -> Self {
         Self::from_boxed_verifiyer(Box::new(verifying_provider))
     }
 
-    /// Todo
+    /// Create a new [`JwtDecoder`] with any `verifying_provider` implements the [`JwtVerifier`] trait.
     pub fn from_boxed_verifiyer(verifying_provider: Box<dyn JwtVerifier>) -> Self {
         let validation = Validation::new(verifying_provider.algorithm());
 
         Self { verifying_provider, validation }
     }
 
-    /// Todo
+    /// Provide custom a custom validation configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use jsonwebtoken::{JwtDecoder, HmacSecret, Validation, Algorithm};
+    ///
+    /// let hmac_secret = HmacSecret::from_secret(b"secret");
+    /// let mut validation = Validation::new(Algorithm::HS256);
+    /// validation.leeway = 5;
+    ///
+    /// let jwt_decoder = JwtDecoder::hs_256(hmac_secret)
+    ///     .unwrap()
+    ///     .with_validation(&validation)
+    ///     .unwrap();
+    /// ```
     pub fn with_validation(mut self, validation: &Validation) -> Result<Self> {
         // Check that the validation contains the correct algorithm
         if validation.validate_signature
@@ -319,7 +351,7 @@ impl JwtDecoder {
         Ok(self)
     }
 
-    /// Todo
+    /// Decode and verify a JWT `token` using the `verifying_provider` and `validation` of the [`JwtDecoder`]
     pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>> {
         let (header, claims) = self.verify_signature(token)?;
 
