@@ -27,7 +27,6 @@ base64 = "0.22"
 pem = { version = "3", optional = true }
 simple_asn1 = { version = "0.6", optional = true }
 
-hmac = "0.12.1"
 rsa = "0.9.6"
 sha2 = { version = "0.10.7", features = ["oid"] }
 getrandom = { version = "0.2.10", features = ["js"] }
@@ -37,6 +36,13 @@ p256 = { version = "0.13.2", features = ["ecdsa"] }
 p384 = { version = "0.13.0", features = ["ecdsa"] }
 rand_core = "0.6.4"
 signature = "2.2.0"
+
+# "rust_crypto" feature
+hmac = { version = "0.12.1", optional = true }
+
+# "aws_lc_rs" feature
+aws-lc-rs = { version = "1.10.0", optional = true }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
 
@@ -54,8 +60,10 @@ time = { version = "0.3", features = ["wasm-bindgen"] }
 criterion = { version = "0.4", default-features = false }
 
 [features]
-default = ["use_pem"]
+default = ["use_pem", "rust_crypto"]
 use_pem = ["pem", "simple_asn1", 'p256/pem', 'p384/pem']
+rust_crypto = ["hmac"]
+aws_lc_rs = ["aws-lc-rs"]
 
 [[bench]]
 name = "jwt"

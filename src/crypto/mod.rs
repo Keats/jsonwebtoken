@@ -4,10 +4,11 @@
 
 use crate::algorithms::Algorithm;
 
-// pub(crate) mod ecdsa;
-// pub(crate) mod eddsa;
+#[cfg(feature = "aws_lc_rs")]
+pub(crate) mod aws_lc;
 pub(crate) mod hmac;
-// pub(crate) mod rsa;
+#[cfg(feature = "rust_crypto")]
+pub(crate) mod rust_crypto;
 
 use signature::{Signer, Verifier};
 

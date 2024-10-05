@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::hmac::{HmacSecret, Hs256, Hs384, Hs512};
+use crate::crypto::hmac::HmacSecret;
 use crate::crypto::JwtSigner;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
@@ -10,6 +10,12 @@ use crate::header::Header;
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_encode, b64_encode_part};
 use crate::Algorithm;
+
+// Crypto
+#[cfg(feature = "aws_lc_rs")]
+use crate::crypto::aws_lc::hmac::{Hs256, Hs384, Hs512};
+#[cfg(feature = "rust_crypto")]
+use crate::crypto::rust_crypto::hmac::{Hs256, Hs384, Hs512};
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
