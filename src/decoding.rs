@@ -232,17 +232,34 @@ pub fn decode<T: DeserializeOwned>(
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    let decoder = decoder_factory(&header.alg, key)?.with_validation(validation)?;
+    let verifying_provider = jwt_verifier_factory(&header.alg, key)?;
 
-    decoder.decode(token)
+    _decode(token, validation, verifying_provider)
 }
 
-/// Return the correct decoder based on the `algorithm`.
-fn decoder_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<JwtDecoder> {
+/// # Todo
+///
+/// - Documentation
+pub fn _decode<T: DeserializeOwned>(
+    token: &str,
+    validation: &Validation,
+    verifying_provider: Box<dyn JwtVerifier>,
+) -> Result<TokenData<T>> {
+    let (header, claims) = verify_signature(token, validation, verifying_provider)?;
+
+    let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
+    let claims = decoded_claims.deserialize()?;
+    validate(decoded_claims.deserialize()?, validation)?;
+
+    Ok(TokenData { header, claims })
+}
+
+/// Return the correct [`JwtVerifier`] based on the `algorithm`.
+fn jwt_verifier_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<dyn JwtVerifier>> {
     let jwt_encoder = match algorithm {
-        Algorithm::HS256 => JwtDecoder::hs_256(key.try_into()?)?,
-        Algorithm::HS384 => JwtDecoder::hs_384(key.try_into()?)?,
-        Algorithm::HS512 => JwtDecoder::hs_512(key.try_into()?)?,
+        Algorithm::HS256 => Box::new(Hs256::new(key.try_into()?)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS384 => Box::new(Hs384::new(key.try_into()?)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS512 => Box::new(Hs512::new(key.try_into()?)?) as Box<dyn JwtVerifier>,
         Algorithm::ES256 => todo!(),
         Algorithm::ES384 => todo!(),
         Algorithm::RS256 => todo!(),
@@ -287,139 +304,40 @@ pub fn decode_header(token: &str) -> Result<Header> {
     Header::from_encoded(header)
 }
 
-/// A builder style JWT decoder
+/// Verify signature of a JWT, and return header object and raw payload
 ///
-/// # Examples
-///
-/// ```
-/// use jsonwebtoken::{JwtDecoder, HmacSecret};
-/// use serde::{Serialize, Deserialize};
-///
-/// #[derive(Debug, Serialize, Deserialize)]
-/// struct Claims {
-///    sub: String,
-///    company: String,
-///    exp: usize,
-/// }
-///
-/// let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
-///
-/// let hmac_secret = HmacSecret::from_secret(b"secret");
-///
-/// let claims = JwtDecoder::hs_256(hmac_secret)
-///     .unwrap()
-///     .decode::<Claims>(&token)
-///     .unwrap();
-/// ```
-pub struct JwtDecoder {
+/// If the token or its signature is invalid, it will return an error.
+fn verify_signature<'a>(
+    token: &'a str,
+    validation: &Validation,
     verifying_provider: Box<dyn JwtVerifier>,
-    validation: Validation,
-}
-
-impl JwtDecoder {
-    /// Create a new [`JwtDecoder`] with any `verifying_provider` that implements the [`JwtVerifier`] trait.
-    pub fn from_verifier<V: JwtVerifier + 'static>(verifying_provider: V) -> Self {
-        Self::from_boxed_verifiyer(Box::new(verifying_provider))
+) -> Result<(Header, &'a str)> {
+    if validation.validate_signature && validation.algorithms.is_empty() {
+        return Err(new_error(ErrorKind::MissingAlgorithm));
     }
 
-    /// Create a new [`JwtDecoder`] with any `verifying_provider` implements the [`JwtVerifier`] trait.
-    pub fn from_boxed_verifiyer(verifying_provider: Box<dyn JwtVerifier>) -> Self {
-        let validation = Validation::new(verifying_provider.algorithm());
+    // Todo: This behaviour is currently not captured anywhere.
+    // if validation.validate_signature {
+    //     for alg in &validation.algorithms {
+    //         if key.family != alg.family() {
+    //             return Err(new_error(ErrorKind::InvalidAlgorithm));
+    //         }
+    //     }
+    // }
 
-        Self { verifying_provider, validation }
+    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
+    let header = Header::from_encoded(header)?;
+
+    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    /// Provide custom a custom validation configuration.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use jsonwebtoken::{JwtDecoder, HmacSecret, Validation, Algorithm};
-    ///
-    /// let hmac_secret = HmacSecret::from_secret(b"secret");
-    /// let mut validation = Validation::new(Algorithm::HS256);
-    /// validation.leeway = 5;
-    ///
-    /// let jwt_decoder = JwtDecoder::hs_256(hmac_secret)
-    ///     .unwrap()
-    ///     .with_validation(&validation)
-    ///     .unwrap();
-    /// ```
-    pub fn with_validation(mut self, validation: &Validation) -> Result<Self> {
-        // Check that the validation contains the correct algorithm
-        if validation.validate_signature
-            && !validation.algorithms.contains(&self.verifying_provider.algorithm())
-        {
-            return Err(new_error(crate::errors::ErrorKind::InvalidAlgorithm));
-        }
-
-        self.validation = validation.clone();
-        Ok(self)
+    if validation.validate_signature
+        && verifying_provider.verify(message.as_bytes(), &b64_decode(signature)?).is_err()
+    {
+        return Err(new_error(ErrorKind::InvalidSignature));
     }
 
-    /// Decode and verify a JWT `token` using the `verifying_provider` and `validation` of the [`JwtDecoder`]
-    pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>> {
-        let (header, claims) = self.verify_signature(token)?;
-
-        let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
-        let claims = decoded_claims.deserialize()?;
-        validate(decoded_claims.deserialize()?, &self.validation)?;
-
-        Ok(TokenData { header, claims })
-    }
-
-    /// Verify signature of a JWT, and return header object and raw payload
-    ///
-    /// If the token or its signature is invalid, it will return an error.
-    fn verify_signature<'a>(&self, token: &'a str) -> Result<(Header, &'a str)> {
-        if self.validation.validate_signature && self.validation.algorithms.is_empty() {
-            return Err(new_error(ErrorKind::MissingAlgorithm));
-        }
-
-        // Todo: This behaviour is currently not captured anywhere.
-        // if validation.validate_signature {
-        //     for alg in &validation.algorithms {
-        //         if key.family != alg.family() {
-        //             return Err(new_error(ErrorKind::InvalidAlgorithm));
-        //         }
-        //     }
-        // }
-
-        let (signature, message) = expect_two!(token.rsplitn(2, '.'));
-        let (payload, header) = expect_two!(message.rsplitn(2, '.'));
-        let header = Header::from_encoded(header)?;
-
-        if self.validation.validate_signature && !self.validation.algorithms.contains(&header.alg) {
-            return Err(new_error(ErrorKind::InvalidAlgorithm));
-        }
-
-        if self.validation.validate_signature
-            && self.verifying_provider.verify(message.as_bytes(), &b64_decode(signature)?).is_err()
-        {
-            return Err(new_error(ErrorKind::InvalidSignature));
-        }
-
-        Ok((header, payload))
-    }
-
-    /// Create new [`JwtDecoder`] with the `HS256` algorithm.
-    pub fn hs_256(secret: HmacSecret) -> Result<JwtDecoder> {
-        let verifying_provider = Box::new(Hs256::new(secret)?);
-
-        Ok(JwtDecoder::from_boxed_verifiyer(verifying_provider))
-    }
-
-    /// Create new [`JwtDecoder`] with the `HS384` algorithm.
-    pub fn hs_384(secret: HmacSecret) -> Result<JwtDecoder> {
-        let verifying_provider = Box::new(Hs384::new(secret)?);
-
-        Ok(JwtDecoder::from_boxed_verifiyer(verifying_provider))
-    }
-
-    /// Create new [`JwtDecoder`] with the `HS512` algorithm.
-    pub fn hs_512(secret: HmacSecret) -> Result<JwtDecoder> {
-        let verifying_provider = Box::new(Hs512::new(secret)?);
-
-        Ok(JwtDecoder::from_boxed_verifiyer(verifying_provider))
-    }
+    Ok((header, payload))
 }
