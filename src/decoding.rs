@@ -2,7 +2,6 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::hmac::HmacSecret;
 use crate::crypto::JwtVerifier;
 use crate::errors::{new_error, Error, ErrorKind, Result};
 use crate::header::Header;
@@ -17,7 +16,7 @@ use crate::Algorithm;
 #[cfg(feature = "aws_lc_rs")]
 use crate::crypto::aws_lc::hmac::{Hs256, Hs384, Hs512};
 #[cfg(feature = "rust_crypto")]
-use crate::crypto::rust_crypto::hmac::{Hs256, Hs384, Hs512};
+use crate::crypto::rust_crypto::hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier};
 
 /// The return type of a successful call to [decode](fn.decode.html).
 #[derive(Debug)]
@@ -257,9 +256,9 @@ pub fn _decode<T: DeserializeOwned>(
 /// Return the correct [`JwtVerifier`] based on the `algorithm`.
 fn jwt_verifier_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<dyn JwtVerifier>> {
     let jwt_encoder = match algorithm {
-        Algorithm::HS256 => Box::new(Hs256::new(key.try_into()?)?) as Box<dyn JwtVerifier>,
-        Algorithm::HS384 => Box::new(Hs384::new(key.try_into()?)?) as Box<dyn JwtVerifier>,
-        Algorithm::HS512 => Box::new(Hs512::new(key.try_into()?)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS256 => Box::new(Hs256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS384 => Box::new(Hs384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS512 => Box::new(Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES256 => todo!(),
         Algorithm::ES384 => todo!(),
         Algorithm::RS256 => todo!(),
@@ -272,20 +271,6 @@ fn jwt_verifier_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<
     };
 
     Ok(jwt_encoder)
-}
-
-/// Convert a [`&DecodingKey`] into an [`HmacSecret`]
-impl TryInto<HmacSecret> for &DecodingKey {
-    type Error = Error;
-
-    fn try_into(self) -> std::result::Result<HmacSecret, Self::Error> {
-        match self.kind.clone() {
-            DecodingKeyKind::SecretOrDer(vec) => Ok(HmacSecret::from_secret(&vec)),
-            DecodingKeyKind::RsaModulusExponent { .. } => {
-                Err(new_error(crate::errors::ErrorKind::InvalidKeyFormat))
-            }
-        }
-    }
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
@@ -340,4 +325,20 @@ fn verify_signature<'a>(
     }
 
     Ok((header, payload))
+}
+
+/// # Todo
+///
+/// - Try return a reference.
+pub(crate) fn try_get_hmac_secret_from_decoding_key(decoding_key: &DecodingKey) -> Result<Vec<u8>> {
+    if decoding_key.family != AlgorithmFamily::Hmac {
+        return Err(new_error(ErrorKind::InvalidKeyFormat));
+    }
+
+    match decoding_key.kind.clone() {
+        DecodingKeyKind::SecretOrDer(vec) => Ok(vec),
+        DecodingKeyKind::RsaModulusExponent { .. } => {
+            Err(new_error(crate::errors::ErrorKind::InvalidKeyFormat))
+        }
+    }
 }

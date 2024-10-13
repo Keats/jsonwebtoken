@@ -9,7 +9,6 @@ compile_error!(
 );
 
 pub use algorithms::Algorithm;
-pub use crypto::hmac::HmacSecret;
 pub use decoding::{decode, decode_header, DecodingKey, TokenData, _decode};
 pub use encoding::{encode, EncodingKey, _encode};
 pub use header::Header;

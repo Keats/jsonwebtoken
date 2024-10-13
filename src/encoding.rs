@@ -2,20 +2,19 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::hmac::HmacSecret;
 use crate::crypto::JwtSigner;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_encode, b64_encode_part};
-use crate::Algorithm;
+use crate::{Algorithm, DecodingKey};
 
 // Crypto
 #[cfg(feature = "aws_lc_rs")]
 use crate::crypto::aws_lc::hmac::{Hs256, Hs384, Hs512};
 #[cfg(feature = "rust_crypto")]
-use crate::crypto::rust_crypto::hmac::{Hs256, Hs384, Hs512};
+use crate::crypto::rust_crypto::hmac::{Hs256Signer, Hs384Signer, Hs512Signer};
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
@@ -160,9 +159,9 @@ pub fn _encode<T: Serialize>(
 /// Return the correct [`JwtSigner`] based on the `algorithm`.
 fn jwt_signer_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSigner>> {
     let jwt_signer = match algorithm {
-        Algorithm::HS256 => Box::new(Hs256::new(key.into())?) as Box<dyn JwtSigner>,
-        Algorithm::HS384 => Box::new(Hs384::new(key.into())?) as Box<dyn JwtSigner>,
-        Algorithm::HS512 => Box::new(Hs512::new(key.into())?) as Box<dyn JwtSigner>,
+        Algorithm::HS256 => Box::new(Hs256Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::HS384 => Box::new(Hs384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::HS512 => Box::new(Hs512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES256 => todo!(),
         Algorithm::ES384 => todo!(),
         Algorithm::RS256 => todo!(),
@@ -177,9 +176,12 @@ fn jwt_signer_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dy
     Ok(jwt_signer)
 }
 
-/// Convert an [`&EncodingKey`] to an [`HmacSecret`].
-impl From<&EncodingKey> for HmacSecret {
-    fn from(key: &EncodingKey) -> Self {
-        HmacSecret::from_secret(&key.content)
+pub(crate) fn try_get_hmac_secret_from_encoding_key(
+    encoding_key: &EncodingKey,
+) -> Result<&Vec<u8>> {
+    if encoding_key.family == AlgorithmFamily::Hmac {
+        Ok(&encoding_key.content)
+    } else {
+        Err(new_error(ErrorKind::InvalidKeyFormat))
     }
 }

@@ -6,7 +6,6 @@ use crate::algorithms::Algorithm;
 
 #[cfg(feature = "aws_lc_rs")]
 pub(crate) mod aws_lc;
-pub(crate) mod hmac;
 #[cfg(feature = "rust_crypto")]
 pub(crate) mod rust_crypto;
 
