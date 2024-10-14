@@ -8,6 +8,7 @@ use crate::algorithms::Algorithm;
 pub(crate) mod aws_lc;
 #[cfg(feature = "rust_crypto")]
 pub(crate) mod rust_crypto;
+pub(crate) mod utils;
 
 use signature::{Signer, Verifier};
 

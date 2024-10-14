@@ -1,2 +1,2 @@
 pub(crate) mod hmac;
-// pub(crate) mod rsa;
+pub(crate) mod rsa;

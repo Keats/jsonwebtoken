@@ -60,7 +60,7 @@ time = { version = "0.3", features = ["wasm-bindgen"] }
 criterion = { version = "0.4", default-features = false }
 
 [features]
-default = ["use_pem", "rust_crypto"]
+default = ["use_pem", "aws_lc_rs"]
 use_pem = ["pem", "simple_asn1", 'p256/pem', 'p384/pem']
 rust_crypto = ["hmac"]
 aws_lc_rs = ["aws-lc-rs"]

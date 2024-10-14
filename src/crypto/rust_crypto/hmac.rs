@@ -5,9 +5,10 @@ use hmac::{Hmac, Mac};
 use sha2::{Sha256, Sha384, Sha512};
 use signature::{Signer, Verifier};
 
+use crate::crypto::utils::{
+    try_get_hmac_secret_from_decoding_key, try_get_hmac_secret_from_encoding_key,
+};
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::decoding::try_get_hmac_secret_from_decoding_key;
-use crate::encoding::try_get_hmac_secret_from_encoding_key;
 use crate::errors::Result;
 use crate::{Algorithm, DecodingKey, EncodingKey};
 
@@ -48,7 +49,7 @@ pub struct Hs256Verifier(HmacSha256);
 impl Hs256Verifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
         let inner =
-            HmacSha256::new_from_slice(&try_get_hmac_secret_from_decoding_key(decoding_key)?)
+            HmacSha256::new_from_slice(try_get_hmac_secret_from_decoding_key(decoding_key)?)
                 .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
 
         Ok(Self(inner))
@@ -104,7 +105,7 @@ pub struct Hs384Verifier(HmacSha384);
 impl Hs384Verifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
         let inner =
-            HmacSha384::new_from_slice(&try_get_hmac_secret_from_decoding_key(decoding_key)?)
+            HmacSha384::new_from_slice(try_get_hmac_secret_from_decoding_key(decoding_key)?)
                 .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
 
         Ok(Self(inner))
@@ -160,7 +161,7 @@ pub struct Hs512Verifier(HmacSha512);
 impl Hs512Verifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
         let inner =
-            HmacSha512::new_from_slice(&try_get_hmac_secret_from_decoding_key(decoding_key)?)
+            HmacSha512::new_from_slice(try_get_hmac_secret_from_decoding_key(decoding_key)?)
                 .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
 
         Ok(Self(inner))
