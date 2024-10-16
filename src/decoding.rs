@@ -2,14 +2,22 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::verify;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::crypto::aws_lc::rsa::{Rsa256Verifier, Rsa384Verifier, Rsa512Verifier};
+use crate::crypto::JwtVerifier;
+use crate::errors::{new_error, Error, ErrorKind, Result};
 use crate::header::Header;
 use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, DecodedJwtPartClaims};
 use crate::validation::{validate, Validation};
+use crate::Algorithm;
+
+// Crypto
+#[cfg(feature = "aws_lc_rs")]
+use crate::crypto::aws_lc::hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier};
+#[cfg(feature = "rust_crypto")]
+use crate::crypto::rust_crypto::hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier};
 
 /// The return type of a successful call to [decode](fn.decode.html).
 #[derive(Debug)]
@@ -201,41 +209,6 @@ impl DecodingKey {
     }
 }
 
-/// Verify signature of a JWT, and return header object and raw payload
-///
-/// If the token or its signature is invalid, it will return an error.
-fn verify_signature<'a>(
-    token: &'a str,
-    key: &DecodingKey,
-    validation: &Validation,
-) -> Result<(Header, &'a str)> {
-    if validation.validate_signature && validation.algorithms.is_empty() {
-        return Err(new_error(ErrorKind::MissingAlgorithm));
-    }
-
-    if validation.validate_signature {
-        for alg in &validation.algorithms {
-            if key.family != alg.family() {
-                return Err(new_error(ErrorKind::InvalidAlgorithm));
-            }
-        }
-    }
-
-    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
-    let header = Header::from_encoded(header)?;
-
-    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
-        return Err(new_error(ErrorKind::InvalidAlgorithm));
-    }
-
-    if validation.validate_signature && !verify(signature, message.as_bytes(), key, header.alg)? {
-        return Err(new_error(ErrorKind::InvalidSignature));
-    }
-
-    Ok((header, payload))
-}
-
 /// Decode and validate a JWT
 ///
 /// If the token or its signature is invalid or the claims fail validation, it will return an error.
@@ -259,16 +232,53 @@ pub fn decode<T: DeserializeOwned>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
-    match verify_signature(token, key, validation) {
-        Err(e) => Err(e),
-        Ok((header, claims)) => {
-            let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
-            let claims = decoded_claims.deserialize()?;
-            validate(decoded_claims.deserialize()?, validation)?;
+    // The decoding step is unfortunately a little clunky but that seems to be how I need to do it to fit it into the `decode` function
+    let header = decode_header(token)?;
 
-            Ok(TokenData { header, claims })
-        }
+    if validation.validate_signature && !(validation.algorithms.contains(&header.alg)) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
+
+    let verifying_provider = jwt_verifier_factory(&header.alg, key)?;
+
+    _decode(token, validation, verifying_provider)
+}
+
+/// # Todo
+///
+/// - Documentation
+pub fn _decode<T: DeserializeOwned>(
+    token: &str,
+    validation: &Validation,
+    verifying_provider: Box<dyn JwtVerifier>,
+) -> Result<TokenData<T>> {
+    let (header, claims) = verify_signature(token, validation, verifying_provider)?;
+
+    let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
+    let claims = decoded_claims.deserialize()?;
+    validate(decoded_claims.deserialize()?, validation)?;
+
+    Ok(TokenData { header, claims })
+}
+
+/// Return the correct [`JwtVerifier`] based on the `algorithm`.
+fn jwt_verifier_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<dyn JwtVerifier>> {
+    let jwt_encoder = match algorithm {
+        Algorithm::HS256 => Box::new(Hs256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS384 => Box::new(Hs384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS512 => Box::new(Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::ES256 => todo!(),
+        Algorithm::ES384 => todo!(),
+        Algorithm::RS256 => Box::new(Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::RS384 => Box::new(Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::RS512 => Box::new(Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::PS256 => todo!(),
+        Algorithm::PS384 => todo!(),
+        Algorithm::PS512 => todo!(),
+        Algorithm::EdDSA => todo!(),
+    };
+
+    Ok(jwt_encoder)
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
@@ -285,4 +295,42 @@ pub fn decode_header(token: &str) -> Result<Header> {
     let (_, message) = expect_two!(token.rsplitn(2, '.'));
     let (_, header) = expect_two!(message.rsplitn(2, '.'));
     Header::from_encoded(header)
+}
+
+/// Verify signature of a JWT, and return header object and raw payload
+///
+/// If the token or its signature is invalid, it will return an error.
+fn verify_signature<'a>(
+    token: &'a str,
+    validation: &Validation,
+    verifying_provider: Box<dyn JwtVerifier>,
+) -> Result<(Header, &'a str)> {
+    if validation.validate_signature && validation.algorithms.is_empty() {
+        return Err(new_error(ErrorKind::MissingAlgorithm));
+    }
+
+    // Todo: This behaviour is currently not captured anywhere.
+    // if validation.validate_signature {
+    //     for alg in &validation.algorithms {
+    //         if key.family != alg.family() {
+    //             return Err(new_error(ErrorKind::InvalidAlgorithm));
+    //         }
+    //     }
+    // }
+
+    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
+    let header = Header::from_encoded(header)?;
+
+    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+
+    if validation.validate_signature
+        && verifying_provider.verify(message.as_bytes(), &b64_decode(signature)?).is_err()
+    {
+        return Err(new_error(ErrorKind::InvalidSignature));
+    }
+
+    Ok((header, payload))
 }

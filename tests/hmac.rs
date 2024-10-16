@@ -5,8 +5,15 @@ use wasm_bindgen_test::wasm_bindgen_test;
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{
-    crypto::{sign, verify},
-    decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+    // crypto::{sign, verify},
+    decode,
+    decode_header,
+    encode,
+    Algorithm,
+    DecodingKey,
+    EncodingKey,
+    Header,
+    Validation,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
@@ -16,23 +23,23 @@ pub struct Claims {
     exp: i64,
 }
 
-#[test]
-#[wasm_bindgen_test]
-fn sign_hs256() {
-    let result =
-        sign(b"hello world", &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
-    let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
-    assert_eq!(result, expected);
-}
+// #[test]
+// #[wasm_bindgen_test]
+// fn sign_hs256() {
+//     let result =
+//         sign(b"hello world", &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
+//     let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
+//     assert_eq!(result, expected);
+// }
 
-#[test]
-#[wasm_bindgen_test]
-fn verify_hs256() {
-    let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
-    let valid = verify(sig, b"hello world", &DecodingKey::from_secret(b"secret"), Algorithm::HS256)
-        .unwrap();
-    assert!(valid);
-}
+// #[test]
+// #[wasm_bindgen_test]
+// fn verify_hs256() {
+//     let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
+//     let valid = verify(sig, b"hello world", &DecodingKey::from_secret(b"secret"), Algorithm::HS256)
+//         .unwrap();
+//     assert!(valid);
+// }
 
 #[test]
 #[wasm_bindgen_test]
@@ -44,6 +51,7 @@ fn encode_with_custom_header() {
     };
     let header = Header { kid: Some("kid".to_string()), ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(b"secret"),

@@ -3,9 +3,14 @@
 //! Documentation:  [stable](https://docs.rs/jsonwebtoken/)
 #![deny(missing_docs)]
 
+#[cfg(all(feature = "rust_crypto", feature = "aws_lc_rs"))]
+compile_error!(
+    "feature \"rust_crypto\" and feature \"aws_lc_rs\" cannot be enabled at the same time"
+);
+
 pub use algorithms::Algorithm;
-pub use decoding::{decode, decode_header, DecodingKey, TokenData};
-pub use encoding::{encode, EncodingKey};
+pub use decoding::{decode, decode_header, DecodingKey, TokenData, _decode};
+pub use encoding::{encode, EncodingKey, _encode};
 pub use header::Header;
 pub use validation::{get_current_timestamp, Validation};
 
