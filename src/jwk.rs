@@ -188,6 +188,10 @@ pub enum KeyAlgorithm {
     /// RSAES-OAEP-256 using SHA-2
     #[serde(rename = "RSA-OAEP-256")]
     RSA_OAEP_256,
+
+    /// Catch-All for when the key algorithm can not be determined or is not supported
+    #[serde(other)]
+    UNKNOWN_ALGORITHM,
 }
 
 impl FromStr for KeyAlgorithm {
@@ -435,9 +439,10 @@ impl JwkSet {
 
 #[cfg(test)]
 mod tests {
-    use crate::jwk::{AlgorithmParameters, JwkSet, OctetKeyType};
+    use crate::jwk::{AlgorithmParameters, JwkSet, KeyAlgorithm, OctetKeyType};
     use crate::serialization::b64_encode;
     use crate::Algorithm;
+    use proptest::proptest;
     use serde_json::json;
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -469,6 +474,24 @@ mod tests {
                 assert_eq!(key.value, key.value)
             }
             _ => panic!("Unexpected key algorithm"),
+        }
+    }
+
+    #[test]
+    fn deserialize_unknown_key_algorithm() {
+        let key_alg_json = json!("");
+        let key_alg_result: KeyAlgorithm =
+            serde_json::from_value(key_alg_json).expect("Could not deserialize json");
+        assert_eq!(key_alg_result, KeyAlgorithm::UNKNOWN_ALGORITHM);
+    }
+
+    // Rather than testing against a particular case, test against a sampling of random strings
+    proptest! {
+        #[test]
+        fn deserialize_arbitrary_key_algorithm(s in ".*"){
+            let key_alg_json = json!(s);
+            let _key_alg_result: KeyAlgorithm = serde_json::from_value(key_alg_json).expect("Could not deserialize json");
+            // We don't need to assert a specific variant - we only care that the above line does not panic
         }
     }
 }
