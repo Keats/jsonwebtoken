@@ -77,7 +77,7 @@ pub enum ErrorKind {
     /// Some of the text was invalid UTF-8
     Utf8(::std::string::FromUtf8Error),
     /// Something unspecified went wrong with crypto
-    Crypto(::ring::error::Unspecified),
+    Crypto(crate::crypto::core::error::Unspecified),
 }
 
 impl StdError for Error {
@@ -159,14 +159,14 @@ impl From<::std::string::FromUtf8Error> for Error {
     }
 }
 
-impl From<::ring::error::Unspecified> for Error {
-    fn from(err: ::ring::error::Unspecified) -> Error {
+impl From<crate::crypto::core::error::Unspecified> for Error {
+    fn from(err: crate::crypto::core::error::Unspecified) -> Error {
         new_error(ErrorKind::Crypto(err))
     }
 }
 
-impl From<::ring::error::KeyRejected> for Error {
-    fn from(_err: ::ring::error::KeyRejected) -> Error {
+impl From<crate::crypto::core::error::KeyRejected> for Error {
+    fn from(_err: crate::crypto::core::error::KeyRejected) -> Error {
         new_error(ErrorKind::InvalidEcdsaKey)
     }
 }

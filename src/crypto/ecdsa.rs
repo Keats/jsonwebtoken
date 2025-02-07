@@ -1,6 +1,5 @@
-use ring::{rand, signature};
-
 use crate::algorithms::Algorithm;
+use crate::crypto::core::{rand, signature};
 use crate::errors::Result;
 use crate::serialization::b64_encode;
 
@@ -32,7 +31,7 @@ pub fn sign(
     message: &[u8],
 ) -> Result<String> {
     let rng = rand::SystemRandom::new();
-    let signing_key = signature::EcdsaKeyPair::from_pkcs8(alg, key, &rng)?;
+    let signing_key = signature::ecdsa_key_pair_from_pkcs8(alg, key, &rng)?;
     let out = signing_key.sign(&rng, message)?;
     Ok(b64_encode(out))
 }

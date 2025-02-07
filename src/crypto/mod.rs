@@ -1,12 +1,12 @@
-use ring::constant_time::verify_slices_are_equal;
-use ring::{hmac, signature};
-
 use crate::algorithms::Algorithm;
+use crate::crypto::core::constant_time::verify_slices_are_equal;
+use crate::crypto::core::{hmac, signature};
 use crate::decoding::{DecodingKey, DecodingKeyKind};
 use crate::encoding::EncodingKey;
 use crate::errors::Result;
 use crate::serialization::{b64_decode, b64_encode};
 
+pub(crate) mod core;
 pub(crate) mod ecdsa;
 pub(crate) mod eddsa;
 pub(crate) mod rsa;
