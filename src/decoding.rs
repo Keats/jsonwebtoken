@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
@@ -41,19 +42,35 @@ macro_rules! expect_two {
     }};
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) enum DecodingKeyKind {
     SecretOrDer(Vec<u8>),
     RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
 }
 
+impl Debug for DecodingKeyKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DecodingKeyKind::SecretOrDer(_) => f.debug_struct("DecodingKeyKind::SecretOrDer").finish(),
+            DecodingKeyKind::RsaModulusExponent { n, e } => f.debug_struct("DecodingKeyKind::RsaModulusExponent").field("n", n).field("e", e).finish()
+        }
+    }
+}
+
 /// All the different kind of keys we can use to decode a JWT.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct DecodingKey {
     pub(crate) family: AlgorithmFamily,
     pub(crate) kind: DecodingKeyKind,
 }
+
+impl Debug for DecodingKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DecodingKey").field("family", &self.family).field("kind", &self.kind).finish()
+    }
+}
+
 
 impl DecodingKey {
     /// If you're using HMAC, use this.
@@ -285,4 +302,19 @@ pub fn decode_header(token: &str) -> Result<Header> {
     let (_, message) = expect_two!(token.rsplitn(2, '.'));
     let (_, header) = expect_two!(message.rsplitn(2, '.'));
     Header::from_encoded(header)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eq() {
+        let first = DecodingKey::from_rsa_components("yRE6rHuNR0QbHO3H3Kt2pOKGVhQqGZXInOduQNxXzuKlvQTLUTv4l4sggh5_CYYi_cvI-SXVT9kPWSKXxJXBXd_4LkvcPuUakBoAkfh-eiFVMh2VrUyWyj3MFl0HTVF9KwRXLAcwkREiS3npThHRyIxuy0ZMeZfxVL5arMhw1SRELB8HoGfG_AtH89BIE9jDBHZ9dLelK9a184zAf8LwoPLxvJb3Il5nncqPcSfKDDodMFBIMc4lQzDKL5gvmiXLXB1AGLm8KBjfE8s3L5xqi-yUod-j8MtvIj812dkS4QMiRVN_by2h3ZY8LYVGrqZXZTcgn2ujn8uKjXLZVD5TdQ", "AQAB").unwrap();
+        let same = DecodingKey::from_rsa_components("yRE6rHuNR0QbHO3H3Kt2pOKGVhQqGZXInOduQNxXzuKlvQTLUTv4l4sggh5_CYYi_cvI-SXVT9kPWSKXxJXBXd_4LkvcPuUakBoAkfh-eiFVMh2VrUyWyj3MFl0HTVF9KwRXLAcwkREiS3npThHRyIxuy0ZMeZfxVL5arMhw1SRELB8HoGfG_AtH89BIE9jDBHZ9dLelK9a184zAf8LwoPLxvJb3Il5nncqPcSfKDDodMFBIMc4lQzDKL5gvmiXLXB1AGLm8KBjfE8s3L5xqi-yUod-j8MtvIj812dkS4QMiRVN_by2h3ZY8LYVGrqZXZTcgn2ujn8uKjXLZVD5TdQ", "AQAB").unwrap();
+        let not_same = DecodingKey::from_rsa_components("zRE6rHuNR0QbHO3H3Kt2pOKGVhQqGZXInOduQNxXzuKlvQTLUTv4l4sggh5_CYYi_cvI-SXVT9kPWSKXxJXBXd_4LkvcPuUakBoAkfh-eiFVMh2VrUyWyj3MFl0HTVF9KwRXLAcwkREiS3npThHRyIxuy0ZMeZfxVL5arMhw1SRELB8HoGfG_AtH89BIE9jDBHZ9dLelK9a184zAf8LwoPLxvJb3Il5nncqPcSfKDDodMFBIMc4lQzDKL5gvmiXLXB1AGLm8KBjfE8s3L5xqi-yUod-j8MtvIj812dkS4QMiRVN_by2h3ZY8LYVGrqZXZTcgn2ujn8uKjXLZVD5TdQ", "AQAB").unwrap();
+        assert_eq!(first, same);
+        assert_ne!(first, not_same);
+    }
 }
