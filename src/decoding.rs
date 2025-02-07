@@ -204,11 +204,11 @@ impl DecodingKey {
 /// Verify signature of a JWT, and return header object and raw payload
 ///
 /// If the token or its signature is invalid, it will return an error.
-fn verify_signature<'a>(
-    token: &'a str,
+fn verify_signature_bytes<'a>(
+    token: &'a [u8],
     key: &DecodingKey,
     validation: &Validation,
-) -> Result<(Header, &'a str)> {
+) -> Result<(Header, &'a [u8])> {
     if validation.validate_signature && validation.algorithms.is_empty() {
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
@@ -221,15 +221,15 @@ fn verify_signature<'a>(
         }
     }
 
-    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
+    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
     let header = Header::from_encoded(header)?;
 
     if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    if validation.validate_signature && !verify(signature, message.as_bytes(), key, header.alg)? {
+    if validation.validate_signature && !verify(signature, message, key, header.alg)? {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
@@ -250,16 +250,17 @@ fn verify_signature<'a>(
 ///    company: String
 /// }
 ///
-/// let token = "a.jwt.token".to_string();
+/// let token = "a.jwt.token";
 /// // Claims is a struct that implements Deserialize
-/// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
+/// let token_message = decode::<Claims>(token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
 /// ```
 pub fn decode<T: DeserializeOwned>(
-    token: &str,
+    token: impl AsRef<[u8]>,
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
-    match verify_signature(token, key, validation) {
+    let token = token.as_ref();
+    match verify_signature_bytes(token, key, validation) {
         Err(e) => Err(e),
         Ok((header, claims)) => {
             let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
@@ -278,11 +279,12 @@ pub fn decode<T: DeserializeOwned>(
 /// ```rust
 /// use jsonwebtoken::decode_header;
 ///
-/// let token = "a.jwt.token".to_string();
-/// let header = decode_header(&token);
+/// let token = "a.jwt.token";
+/// let header = decode_header(token);
 /// ```
-pub fn decode_header(token: &str) -> Result<Header> {
-    let (_, message) = expect_two!(token.rsplitn(2, '.'));
-    let (_, header) = expect_two!(message.rsplitn(2, '.'));
+pub fn decode_header(token: impl AsRef<[u8]>) -> Result<Header> {
+    let token = token.as_ref();
+    let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (_, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
     Header::from_encoded(header)
 }
