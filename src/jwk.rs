@@ -5,8 +5,14 @@
 //! tweaked to remove the private bits as it's not the goal for this crate currently.
 
 use crate::{
+    crypto::ecdsa::alg_to_ec_signing,
     errors::{self, Error, ErrorKind},
-    Algorithm,
+    serialization::b64_encode,
+    Algorithm, EncodingKey,
+};
+use ring::{
+    rand,
+    signature::{self, KeyPair},
 };
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::{fmt, str::FromStr};
@@ -402,6 +408,13 @@ pub enum AlgorithmParameters {
     OctetKeyPair(OctetKeyPairParameters),
 }
 
+/// The function to use to hash the intermediate thumbprint data.
+pub enum ThumbprintHash {
+    SHA256,
+    SHA384,
+    SHA512,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct Jwk {
     #[serde(flatten)]
@@ -415,6 +428,139 @@ impl Jwk {
     /// Find whether the Algorithm is implemented and supported
     pub fn is_supported(&self) -> bool {
         self.common.key_algorithm.unwrap().to_algorithm().is_ok()
+    }
+
+    pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> crate::errors::Result<Self> {
+        Ok(Self {
+            common: CommonParameters {
+                key_algorithm: Some(match alg {
+                    Algorithm::HS256 => KeyAlgorithm::HS256,
+                    Algorithm::HS384 => KeyAlgorithm::HS384,
+                    Algorithm::HS512 => KeyAlgorithm::HS512,
+                    Algorithm::ES256 => KeyAlgorithm::ES256,
+                    Algorithm::ES384 => KeyAlgorithm::ES384,
+                    Algorithm::RS256 => KeyAlgorithm::RS256,
+                    Algorithm::RS384 => KeyAlgorithm::RS384,
+                    Algorithm::RS512 => KeyAlgorithm::RS512,
+                    Algorithm::PS256 => KeyAlgorithm::PS256,
+                    Algorithm::PS384 => KeyAlgorithm::PS384,
+                    Algorithm::PS512 => KeyAlgorithm::PS512,
+                    Algorithm::EdDSA => KeyAlgorithm::EdDSA,
+                }),
+                ..Default::default()
+            },
+            algorithm: match key.family {
+                crate::algorithms::AlgorithmFamily::Hmac => {
+                    AlgorithmParameters::OctetKey(OctetKeyParameters {
+                        key_type: OctetKeyType::Octet,
+                        value: b64_encode(&key.content),
+                    })
+                }
+                crate::algorithms::AlgorithmFamily::Rsa => {
+                    let key_pair = signature::RsaKeyPair::from_der(&key.content)
+                        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+                    let public = key_pair.public();
+                    let components =
+                        ring::signature::RsaPublicKeyComponents::<Vec<u8>>::from(public);
+                    AlgorithmParameters::RSA(RSAKeyParameters {
+                        key_type: RSAKeyType::RSA,
+                        n: b64_encode(components.n),
+                        e: b64_encode(components.e),
+                    })
+                }
+                crate::algorithms::AlgorithmFamily::Ec => {
+                    let rng = rand::SystemRandom::new();
+                    let key_pair = signature::EcdsaKeyPair::from_pkcs8(
+                        alg_to_ec_signing(alg),
+                        &key.content,
+                        &rng,
+                    )?;
+                    // Ring has this as `ring::ec::suite_b::curve::P384.elem_scalar_seed_len` but
+                    // it's private and not exposed via any methods AFAICT.
+                    let pub_elem_bytes;
+                    let curve;
+                    match alg {
+                        Algorithm::ES256 => {
+                            pub_elem_bytes = 32;
+                            curve = EllipticCurve::P256;
+                        }
+                        Algorithm::ES384 => {
+                            pub_elem_bytes = 48;
+                            curve = EllipticCurve::P384;
+                        }
+                        _ => unreachable!(),
+                    };
+                    let pub_bytes = key_pair.public_key().as_ref();
+                    if pub_bytes[0] != 4 {
+                        panic!("Compressed coordinates in public key!");
+                    }
+                    let (x, y) = pub_bytes[1..].split_at(pub_elem_bytes);
+                    AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
+                        key_type: EllipticCurveKeyType::EC,
+                        curve,
+                        x: b64_encode(x),
+                        y: b64_encode(y),
+                    })
+                }
+                crate::algorithms::AlgorithmFamily::Ed => {
+                    unimplemented!();
+                }
+            },
+        })
+    }
+
+    /// Compute the thumbprint of the JWK.
+    ///
+    /// Per (RFC-7638)[https://datatracker.ietf.org/doc/html/rfc7638]
+    pub fn thumbprint(&self, hash_function: ThumbprintHash) -> String {
+        let hash_function = match hash_function {
+            ThumbprintHash::SHA256 => &ring::digest::SHA256,
+            ThumbprintHash::SHA384 => &ring::digest::SHA384,
+            ThumbprintHash::SHA512 => &ring::digest::SHA512,
+        };
+        let pre = match &self.algorithm {
+            AlgorithmParameters::EllipticCurve(a) => match a.curve {
+                EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
+                    format!(
+                        r#"{{"crv":{},"kty":{},"x":"{}","y":"{}"}}"#,
+                        serde_json::to_string(&a.curve).unwrap(),
+                        serde_json::to_string(&a.key_type).unwrap(),
+                        a.x,
+                        a.y,
+                    )
+                }
+                EllipticCurve::Ed25519 => panic!("EllipticCurve can't contain this curve type"),
+            },
+            AlgorithmParameters::RSA(a) => {
+                format!(
+                    r#"{{"e":"{}","kty":{},"n":"{}"}}"#,
+                    a.e,
+                    serde_json::to_string(&a.key_type).unwrap(),
+                    a.n,
+                )
+            }
+            AlgorithmParameters::OctetKey(a) => {
+                format!(
+                    r#"{{"k":"{}","kty":{}}}"#,
+                    a.value,
+                    serde_json::to_string(&a.key_type).unwrap()
+                )
+            }
+            AlgorithmParameters::OctetKeyPair(a) => match a.curve {
+                EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
+                    panic!("OctetKeyPair can't contain this curve type")
+                }
+                EllipticCurve::Ed25519 => {
+                    format!(
+                        r#"{{crv:{},"kty":{},"x":"{}"}}"#,
+                        serde_json::to_string(&a.curve).unwrap(),
+                        serde_json::to_string(&a.key_type).unwrap(),
+                        a.x,
+                    )
+                }
+            },
+        };
+        return b64_encode(ring::digest::digest(hash_function, pre.as_bytes()));
     }
 }
 
@@ -435,7 +581,9 @@ impl JwkSet {
 
 #[cfg(test)]
 mod tests {
-    use crate::jwk::{AlgorithmParameters, JwkSet, OctetKeyType};
+    use crate::jwk::{
+        AlgorithmParameters, Jwk, JwkSet, OctetKeyType, RSAKeyParameters, ThumbprintHash,
+    };
     use crate::serialization::b64_encode;
     use crate::Algorithm;
     use serde_json::json;
@@ -470,5 +618,20 @@ mod tests {
             }
             _ => panic!("Unexpected key algorithm"),
         }
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn check_thumbprint() {
+        let tp = Jwk {
+            common: crate::jwk::CommonParameters { key_id: Some("2011-04-29".to_string()), ..Default::default() },
+            algorithm: AlgorithmParameters::RSA(RSAKeyParameters {
+                key_type: crate::jwk::RSAKeyType::RSA,
+                n: "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw".to_string(),
+                e: "AQAB".to_string(),
+            }),
+        }
+        .thumbprint(ThumbprintHash::SHA256);
+        assert_eq!(tp.as_str(), "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
     }
 }
