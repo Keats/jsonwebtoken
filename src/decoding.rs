@@ -286,3 +286,43 @@ pub fn decode_header(token: &str) -> Result<Header> {
     let (_, header) = expect_two!(message.rsplitn(2, '.'));
     Header::from_encoded(header)
 }
+
+/// Decode a JWT without any signature verification and return its claims.
+/// This means that the token is not verified so use with caution.
+/// This is useful when you want to extract the claims without verifying the signature.
+///
+/// # Arguments
+///
+/// * `token` - A string slice that holds the JWT token
+/// * `validation` - A [Validation](struct.Validation.html) object that holds the validation options
+///
+/// # Example
+///
+/// ```rust
+/// use jsonwebtoken::{insecure_decode_without_signature_validation, Validation, Algorithm};
+/// use serde::{Deserialize, Serialize};
+///
+/// #[derive(Debug, Serialize, Deserialize)]
+/// struct Claims {
+///    sub: u32,
+///    name: String,
+///    iat: u64,
+///    exp: u64
+/// }
+///
+/// // Example token from jwt.io
+/// let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEyMzQ1Njc4OTAsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjoyNTE2MjM5MDYwfQ.Yf3kCk-BdkW3DZNao3lwMoU41ujnt86OgewBA-Q2uBw".to_string();
+/// let validation = Validation::new(Algorithm::HS256);
+/// let claims = insecure_decode_without_signature_validation::<Claims>(&token, &validation).unwrap();
+/// ```
+pub fn insecure_decode_without_signature_validation<T: DeserializeOwned>(
+    token: &str,
+    validation: &Validation,
+) -> Result<T> {
+    let (_, rest) = expect_two!(token.rsplitn(2, '.'));
+    let (claims, _) = expect_two!(rest.rsplitn(2, '.'));
+    let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
+    let claims = decoded_claims.deserialize()?;
+    validate(decoded_claims.deserialize()?, validation)?;
+    Ok(claims)
+}
