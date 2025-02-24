@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{
@@ -41,7 +42,9 @@ fn encode_with_custom_header() {
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
-    let header = Header { kid: Some("kid".to_string()), ..Default::default() };
+    let mut extra = HashMap::with_capacity(1);
+    extra.insert("custom".to_string(), "header".to_string());
+    let header = Header { kid: Some("kid".to_string()), extra: Some(extra), ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let token_data = decode::<Claims>(
         &token,
@@ -51,6 +54,7 @@ fn encode_with_custom_header() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
+    assert_eq!("header", token_data.header.extra.unwrap().get("custom").unwrap().as_str());
 }
 
 #[test]

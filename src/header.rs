@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::result;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -10,7 +11,7 @@ use crate::serialization::b64_decode;
 
 /// A basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Header {
     /// The type of JWS: it can only be "JWT" here
     ///
@@ -64,6 +65,11 @@ pub struct Header {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "x5t#S256")]
     pub x5t_s256: Option<String>,
+
+    /// Any additional headers
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(flatten)]
+    pub extra: Option<HashMap<String, String>>,
 }
 
 impl Header {
@@ -80,6 +86,7 @@ impl Header {
             x5c: None,
             x5t: None,
             x5t_s256: None,
+            extra: None
         }
     }
 
