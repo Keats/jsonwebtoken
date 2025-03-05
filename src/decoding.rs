@@ -213,10 +213,10 @@ fn verify_signature<'a>(
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
 
-    if validation.validate_signature {
-        if !validation.algorithms.iter().any(|alg| alg.family() == key.family) {
-            return Err(new_error(ErrorKind::InvalidAlgorithm));
-        }
+    if validation.validate_signature
+        && !validation.algorithms.iter().any(|alg| alg.family() == key.family)
+    {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
     let (signature, message) = expect_two!(token.rsplitn(2, '.'));
