@@ -66,10 +66,12 @@ pub struct Header {
     #[serde(rename = "x5t#S256")]
     pub x5t_s256: Option<String>,
 
-    /// Any additional headers
+    /// Any additional non-standard headers not defined in [RFC7515#4.1](https://datatracker.ietf.org/doc/html/rfc7515#section-4.1).
+    /// Once serialized, all keys will be converted to fields at the root level of the header payload
+    /// Ex: Dict("custom" -> "header") will be converted to "{"typ": "JWT", ..., "custom": "header"}"
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(flatten)]
-    pub extra: Option<HashMap<String, String>>,
+    pub extras: Option<HashMap<String, String>>,
 }
 
 impl Header {
@@ -86,7 +88,7 @@ impl Header {
             x5c: None,
             x5t: None,
             x5t_s256: None,
-            extra: None
+            extras: None,
         }
     }
 

@@ -43,7 +43,7 @@ impl<'de> Deserialize<'de> for PublicKeyUse {
         D: Deserializer<'de>,
     {
         struct PublicKeyUseVisitor;
-        impl<'de> de::Visitor<'de> for PublicKeyUseVisitor {
+        impl de::Visitor<'_> for PublicKeyUseVisitor {
             type Value = PublicKeyUse;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -116,7 +116,7 @@ impl<'de> Deserialize<'de> for KeyOperations {
         D: Deserializer<'de>,
     {
         struct KeyOperationsVisitor;
-        impl<'de> de::Visitor<'de> for KeyOperationsVisitor {
+        impl de::Visitor<'_> for KeyOperationsVisitor {
             type Value = KeyOperations;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{
@@ -6,6 +5,7 @@ use jsonwebtoken::{
     decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -42,9 +42,7 @@ fn encode_with_custom_header() {
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
-    let mut extra = HashMap::with_capacity(1);
-    extra.insert("custom".to_string(), "header".to_string());
-    let header = Header { kid: Some("kid".to_string()), extra: Some(extra), ..Default::default() };
+    let header = Header { kid: Some("kid".to_string()), ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let token_data = decode::<Claims>(
         &token,
@@ -54,7 +52,55 @@ fn encode_with_custom_header() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
-    assert_eq!("header", token_data.header.extra.unwrap().get("custom").unwrap().as_str());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn encode_with_extra_custom_header() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let mut extra = HashMap::with_capacity(1);
+    extra.insert("custom".to_string(), "header".to_string());
+    let header = Header { kid: Some("kid".to_string()), extras: Some(extra), ..Default::default() };
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
+    assert_eq!(my_claims, token_data.claims);
+    assert_eq!("kid", token_data.header.kid.unwrap());
+    assert_eq!("header", token_data.header.extras.unwrap().get("custom").unwrap().as_str());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn encode_with_multiple_extra_custom_headers() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let mut extra = HashMap::with_capacity(1);
+    extra.insert("custom1".to_string(), "header1".to_string());
+    extra.insert("custom2".to_string(), "header2".to_string());
+    let header = Header { kid: Some("kid".to_string()), extras: Some(extra), ..Default::default() };
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
+    assert_eq!(my_claims, token_data.claims);
+    assert_eq!("kid", token_data.header.kid.unwrap());
+    let extras = token_data.header.extras.unwrap();
+    assert_eq!("header1", extras.get("custom1").unwrap().as_str());
+    assert_eq!("header2", extras.get("custom2").unwrap().as_str());
 }
 
 #[test]

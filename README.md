@@ -79,6 +79,11 @@ If you want to set the `kid` parameter or change the algorithm for example:
 ```rust
 let mut header = Header::new(Algorithm::HS512);
 header.kid = Some("blabla".to_owned());
+
+let mut extras = HashMap::with_capacity(1);
+extras.insert("custom".to_string(), "header".to_string());
+header.extras = Some(extras);
+
 let token = encode(&header, &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
 ```
 Look at `examples/custom_header.rs` for a full working example.

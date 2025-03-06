@@ -337,7 +337,7 @@ where
 {
     struct NumericType(PhantomData<fn() -> TryParse<u64>>);
 
-    impl<'de> Visitor<'de> for NumericType {
+    impl Visitor<'_> for NumericType {
         type Value = TryParse<u64>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
