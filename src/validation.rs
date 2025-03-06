@@ -344,6 +344,13 @@ where
             formatter.write_str("A NumericType that can be reasonably coerced into a u64")
         }
 
+        fn visit_u64<E>(self, value: u64) -> std::result::Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(TryParse::Parsed(value))
+        }
+
         fn visit_f64<E>(self, value: f64) -> std::result::Result<Self::Value, E>
         where
             E: de::Error,
@@ -353,13 +360,6 @@ where
             } else {
                 Err(serde::de::Error::custom("NumericType must be representable as a u64"))
             }
-        }
-
-        fn visit_u64<E>(self, value: u64) -> std::result::Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(TryParse::Parsed(value))
         }
     }
 
