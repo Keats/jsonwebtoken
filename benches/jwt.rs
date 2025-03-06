@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -11,9 +12,12 @@ struct Claims {
 fn bench_encode(c: &mut Criterion) {
     let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned() };
     let key = EncodingKey::from_secret("secret".as_ref());
+    let mut extras = HashMap::with_capacity(1);
+    extras.insert("custom".to_string(), "header".to_string());
+    let header = &Header{extras: Some(extras), ..Default::default()};
 
     c.bench_function("bench_encode", |b| {
-        b.iter(|| encode(black_box(&Header::default()), black_box(&claim), black_box(&key)))
+        b.iter(|| encode(black_box(header), black_box(&claim), black_box(&key)))
     });
 }
 
