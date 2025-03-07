@@ -26,7 +26,6 @@ base64 = "0.22"
 # For PEM decoding
 pem = { version = "3", optional = true }
 simple_asn1 = { version = "0.6", optional = true }
-openssl = "0.10.71"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ring = { version = "0.17.4", features = ["std"] }

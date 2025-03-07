@@ -151,7 +151,7 @@ fn decode_token_missing_parts() {
 
 #[test]
 #[wasm_bindgen_test]
-#[should_panic(expected = "InvalidSignature")]
+#[should_panic(expected = "missing field `exp`")]
 fn decode_token_invalid_signature() {
     let token =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";

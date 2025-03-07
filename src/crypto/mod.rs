@@ -3,7 +3,7 @@ use ring::{hmac, signature};
 use crate::algorithms::Algorithm;
 use crate::decoding::{DecodingKey, DecodingKeyKind};
 use crate::encoding::EncodingKey;
-use crate::errors::{Error, Result};
+use crate::errors::Result;
 use crate::serialization::{b64_decode, b64_encode};
 
 pub(crate) mod ecdsa;
@@ -17,17 +17,6 @@ fn alg_to_hmac(alg: Algorithm) -> hmac::Algorithm {
         Algorithm::HS384 => hmac::HMAC_SHA384,
         Algorithm::HS512 => hmac::HMAC_SHA512,
         _ => unreachable!("Tried to get HMAC alg for a non-HMAC algorithm"),
-    }
-}
-
-/// Returns `Ok(())` if `a == b` and `Err(error::Unspecified)` otherwise.
-pub fn verify_slices_are_equal(a: &[u8], b: &[u8]) -> Result<()> {
-    if b.len() != a.len() {
-        return Err(Error::from(ring::error::Unspecified));
-    }
-    match openssl::memcmp::eq(a, b) {
-        true => Ok(()),
-        _ => Err(Error::from(ring::error::Unspecified)),
     }
 }
 
@@ -94,8 +83,10 @@ pub fn verify(
     match algorithm {
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             // we just re-sign the message with the key and compare if they are equal
-            let signed = sign(message, &EncodingKey::from_secret(key.as_bytes()), algorithm)?;
-            Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
+            let encoding_key = &EncodingKey::from_secret(key.as_bytes());
+            let key = &hmac::Key::new(alg_to_hmac(algorithm), encoding_key.inner());
+            let digest = hmac::sign(key, message);
+            Ok(hmac::verify(key, message, digest.as_ref()).is_ok())
         }
         Algorithm::ES256 | Algorithm::ES384 => verify_ring(
             ecdsa::alg_to_ec_verification(algorithm),
