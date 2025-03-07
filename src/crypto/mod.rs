@@ -1,15 +1,35 @@
-use ring::constant_time::verify_slices_are_equal;
 use ring::{hmac, signature};
 
 use crate::algorithms::Algorithm;
 use crate::decoding::{DecodingKey, DecodingKeyKind};
 use crate::encoding::EncodingKey;
-use crate::errors::Result;
+use crate::errors::{Error, Result};
 use crate::serialization::{b64_decode, b64_encode};
 
 pub(crate) mod ecdsa;
 pub(crate) mod eddsa;
 pub(crate) mod rsa;
+
+/// Only used internally when signing/verifying with HMAC, to map from our enum to the Ring HMAC structs.
+fn alg_to_hmac(alg: Algorithm) -> hmac::Algorithm {
+    match alg {
+        Algorithm::HS256 => hmac::HMAC_SHA256,
+        Algorithm::HS384 => hmac::HMAC_SHA384,
+        Algorithm::HS512 => hmac::HMAC_SHA512,
+        _ => unreachable!("Tried to get HMAC alg for a non-HMAC algorithm"),
+    }
+}
+
+/// Returns `Ok(())` if `a == b` and `Err(error::Unspecified)` otherwise.
+pub fn verify_slices_are_equal(a: &[u8], b: &[u8]) -> Result<()> {
+    if b.len() != a.len() {
+        return Err(Error::from(ring::error::Unspecified));
+    }
+    match openssl::memcmp::eq(a, b) {
+        true => Ok(()),
+        _ => Err(Error::from(ring::error::Unspecified)),
+    }
+}
 
 /// The actual HS signing + encoding
 /// Could be in its own file to match RSA/EC but it's 2 lines...
@@ -24,9 +44,9 @@ pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &[u8]) -> Str
 /// If you just want to encode a JWT, use `encode` instead.
 pub fn sign(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
     match algorithm {
-        Algorithm::HS256 => Ok(sign_hmac(hmac::HMAC_SHA256, key.inner(), message)),
-        Algorithm::HS384 => Ok(sign_hmac(hmac::HMAC_SHA384, key.inner(), message)),
-        Algorithm::HS512 => Ok(sign_hmac(hmac::HMAC_SHA512, key.inner(), message)),
+        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
+            Ok(sign_hmac(alg_to_hmac(algorithm), key.inner(), message))
+        }
 
         Algorithm::ES256 | Algorithm::ES384 => {
             ecdsa::sign(ecdsa::alg_to_ec_signing(algorithm), key.inner(), message)
