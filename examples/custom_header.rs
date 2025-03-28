@@ -22,7 +22,7 @@ fn main() {
     let header = Header {
         kid: Some("signing_key".to_owned()),
         alg: Algorithm::HS512,
-        extras: Some(extras),
+        extras,
         ..Default::default()
     };
 

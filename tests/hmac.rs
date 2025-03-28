@@ -52,6 +52,7 @@ fn encode_with_custom_header() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
+    assert!(token_data.header.extras.is_empty());
 }
 
 #[test]
@@ -62,9 +63,9 @@ fn encode_with_extra_custom_header() {
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
-    let mut extra = HashMap::with_capacity(1);
-    extra.insert("custom".to_string(), "header".to_string());
-    let header = Header { kid: Some("kid".to_string()), extras: Some(extra), ..Default::default() };
+    let mut extras = HashMap::with_capacity(1);
+    extras.insert("custom".to_string(), "header".to_string());
+    let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let token_data = decode::<Claims>(
         &token,
@@ -74,7 +75,7 @@ fn encode_with_extra_custom_header() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
-    assert_eq!("header", token_data.header.extras.unwrap().get("custom").unwrap().as_str());
+    assert_eq!("header", token_data.header.extras.get("custom").unwrap().as_str());
 }
 
 #[test]
@@ -85,10 +86,10 @@ fn encode_with_multiple_extra_custom_headers() {
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
-    let mut extra = HashMap::with_capacity(1);
-    extra.insert("custom1".to_string(), "header1".to_string());
-    extra.insert("custom2".to_string(), "header2".to_string());
-    let header = Header { kid: Some("kid".to_string()), extras: Some(extra), ..Default::default() };
+    let mut extras = HashMap::with_capacity(2);
+    extras.insert("custom1".to_string(), "header1".to_string());
+    extras.insert("custom2".to_string(), "header2".to_string());
+    let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let token_data = decode::<Claims>(
         &token,
@@ -98,7 +99,7 @@ fn encode_with_multiple_extra_custom_headers() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
-    let extras = token_data.header.extras.unwrap();
+    let extras = token_data.header.extras;
     assert_eq!("header1", extras.get("custom1").unwrap().as_str());
     assert_eq!("header2", extras.get("custom2").unwrap().as_str());
 }
@@ -151,7 +152,7 @@ fn decode_token_missing_parts() {
 
 #[test]
 #[wasm_bindgen_test]
-#[should_panic(expected = "missing field `exp`")]
+#[should_panic(expected = "InvalidSignature")]
 fn decode_token_invalid_signature() {
     let token =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";

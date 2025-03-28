@@ -1,3 +1,4 @@
+use ring::constant_time::verify_slices_are_equal;
 use ring::{hmac, signature};
 
 use crate::algorithms::Algorithm;
@@ -9,16 +10,6 @@ use crate::serialization::{b64_decode, b64_encode};
 pub(crate) mod ecdsa;
 pub(crate) mod eddsa;
 pub(crate) mod rsa;
-
-/// Only used internally when signing/verifying with HMAC, to map from our enum to the Ring HMAC structs.
-fn alg_to_hmac(alg: Algorithm) -> hmac::Algorithm {
-    match alg {
-        Algorithm::HS256 => hmac::HMAC_SHA256,
-        Algorithm::HS384 => hmac::HMAC_SHA384,
-        Algorithm::HS512 => hmac::HMAC_SHA512,
-        _ => unreachable!("Tried to get HMAC alg for a non-HMAC algorithm"),
-    }
-}
 
 /// The actual HS signing + encoding
 /// Could be in its own file to match RSA/EC but it's 2 lines...
@@ -33,9 +24,9 @@ pub(crate) fn sign_hmac(alg: hmac::Algorithm, key: &[u8], message: &[u8]) -> Str
 /// If you just want to encode a JWT, use `encode` instead.
 pub fn sign(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
     match algorithm {
-        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
-            Ok(sign_hmac(alg_to_hmac(algorithm), key.inner(), message))
-        }
+        Algorithm::HS256 => Ok(sign_hmac(hmac::HMAC_SHA256, key.inner(), message)),
+        Algorithm::HS384 => Ok(sign_hmac(hmac::HMAC_SHA384, key.inner(), message)),
+        Algorithm::HS512 => Ok(sign_hmac(hmac::HMAC_SHA512, key.inner(), message)),
 
         Algorithm::ES256 | Algorithm::ES384 => {
             ecdsa::sign(ecdsa::alg_to_ec_signing(algorithm), key.inner(), message)
@@ -83,10 +74,8 @@ pub fn verify(
     match algorithm {
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             // we just re-sign the message with the key and compare if they are equal
-            let encoding_key = &EncodingKey::from_secret(key.as_bytes());
-            let key = &hmac::Key::new(alg_to_hmac(algorithm), encoding_key.inner());
-            let digest = hmac::sign(key, message);
-            Ok(hmac::verify(key, message, digest.as_ref()).is_ok())
+            let signed = sign(message, &EncodingKey::from_secret(key.as_bytes()), algorithm)?;
+            Ok(verify_slices_are_equal(signature.as_ref(), signed.as_ref()).is_ok())
         }
         Algorithm::ES256 | Algorithm::ES384 => verify_ring(
             ecdsa::alg_to_ec_verification(algorithm),

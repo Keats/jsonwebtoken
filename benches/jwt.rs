@@ -23,7 +23,7 @@ fn bench_encode_custom_extra_headers(c: &mut Criterion) {
     let key = EncodingKey::from_secret("secret".as_ref());
     let mut extras = HashMap::with_capacity(1);
     extras.insert("custom".to_string(), "header".to_string());
-    let header = &Header { extras: Some(extras), ..Default::default() };
+    let header = &Header { extras, ..Default::default() };
 
     c.bench_function("bench_encode", |b| {
         b.iter(|| encode(black_box(header), black_box(&claim), black_box(&key)))
