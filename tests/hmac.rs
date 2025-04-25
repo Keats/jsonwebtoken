@@ -91,6 +91,7 @@ fn encode_with_multiple_extra_custom_headers() {
     extras.insert("custom2".to_string(), "header2".to_string());
     let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    println!("{}", token);
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(b"secret"),
@@ -135,6 +136,28 @@ fn decode_token() {
     );
     println!("{:?}", claims);
     claims.unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn decode_token_custom_headers() {
+    let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsImN1c3RvbTEiOiJoZWFkZXIxIiwiY3VzdG9tMiI6ImhlYWRlcjIifQ.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjE3NDU2MDEzNzN9.527XvJYUtdJWLbs6o1qyof_LSyD_IsGcCCIzkYshmfk";
+    let claims = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: 1745601373,
+    };
+    assert_eq!(my_claims, claims.claims);
+    assert_eq!("kid", claims.header.kid.unwrap());
+    let extras = claims.header.extras.unwrap();
+    assert_eq!("header1", extras.get("custom1").unwrap().as_str());
+    assert_eq!("header2", extras.get("custom2").unwrap().as_str());
 }
 
 #[test]
