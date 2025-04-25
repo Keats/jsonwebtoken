@@ -155,7 +155,7 @@ fn decode_token_custom_headers() {
     };
     assert_eq!(my_claims, claims.claims);
     assert_eq!("kid", claims.header.kid.unwrap());
-    let extras = claims.header.extras.unwrap();
+    let extras = claims.header.extras;
     assert_eq!("header1", extras.get("custom1").unwrap().as_str());
     assert_eq!("header2", extras.get("custom2").unwrap().as_str());
 }
