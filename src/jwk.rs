@@ -414,7 +414,10 @@ pub struct Jwk {
 impl Jwk {
     /// Find whether the Algorithm is implemented and supported
     pub fn is_supported(&self) -> bool {
-        self.common.key_algorithm.unwrap().to_algorithm().is_ok()
+        match self.common.key_algorithm {
+            Some(alg) => alg.to_algorithm().is_ok(),
+            _ => false,
+        }
     }
 }
 
