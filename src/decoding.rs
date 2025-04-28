@@ -213,12 +213,10 @@ fn verify_signature<'a>(
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
 
-    if validation.validate_signature {
-        for alg in &validation.algorithms {
-            if key.family != alg.family() {
-                return Err(new_error(ErrorKind::InvalidAlgorithm));
-            }
-        }
+    if validation.validate_signature
+        && !validation.algorithms.iter().any(|alg| alg.family() == key.family)
+    {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
     let (signature, message) = expect_two!(token.rsplitn(2, '.'));
@@ -226,6 +224,10 @@ fn verify_signature<'a>(
     let header = Header::from_encoded(header)?;
 
     if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+
+    if header.alg.family() != key.family {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 

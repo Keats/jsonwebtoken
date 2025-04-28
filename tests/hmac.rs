@@ -88,6 +88,16 @@ fn decode_token() {
 
 #[test]
 #[wasm_bindgen_test]
+fn decode_token_with_multiple_algorithms_allowed() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.algorithms.push(Algorithm::RS256);
+    let claims = decode::<Claims>(token, &DecodingKey::from_secret(b"secret"), &validation);
+    claims.unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
 #[should_panic(expected = "InvalidToken")]
 fn decode_token_missing_parts() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
@@ -123,6 +133,50 @@ fn decode_token_wrong_algorithm() {
         &DecodingKey::from_secret(b"secret"),
         &Validation::new(Algorithm::RS512),
     );
+    claims.unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
+#[should_panic(expected = "MissingAlgorithm")]
+fn decode_missing_algorithm() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.algorithms = vec![];
+    let claims = decode::<Claims>(token, &DecodingKey::from_secret(b"secret"), &validation);
+    claims.unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
+#[should_panic(expected = "InvalidAlgorithm")]
+fn decode_mismatched_key_algorithm() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.algorithms.push(Algorithm::RS256);
+    let key = &DecodingKey::from_rsa_components("aGk", "aGk").unwrap();
+    let claims = decode::<Claims>(token, &key, &validation);
+    claims.unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
+#[should_panic(expected = "InvalidAlgorithm")]
+fn decode_invalid_header_algorithm() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let validation = Validation::new(Algorithm::RS256);
+    let key = &DecodingKey::from_rsa_components("aGk", "aGk").unwrap();
+    let claims = decode::<Claims>(token, &key, &validation);
+    claims.unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
+#[should_panic(expected = "InvalidAlgorithm")]
+fn wrong_decoding_key_family() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
+    let validation = Validation::new(Algorithm::RS256);
+    let claims = decode::<Claims>(token, &DecodingKey::from_secret(b"secret"), &validation);
     claims.unwrap();
 }
 
