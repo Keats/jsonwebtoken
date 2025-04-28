@@ -106,6 +106,29 @@ fn ec_x_y() {
 #[cfg(feature = "use_pem")]
 #[test]
 #[wasm_bindgen_test]
+fn ec_jwk_from_key() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
+    let privkey = include_str!("private_ecdsa_key.pem");
+    let encoding_key = EncodingKey::from_ec_pem(privkey.as_ref()).unwrap();
+    let jwk = Jwk::from_encoding_key(&encoding_key, Algorithm::ES256).unwrap();
+    assert_eq!(
+        jwk,
+        serde_json::from_value(json!({
+            "kty": "EC",
+            "crv": "P-256",
+            "x": "w7JAoU_gJbZJvV-zCOvU9yFJq0FNC_edCMRM78P8eQQ",
+            "y": "wQg1EytcsEmGrM70Gb53oluoDbVhCZ3Uq3hHMslHVb4",
+            "alg": "ES256",
+        }))
+        .unwrap()
+    );
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
 fn ed_jwk() {
     use jsonwebtoken::jwk::Jwk;
     use serde_json::json;
