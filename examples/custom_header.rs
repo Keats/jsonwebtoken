@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -15,8 +16,15 @@ fn main() {
         Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 10000000000 };
     let key = b"secret";
 
-    let header =
-        Header { kid: Some("signing_key".to_owned()), alg: Algorithm::HS512, ..Default::default() };
+    let mut extras = HashMap::with_capacity(1);
+    extras.insert("custom".to_string(), "header".to_string());
+
+    let header = Header {
+        kid: Some("signing_key".to_owned()),
+        alg: Algorithm::HS512,
+        extras,
+        ..Default::default()
+    };
 
     let token = match encode(&header, &my_claims, &EncodingKey::from_secret(key)) {
         Ok(t) => t,
