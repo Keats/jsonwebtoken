@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 //! This crate contains types only for working JWK and JWK Sets
 //! This is only meant to be used to deal with public JWK, not generate ones.
-//! Most of the code in this file is taken from https://github.com/lawliet89/biscuit but
+//! Most of the code in this file is taken from <https://github.com/lawliet89/biscuit> but
 //! tweaked to remove the private bits as it's not the goal for this crate currently.
 
 use crate::{
