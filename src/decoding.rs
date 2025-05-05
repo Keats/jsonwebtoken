@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Formatter};
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
@@ -47,9 +49,22 @@ pub(crate) enum DecodingKeyKind {
     RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
 }
 
+impl Debug for DecodingKeyKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::SecretOrDer(_) => f.debug_tuple("SecretOrDer").field(&"[redacted]").finish(),
+            Self::RsaModulusExponent { .. } => f
+                .debug_struct("RsaModulusExponent")
+                .field("n", &"[redacted]")
+                .field("e", &"[redacted]")
+                .finish(),
+        }
+    }
+}
+
 /// All the different kind of keys we can use to decode a JWT.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DecodingKey {
     pub(crate) family: AlgorithmFamily,
     pub(crate) kind: DecodingKeyKind,
