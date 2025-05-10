@@ -4,7 +4,8 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::{Algorithm, DecodingKey, EncodingKey};
-use ed25519_dalek::{Signature, SigningKey};
+use ed25519_dalek::pkcs8::DecodePrivateKey;
+use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
 use signature::{Error, Signer, Verifier};
 
 pub struct EdDSASigner(SigningKey);
@@ -16,11 +17,8 @@ impl EdDSASigner {
         }
 
         Ok(Self(
-            SigningKey::from_keypair_bytes(
-                <&[u8; 64]>::try_from(encoding_key.inner())
-                    .map_err(|_| ErrorKind::InvalidEddsaKey)?,
-            )
-            .map_err(|_| ErrorKind::InvalidEddsaKey)?,
+            SigningKey::from_pkcs8_der(encoding_key.inner())
+                .map_err(|_| ErrorKind::InvalidEddsaKey)?,
         ))
     }
 }
@@ -37,7 +35,7 @@ impl JwtSigner for EdDSASigner {
     }
 }
 
-pub struct EdDSAVerifier(SigningKey);
+pub struct EdDSAVerifier(VerifyingKey);
 
 impl EdDSAVerifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
@@ -46,8 +44,8 @@ impl EdDSAVerifier {
         }
 
         Ok(Self(
-            SigningKey::from_keypair_bytes(
-                <&[u8; 64]>::try_from(decoding_key.as_bytes())
+            VerifyingKey::from_bytes(
+                <&[u8; 32]>::try_from(&decoding_key.as_bytes()[..32])
                     .map_err(|_| ErrorKind::InvalidEddsaKey)?,
             )
             .map_err(|_| ErrorKind::InvalidEddsaKey)?,

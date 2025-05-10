@@ -11,6 +11,7 @@ use p256::ecdsa::{
 use p384::ecdsa::{
     Signature as Signature384, SigningKey as SigningKey384, VerifyingKey as VerifyingKey384,
 };
+use rsa::pkcs8::DecodePrivateKey;
 use signature::{Error, Signer, Verifier};
 
 pub struct Es256Signer(SigningKey256);
@@ -22,7 +23,7 @@ impl Es256Signer {
         }
 
         Ok(Self(
-            SigningKey256::from_slice(encoding_key.inner())
+            SigningKey256::from_pkcs8_der(encoding_key.inner())
                 .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
         ))
     }
@@ -80,7 +81,7 @@ impl Es384Signer {
         }
 
         Ok(Self(
-            SigningKey384::from_slice(encoding_key.inner())
+            SigningKey384::from_pkcs8_der(encoding_key.inner())
                 .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
         ))
     }
@@ -128,4 +129,3 @@ impl JwtVerifier for Es384Verifier {
         Algorithm::ES384
     }
 }
-

@@ -4,7 +4,7 @@
 
 use crate::{
     algorithms::AlgorithmFamily,
-    errors::{self, new_error, ErrorKind, Result},
+    errors::{new_error, ErrorKind, Result},
     DecodingKey, EncodingKey,
 };
 
