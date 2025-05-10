@@ -1,13 +1,13 @@
-//! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for EdDSA using AWS-LC-RS.
+//! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for EdDSA using RustCrypto.
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::{Algorithm, DecodingKey, EncodingKey};
-use aws_lc_rs::signature::{Ed25519KeyPair, VerificationAlgorithm, ED25519};
+use ed25519_dalek::{Signature, SigningKey};
 use signature::{Error, Signer, Verifier};
 
-pub struct EdDSASigner(Ed25519KeyPair);
+pub struct EdDSASigner(SigningKey);
 
 impl EdDSASigner {
     pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
@@ -16,15 +16,18 @@ impl EdDSASigner {
         }
 
         Ok(Self(
-            Ed25519KeyPair::from_pkcs8(encoding_key.inner())
-                .map_err(|_| ErrorKind::InvalidEddsaKey)?,
+            SigningKey::from_keypair_bytes(
+                <&[u8; 64]>::try_from(encoding_key.inner())
+                    .map_err(|_| ErrorKind::InvalidEddsaKey)?,
+            )
+            .map_err(|_| ErrorKind::InvalidEddsaKey)?,
         ))
     }
 }
 
 impl Signer<Vec<u8>> for EdDSASigner {
     fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
-        Ok(self.0.sign(msg).as_ref().to_vec())
+        Ok(self.0.sign(msg).to_bytes().to_vec())
     }
 }
 
@@ -34,7 +37,7 @@ impl JwtSigner for EdDSASigner {
     }
 }
 
-pub struct EdDSAVerifier(DecodingKey);
+pub struct EdDSAVerifier(SigningKey);
 
 impl EdDSAVerifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
@@ -42,13 +45,19 @@ impl EdDSAVerifier {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
 
-        Ok(Self(decoding_key.clone()))
+        Ok(Self(
+            SigningKey::from_keypair_bytes(
+                <&[u8; 64]>::try_from(decoding_key.as_bytes())
+                    .map_err(|_| ErrorKind::InvalidEddsaKey)?,
+            )
+            .map_err(|_| ErrorKind::InvalidEddsaKey)?,
+        ))
     }
 }
 
 impl Verifier<Vec<u8>> for EdDSAVerifier {
     fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
-        ED25519.verify_sig(self.0.as_bytes(), msg, signature).map_err(Error::from_source)?;
+        self.0.verify(msg, &Signature::from_slice(signature)?)?;
         Ok(())
     }
 }

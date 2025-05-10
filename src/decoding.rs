@@ -23,7 +23,15 @@ use crate::crypto::aws_lc::{
     },
 };
 #[cfg(feature = "rust_crypto")]
-use crate::crypto::rust_crypto::hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier};
+use crate::crypto::rust_crypto::{
+    // ecdsa::{Es256Verifier, Es384Verifier},
+    eddsa::EdDSAVerifier,
+    hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
+    // rsa::{
+    //     Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
+    //     RsaPss512Verifier,
+    // },
+};
 
 /// The return type of a successful call to [decode](fn.decode.html).
 #[derive(Debug)]
