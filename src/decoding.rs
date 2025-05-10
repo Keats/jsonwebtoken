@@ -246,7 +246,6 @@ pub fn decode<T: DeserializeOwned>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
-    // The decoding step is unfortunately a little clunky but that seems to be how I need to do it to fit it into the `decode` function
     let header = decode_header(token)?;
 
     if validation.validate_signature && !(validation.algorithms.contains(&header.alg)) {
@@ -276,7 +275,10 @@ pub fn _decode<T: DeserializeOwned>(
 }
 
 /// Return the correct [`JwtVerifier`] based on the `algorithm`.
-fn jwt_verifier_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<dyn JwtVerifier>> {
+pub fn jwt_verifier_factory(
+    algorithm: &Algorithm,
+    key: &DecodingKey,
+) -> Result<Box<dyn JwtVerifier>> {
     let jwt_encoder = match algorithm {
         Algorithm::HS256 => Box::new(Hs256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::HS384 => Box::new(Hs384Verifier::new(key)?) as Box<dyn JwtVerifier>,

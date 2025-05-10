@@ -3,14 +3,12 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
 
+use jsonwebtoken::{
+    crypto::{sign, verify},
+    Algorithm, DecodingKey, EncodingKey,
+};
 #[cfg(feature = "use_pem")]
 use jsonwebtoken::{decode, encode, Header, Validation};
-use jsonwebtoken::{
-    // crypto::{sign, verify},
-    Algorithm,
-    DecodingKey,
-    EncodingKey,
-};
 
 const RSA_ALGORITHMS: &[Algorithm] = &[
     Algorithm::RS256,
@@ -30,84 +28,84 @@ pub struct Claims {
 
 // Todo: These no longer apply because `verify` does not exist, would probably need to convert it to test the factory for getting signers and verifiers. But I would rather this not be part of the public facing API.
 
-// #[cfg(feature = "use_pem")]
-// #[test]
-// #[wasm_bindgen_test]
-// fn round_trip_sign_verification_pem_pkcs1() {
-//     let privkey_pem = include_bytes!("private_rsa_key_pkcs1.pem");
-//     let pubkey_pem = include_bytes!("public_rsa_key_pkcs1.pem");
-//     let certificate_pem = include_bytes!("certificate_rsa_key_pkcs1.crt");
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_sign_verification_pem_pkcs1() {
+    let privkey_pem = include_bytes!("private_rsa_key_pkcs1.pem");
+    let pubkey_pem = include_bytes!("public_rsa_key_pkcs1.pem");
+    let certificate_pem = include_bytes!("certificate_rsa_key_pkcs1.crt");
 
-//     for &alg in RSA_ALGORITHMS {
-//         let encrypted =
-//             sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
+    for &alg in RSA_ALGORITHMS {
+        let encrypted =
+            sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
 
-//         let is_valid = verify(
-//             &encrypted,
-//             b"hello world",
-//             &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
-//             alg,
-//         )
-//         .unwrap();
-//         assert!(is_valid);
+        let is_valid = verify(
+            &encrypted,
+            b"hello world",
+            &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
+            alg,
+        )
+        .unwrap();
+        assert!(is_valid);
 
-//         let cert_is_valid = verify(
-//             &encrypted,
-//             b"hello world",
-//             &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
-//             alg,
-//         )
-//         .unwrap();
-//         assert!(cert_is_valid);
-//     }
-// }
+        let cert_is_valid = verify(
+            &encrypted,
+            b"hello world",
+            &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
+            alg,
+        )
+        .unwrap();
+        assert!(cert_is_valid);
+    }
+}
 
-// #[cfg(feature = "use_pem")]
-// #[test]
-// #[wasm_bindgen_test]
-// fn round_trip_sign_verification_pem_pkcs8() {
-//     let privkey_pem = include_bytes!("private_rsa_key_pkcs8.pem");
-//     let pubkey_pem = include_bytes!("public_rsa_key_pkcs8.pem");
-//     let certificate_pem = include_bytes!("certificate_rsa_key_pkcs8.crt");
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_sign_verification_pem_pkcs8() {
+    let privkey_pem = include_bytes!("private_rsa_key_pkcs8.pem");
+    let pubkey_pem = include_bytes!("public_rsa_key_pkcs8.pem");
+    let certificate_pem = include_bytes!("certificate_rsa_key_pkcs8.crt");
 
-//     for &alg in RSA_ALGORITHMS {
-//         let encrypted =
-//             sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
+    for &alg in RSA_ALGORITHMS {
+        let encrypted =
+            sign(b"hello world", &EncodingKey::from_rsa_pem(privkey_pem).unwrap(), alg).unwrap();
 
-//         let is_valid = verify(
-//             &encrypted,
-//             b"hello world",
-//             &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
-//             alg,
-//         )
-//         .unwrap();
-//         assert!(is_valid);
+        let is_valid = verify(
+            &encrypted,
+            b"hello world",
+            &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
+            alg,
+        )
+        .unwrap();
+        assert!(is_valid);
 
-//         let cert_is_valid = verify(
-//             &encrypted,
-//             b"hello world",
-//             &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
-//             alg,
-//         )
-//         .unwrap();
-//         assert!(cert_is_valid);
-//     }
-// }
+        let cert_is_valid = verify(
+            &encrypted,
+            b"hello world",
+            &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
+            alg,
+        )
+        .unwrap();
+        assert!(cert_is_valid);
+    }
+}
 
-// #[test]
-// #[wasm_bindgen_test]
-// fn round_trip_sign_verification_der() {
-//     let privkey_der = include_bytes!("private_rsa_key.der");
-//     let pubkey_der = include_bytes!("public_rsa_key.der");
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_sign_verification_der() {
+    let privkey_der = include_bytes!("private_rsa_key.der");
+    let pubkey_der = include_bytes!("public_rsa_key.der");
 
-//     for &alg in RSA_ALGORITHMS {
-//         let encrypted = sign(b"hello world", &EncodingKey::from_rsa_der(privkey_der), alg).unwrap();
-//         let is_valid =
-//             verify(&encrypted, b"hello world", &DecodingKey::from_rsa_der(pubkey_der), alg)
-//                 .unwrap();
-//         assert!(is_valid);
-//     }
-// }
+    for &alg in RSA_ALGORITHMS {
+        let encrypted = sign(b"hello world", &EncodingKey::from_rsa_der(privkey_der), alg).unwrap();
+        let is_valid =
+            verify(&encrypted, b"hello world", &DecodingKey::from_rsa_der(pubkey_der), alg)
+                .unwrap();
+        assert!(is_valid);
+    }
+}
 
 #[cfg(feature = "use_pem")]
 #[test]
