@@ -24,7 +24,9 @@ use crate::crypto::rust_crypto::{
     ecdsa::{Es256Signer, Es384Signer},
     eddsa::EdDSASigner,
     hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
-    // rsa::{Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer},
+    rsa::{
+        Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer,
+    },
 };
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.

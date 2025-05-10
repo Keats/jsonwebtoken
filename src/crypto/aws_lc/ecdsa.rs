@@ -21,7 +21,7 @@ impl Es256Signer {
         }
 
         Ok(Self(
-            EcdsaKeyPair::from_pcs8(&ECDSA_P256_SHA256_FIXED_SIGNING, encoding_key.inner())
+            EcdsaKeyPair::from_pkcs8(&ECDSA_P256_SHA256_FIXED_SIGNING, encoding_key.inner())
                 .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
         ))
     }
@@ -75,7 +75,7 @@ impl Es384Signer {
         if encoding_key.family != AlgorithmFamily::Ec {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
-        
+
         Ok(Self(
             EcdsaKeyPair::from_pkcs8(&ECDSA_P384_SHA384_FIXED_SIGNING, encoding_key.inner())
                 .map_err(|_| crate::errors::ErrorKind::InvalidEcdsaKey)?,
