@@ -15,7 +15,7 @@ use crate::crypto::aws_lc::{
     ecdsa::{Es256Signer, Es384Signer},
     eddsa::EdDSASigner,
     hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
-    rsa::{Rsa256Signer, Rsa384Signer, Rsa512Signer},
+    rsa::{Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer},
 };
 #[cfg(feature = "rust_crypto")]
 use crate::crypto::rust_crypto::hmac::{Hs256Signer, Hs384Signer, Hs512Signer};
@@ -171,9 +171,9 @@ fn jwt_signer_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dy
         Algorithm::RS256 => Box::new(Rsa256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS384 => Box::new(Rsa384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS512 => Box::new(Rsa512Signer::new(key)?) as Box<dyn JwtSigner>,
-        Algorithm::PS256 => todo!(),
-        Algorithm::PS384 => todo!(),
-        Algorithm::PS512 => todo!(),
+        Algorithm::PS256 => Box::new(RsaPss256Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::PS384 => Box::new(RsaPss384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::PS512 => Box::new(RsaPss512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::EdDSA => Box::new(EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
     };
 

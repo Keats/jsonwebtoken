@@ -3,7 +3,7 @@ use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::JwtVerifier;
-use crate::errors::{new_error, Error, ErrorKind, Result};
+use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
@@ -17,7 +17,10 @@ use crate::crypto::aws_lc::{
     ecdsa::{Es256Verifier, Es384Verifier},
     eddsa::EdDSAVerifier,
     hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
-    rsa::{Rsa256Verifier, Rsa384Verifier, Rsa512Verifier},
+    rsa::{
+        Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
+        RsaPss512Verifier,
+    },
 };
 #[cfg(feature = "rust_crypto")]
 use crate::crypto::rust_crypto::hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier};
@@ -275,9 +278,9 @@ fn jwt_verifier_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<
         Algorithm::RS256 => Box::new(Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS384 => Box::new(Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS512 => Box::new(Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::PS256 => todo!(),
-        Algorithm::PS384 => todo!(),
-        Algorithm::PS512 => todo!(),
+        Algorithm::PS256 => Box::new(RsaPss256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::PS384 => Box::new(RsaPss384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::PS512 => Box::new(RsaPss512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::EdDSA => Box::new(EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
     };
 

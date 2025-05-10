@@ -198,3 +198,147 @@ impl JwtVerifier for Rsa512Verifier {
         Algorithm::RS512
     }
 }
+
+pub struct RsaPss256Signer(EncodingKey);
+
+impl RsaPss256Signer {
+    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+        if encoding_key.family != AlgorithmFamily::Rsa {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        Ok(Self(encoding_key.clone()))
+    }
+}
+
+impl Signer<Vec<u8>> for RsaPss256Signer {
+    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
+        try_sign_rsa(&crypto_sig::RSA_PSS_SHA256, &self.0, msg)
+    }
+}
+
+impl JwtSigner for RsaPss256Signer {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::PS256
+    }
+}
+
+pub struct RsaPss256Verifier(DecodingKey);
+
+impl RsaPss256Verifier {
+    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+        if decoding_key.family != AlgorithmFamily::Rsa {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        Ok(Self(decoding_key.clone()))
+    }
+}
+
+impl Verifier<Vec<u8>> for RsaPss256Verifier {
+    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
+        verify_rsa(&crypto_sig::RSA_PSS_2048_8192_SHA256, &self.0, msg, signature)
+    }
+}
+
+impl JwtVerifier for RsaPss256Verifier {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::PS256
+    }
+}
+
+pub struct RsaPss384Signer(EncodingKey);
+
+impl RsaPss384Signer {
+    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+        if encoding_key.family != AlgorithmFamily::Rsa {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        Ok(Self(encoding_key.clone()))
+    }
+}
+
+impl Signer<Vec<u8>> for RsaPss384Signer {
+    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
+        try_sign_rsa(&crypto_sig::RSA_PSS_SHA384, &self.0, msg)
+    }
+}
+
+impl JwtSigner for RsaPss384Signer {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::PS384
+    }
+}
+
+pub struct RsaPss384Verifier(DecodingKey);
+
+impl RsaPss384Verifier {
+    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+        if decoding_key.family != AlgorithmFamily::Rsa {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        Ok(Self(decoding_key.clone()))
+    }
+}
+
+impl Verifier<Vec<u8>> for RsaPss384Verifier {
+    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
+        verify_rsa(&crypto_sig::RSA_PSS_2048_8192_SHA384, &self.0, msg, signature)
+    }
+}
+
+impl JwtVerifier for RsaPss384Verifier {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::PS384
+    }
+}
+
+pub struct RsaPss512Signer(EncodingKey);
+
+impl RsaPss512Signer {
+    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+        if encoding_key.family != AlgorithmFamily::Rsa {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        Ok(Self(encoding_key.clone()))
+    }
+}
+
+impl Signer<Vec<u8>> for RsaPss512Signer {
+    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
+        try_sign_rsa(&crypto_sig::RSA_PSS_SHA512, &self.0, msg)
+    }
+}
+
+impl JwtSigner for RsaPss512Signer {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::PS512
+    }
+}
+
+pub struct RsaPss512Verifier(DecodingKey);
+
+impl RsaPss512Verifier {
+    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+        if decoding_key.family != AlgorithmFamily::Rsa {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        Ok(Self(decoding_key.clone()))
+    }
+}
+
+impl Verifier<Vec<u8>> for RsaPss512Verifier {
+    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
+        verify_rsa(&crypto_sig::RSA_PSS_2048_8192_SHA512, &self.0, msg, signature)
+    }
+}
+
+impl JwtVerifier for RsaPss512Verifier {
+    fn algorithm(&self) -> Algorithm {
+        Algorithm::PS512
+    }
+}
