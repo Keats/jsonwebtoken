@@ -1,4 +1,4 @@
-// mod ecdsa;
+mod ecdsa;
 // mod eddsa;
 // mod header;
 mod rsa;

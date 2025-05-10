@@ -2,7 +2,6 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::aws_lc::rsa::Rsa512Signer;
 use crate::crypto::JwtSigner;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
@@ -10,12 +9,13 @@ use crate::header::Header;
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_encode, b64_encode_part};
 use crate::Algorithm;
-
 // Crypto
 #[cfg(feature = "aws_lc_rs")]
-use crate::crypto::aws_lc::hmac::{Hs256Signer, Hs384Signer, Hs512Signer};
-#[cfg(feature = "aws_lc_rs")]
-use crate::crypto::aws_lc::rsa::{Rsa256Signer, Rsa384Signer};
+use crate::crypto::aws_lc::{
+    ecdsa::{Es256Signer, Es384Signer},
+    hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
+    rsa::{Rsa256Signer, Rsa384Signer, Rsa512Signer},
+};
 #[cfg(feature = "rust_crypto")]
 use crate::crypto::rust_crypto::hmac::{Hs256Signer, Hs384Signer, Hs512Signer};
 
@@ -165,8 +165,8 @@ fn jwt_signer_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dy
         Algorithm::HS256 => Box::new(Hs256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::HS384 => Box::new(Hs384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::HS512 => Box::new(Hs512Signer::new(key)?) as Box<dyn JwtSigner>,
-        Algorithm::ES256 => todo!(),
-        Algorithm::ES384 => todo!(),
+        Algorithm::ES256 => Box::new(Es256Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::ES384 => Box::new(Es384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS256 => Box::new(Rsa256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS384 => Box::new(Rsa384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS512 => Box::new(Rsa512Signer::new(key)?) as Box<dyn JwtSigner>,

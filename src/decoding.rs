@@ -2,7 +2,6 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::aws_lc::rsa::{Rsa256Verifier, Rsa384Verifier, Rsa512Verifier};
 use crate::crypto::JwtVerifier;
 use crate::errors::{new_error, Error, ErrorKind, Result};
 use crate::header::Header;
@@ -12,10 +11,13 @@ use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, DecodedJwtPartClaims};
 use crate::validation::{validate, Validation};
 use crate::Algorithm;
-
 // Crypto
 #[cfg(feature = "aws_lc_rs")]
-use crate::crypto::aws_lc::hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier};
+use crate::crypto::aws_lc::{
+    ecdsa::{Es256Verifier, Es384Verifier},
+    hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
+    rsa::{Rsa256Verifier, Rsa384Verifier, Rsa512Verifier},
+};
 #[cfg(feature = "rust_crypto")]
 use crate::crypto::rust_crypto::hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier};
 
@@ -267,8 +269,8 @@ fn jwt_verifier_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<
         Algorithm::HS256 => Box::new(Hs256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::HS384 => Box::new(Hs384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::HS512 => Box::new(Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::ES256 => todo!(),
-        Algorithm::ES384 => todo!(),
+        Algorithm::ES256 => Box::new(Es256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::ES384 => Box::new(Es384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS256 => Box::new(Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS384 => Box::new(Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS512 => Box::new(Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,

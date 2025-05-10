@@ -3,12 +3,9 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
 
-use jsonwebtoken::{
-    crypto::{sign, verify},
-    Algorithm, DecodingKey, EncodingKey,
-};
 #[cfg(feature = "use_pem")]
 use jsonwebtoken::{decode, encode, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -17,38 +14,38 @@ pub struct Claims {
     exp: i64,
 }
 
-#[test]
-#[wasm_bindgen_test]
-fn round_trip_sign_verification_pk8() {
-    let privkey = include_bytes!("private_ecdsa_key.pk8");
-    let pubkey = include_bytes!("public_ecdsa_key.pk8");
+// #[test]
+// #[wasm_bindgen_test]
+// fn round_trip_sign_verification_pk8() {
+//     let privkey = include_bytes!("private_ecdsa_key.pk8");
+//     let pubkey = include_bytes!("public_ecdsa_key.pk8");
+//
+//     let encrypted =
+//         sign(b"hello world", &EncodingKey::from_ec_der(privkey), Algorithm::ES256).unwrap();
+//     let is_valid =
+//         verify(&encrypted, b"hello world", &DecodingKey::from_ec_der(pubkey), Algorithm::ES256)
+//             .unwrap();
+//     assert!(is_valid);
+// }
 
-    let encrypted =
-        sign(b"hello world", &EncodingKey::from_ec_der(privkey), Algorithm::ES256).unwrap();
-    let is_valid =
-        verify(&encrypted, b"hello world", &DecodingKey::from_ec_der(pubkey), Algorithm::ES256)
-            .unwrap();
-    assert!(is_valid);
-}
-
-#[cfg(feature = "use_pem")]
-#[test]
-#[wasm_bindgen_test]
-fn round_trip_sign_verification_pem() {
-    let privkey_pem = include_bytes!("private_ecdsa_key.pem");
-    let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
-    let encrypted =
-        sign(b"hello world", &EncodingKey::from_ec_pem(privkey_pem).unwrap(), Algorithm::ES256)
-            .unwrap();
-    let is_valid = verify(
-        &encrypted,
-        b"hello world",
-        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
-        Algorithm::ES256,
-    )
-    .unwrap();
-    assert!(is_valid);
-}
+// #[cfg(feature = "use_pem")]
+// #[test]
+// #[wasm_bindgen_test]
+// fn round_trip_sign_verification_pem() {
+//     let privkey_pem = include_bytes!("private_ecdsa_key.pem");
+//     let pubkey_pem = include_bytes!("public_ecdsa_key.pem");
+//     let encrypted =
+//         sign(b"hello world", &EncodingKey::from_ec_pem(privkey_pem).unwrap(), Algorithm::ES256)
+//             .unwrap();
+//     let is_valid = verify(
+//         &encrypted,
+//         b"hello world",
+//         &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+//         Algorithm::ES256,
+//     )
+//     .unwrap();
+//     assert!(is_valid);
+// }
 
 #[cfg(feature = "use_pem")]
 #[test]
