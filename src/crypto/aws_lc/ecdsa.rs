@@ -1,8 +1,9 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
 //! ECDSA family of algorithms using [`aws_lc_rs`]
 
+use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::errors::Result;
+use crate::errors::{new_error, ErrorKind, Result};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 use aws_lc_rs::rand::SystemRandom;
 use aws_lc_rs::signature::{
@@ -15,6 +16,10 @@ pub struct Es256Signer(EcdsaKeyPair);
 
 impl Es256Signer {
     pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+        if encoding_key.family != AlgorithmFamily::Ec {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
         Ok(Self(
             EcdsaKeyPair::from_pkcs8(&ECDSA_P256_SHA256_FIXED_SIGNING, encoding_key.inner())
                 .map_err(|_| crate::errors::ErrorKind::InvalidEcdsaKey)?,
@@ -40,6 +45,10 @@ pub struct Es256Verifier(DecodingKey);
 
 impl Es256Verifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+        if decoding_key.family != AlgorithmFamily::Ec {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
         Ok(Self(decoding_key.clone()))
     }
 }
@@ -63,6 +72,10 @@ pub struct Es384Signer(EcdsaKeyPair);
 
 impl Es384Signer {
     pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+        if encoding_key.family != AlgorithmFamily::Ec {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+        
         Ok(Self(
             EcdsaKeyPair::from_pkcs8(&ECDSA_P384_SHA384_FIXED_SIGNING, encoding_key.inner())
                 .map_err(|_| crate::errors::ErrorKind::InvalidEcdsaKey)?,
@@ -88,6 +101,10 @@ pub struct Es384Verifier(DecodingKey);
 
 impl Es384Verifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+        if decoding_key.family != AlgorithmFamily::Ec {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
         Ok(Self(decoding_key.clone()))
     }
 }
@@ -95,7 +112,8 @@ impl Es384Verifier {
 impl Verifier<Vec<u8>> for Es384Verifier {
     fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
         ECDSA_P384_SHA384_FIXED
-            .verify_sig(self.0.as_bytes(), msg, signature).map_err(Error::from_source)?;
+            .verify_sig(self.0.as_bytes(), msg, signature)
+            .map_err(Error::from_source)?;
 
         Ok(())
     }

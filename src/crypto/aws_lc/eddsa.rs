@@ -1,8 +1,9 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
 //! EdDSA family of algorithms using [`aws_lc_rs`]
 
+use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::errors::Result;
+use crate::errors::{new_error, ErrorKind, Result};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 use aws_lc_rs::signature::{Ed25519KeyPair, VerificationAlgorithm, ED25519};
 use signature::{Error, Signer, Verifier};
@@ -11,6 +12,10 @@ pub struct EdDSASigner(Ed25519KeyPair);
 
 impl EdDSASigner {
     pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+        if encoding_key.family != AlgorithmFamily::Ed {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
         Ok(Self(
             Ed25519KeyPair::from_pkcs8(encoding_key.inner())
                 .map_err(|_| crate::errors::ErrorKind::InvalidEddsaKey)?,
@@ -34,6 +39,10 @@ pub struct EdDSAVerifier(DecodingKey);
 
 impl EdDSAVerifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+        if decoding_key.family != AlgorithmFamily::Ed {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
         Ok(Self(decoding_key.clone()))
     }
 }
