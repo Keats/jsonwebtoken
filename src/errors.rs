@@ -41,7 +41,7 @@ pub enum ErrorKind {
     InvalidSignature,
     /// When the secret given is not a valid ECDSA key
     InvalidEcdsaKey,
-    /// When the secret given is not a valid EDDSA key
+    /// When the secret given is not a valid EdDSA key
     InvalidEddsaKey,
     /// When the secret given is not a valid RSA key
     InvalidRsaKey(String),
@@ -86,6 +86,7 @@ impl StdError for Error {
             ErrorKind::InvalidToken => None,
             ErrorKind::InvalidSignature => None,
             ErrorKind::InvalidEcdsaKey => None,
+            ErrorKind::InvalidEddsaKey => None,
             ErrorKind::RsaFailedSigning => None,
             ErrorKind::InvalidRsaKey(_) => None,
             ErrorKind::ExpiredSignature => None,
@@ -101,7 +102,6 @@ impl StdError for Error {
             ErrorKind::Base64(err) => Some(err),
             ErrorKind::Json(err) => Some(err.as_ref()),
             ErrorKind::Utf8(err) => Some(err),
-            ErrorKind::InvalidEddsaKey => None,
         }
     }
 }

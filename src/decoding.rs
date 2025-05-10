@@ -15,6 +15,7 @@ use crate::Algorithm;
 #[cfg(feature = "aws_lc_rs")]
 use crate::crypto::aws_lc::{
     ecdsa::{Es256Verifier, Es384Verifier},
+    eddsa::EdDSAVerifier,
     hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
     rsa::{Rsa256Verifier, Rsa384Verifier, Rsa512Verifier},
 };
@@ -277,7 +278,7 @@ fn jwt_verifier_factory(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<
         Algorithm::PS256 => todo!(),
         Algorithm::PS384 => todo!(),
         Algorithm::PS512 => todo!(),
-        Algorithm::EdDSA => todo!(),
+        Algorithm::EdDSA => Box::new(EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
     };
 
     Ok(jwt_encoder)

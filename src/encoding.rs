@@ -13,6 +13,7 @@ use crate::Algorithm;
 #[cfg(feature = "aws_lc_rs")]
 use crate::crypto::aws_lc::{
     ecdsa::{Es256Signer, Es384Signer},
+    eddsa::EdDSASigner,
     hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
     rsa::{Rsa256Signer, Rsa384Signer, Rsa512Signer},
 };
@@ -173,7 +174,7 @@ fn jwt_signer_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dy
         Algorithm::PS256 => todo!(),
         Algorithm::PS384 => todo!(),
         Algorithm::PS512 => todo!(),
-        Algorithm::EdDSA => todo!(),
+        Algorithm::EdDSA => Box::new(EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
     };
 
     Ok(jwt_signer)
