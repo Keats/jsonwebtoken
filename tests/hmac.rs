@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -60,6 +61,56 @@ fn encode_with_custom_header() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
+    assert!(token_data.header.extras.is_empty());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn encode_with_extra_custom_header() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let mut extras = HashMap::with_capacity(1);
+    extras.insert("custom".to_string(), "header".to_string());
+    let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
+    assert_eq!(my_claims, token_data.claims);
+    assert_eq!("kid", token_data.header.kid.unwrap());
+    assert_eq!("header", token_data.header.extras.get("custom").unwrap().as_str());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn encode_with_multiple_extra_custom_headers() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let mut extras = HashMap::with_capacity(2);
+    extras.insert("custom1".to_string(), "header1".to_string());
+    extras.insert("custom2".to_string(), "header2".to_string());
+    let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
+    assert_eq!(my_claims, token_data.claims);
+    assert_eq!("kid", token_data.header.kid.unwrap());
+    let extras = token_data.header.extras;
+    assert_eq!("header1", extras.get("custom1").unwrap().as_str());
+    assert_eq!("header2", extras.get("custom2").unwrap().as_str());
 }
 
 #[test]
@@ -93,6 +144,25 @@ fn decode_token() {
     );
     println!("{:?}", claims);
     claims.unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn decode_token_custom_headers() {
+    let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsImN1c3RvbTEiOiJoZWFkZXIxIiwiY3VzdG9tMiI6ImhlYWRlcjIifQ.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.FtOHsoKcNH3SriK3tnR-uWJg4UV4FkOzvq_JCfLngfU";
+    let claims = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
+    let my_claims =
+        Claims { sub: "b@b.com".to_string(), company: "ACME".to_string(), exp: 2532524891 };
+    assert_eq!(my_claims, claims.claims);
+    assert_eq!("kid", claims.header.kid.unwrap());
+    let extras = claims.header.extras;
+    assert_eq!("header1", extras.get("custom1").unwrap().as_str());
+    assert_eq!("header2", extras.get("custom2").unwrap().as_str());
 }
 
 #[test]
