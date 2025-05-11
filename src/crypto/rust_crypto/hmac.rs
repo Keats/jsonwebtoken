@@ -62,7 +62,7 @@ impl Verifier<Vec<u8>> for Hs256Verifier {
         verifier.reset();
         verifier.update(msg);
 
-        verifier.verify_slice(signature).map_err(|e| signature::Error::from_source(e))
+        verifier.verify_slice(signature).map_err(signature::Error::from_source)
     }
 }
 
@@ -118,7 +118,7 @@ impl Verifier<Vec<u8>> for Hs384Verifier {
         verifier.reset();
         verifier.update(msg);
 
-        verifier.verify_slice(signature).map_err(|e| signature::Error::from_source(e))
+        verifier.verify_slice(signature).map_err(signature::Error::from_source)
     }
 }
 
@@ -174,7 +174,7 @@ impl Verifier<Vec<u8>> for Hs512Verifier {
         verifier.reset();
         verifier.update(msg);
 
-        verifier.verify_slice(signature).map_err(|e| signature::Error::from_source(e))
+        verifier.verify_slice(signature).map_err(signature::Error::from_source)
     }
 }
 

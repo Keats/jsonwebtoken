@@ -164,13 +164,16 @@ pub fn _encode<T: Serialize>(
     let encoded_claims = b64_encode_part(claims)?;
     let message = [encoded_header, encoded_claims].join(".");
 
-    let signature = b64_encode(&signing_provider.sign(message.as_bytes()));
+    let signature = b64_encode(signing_provider.sign(message.as_bytes()));
 
     Ok([message, signature].join("."))
 }
 
 /// Return the correct [`JwtSigner`] based on the `algorithm`.
-pub(crate) fn jwt_signer_factory(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSigner>> {
+pub(crate) fn jwt_signer_factory(
+    algorithm: &Algorithm,
+    key: &EncodingKey,
+) -> Result<Box<dyn JwtSigner>> {
     let jwt_signer = match algorithm {
         Algorithm::HS256 => Box::new(Hs256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::HS384 => Box::new(Hs384Signer::new(key)?) as Box<dyn JwtSigner>,

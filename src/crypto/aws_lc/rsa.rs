@@ -17,13 +17,11 @@ fn try_sign_rsa(
     msg: &[u8],
 ) -> std::result::Result<Vec<u8>, signature::Error> {
     let key_pair = crypto_sig::RsaKeyPair::from_der(encoding_key.inner())
-        .map_err(|err| signature::Error::from_source(err))?;
+        .map_err(signature::Error::from_source)?;
 
     let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
-    key_pair
-        .sign(algorithm, &rng, msg, &mut signature)
-        .map_err(|err| signature::Error::from_source(err))?;
+    key_pair.sign(algorithm, &rng, msg, &mut signature).map_err(signature::Error::from_source)?;
 
     Ok(signature)
 }
@@ -42,13 +40,11 @@ fn verify_rsa(
     match &decoding_key.kind {
         DecodingKeyKind::SecretOrDer(bytes) => {
             let public_key = crypto_sig::UnparsedPublicKey::new(algorithm, bytes);
-            public_key.verify(msg, signature).map_err(|err| signature::Error::from_source(err))?;
+            public_key.verify(msg, signature).map_err(signature::Error::from_source)?;
         }
         DecodingKeyKind::RsaModulusExponent { n, e } => {
             let public_key = crypto_sig::RsaPublicKeyComponents { n, e };
-            public_key
-                .verify(algorithm, msg, &signature)
-                .map_err(|err| signature::Error::from_source(err))?;
+            public_key.verify(algorithm, msg, signature).map_err(signature::Error::from_source)?;
         }
     };
 

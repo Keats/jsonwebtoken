@@ -47,7 +47,7 @@ impl Hs256Verifier {
 
 impl Verifier<Vec<u8>> for Hs256Verifier {
     fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        hmac::verify(&self.0, msg, &signature).map_err(|err| signature::Error::from_source(err))
+        hmac::verify(&self.0, msg, signature).map_err(signature::Error::from_source)
     }
 }
 
@@ -93,7 +93,7 @@ impl Hs384Verifier {
 
 impl Verifier<Vec<u8>> for Hs384Verifier {
     fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        hmac::verify(&self.0, msg, &signature).map_err(|err| signature::Error::from_source(err))
+        hmac::verify(&self.0, msg, signature).map_err(signature::Error::from_source)
     }
 }
 
@@ -139,7 +139,7 @@ impl Hs512Verifier {
 
 impl Verifier<Vec<u8>> for Hs512Verifier {
     fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        hmac::verify(&self.0, msg, &signature).map_err(|err| signature::Error::from_source(err))
+        hmac::verify(&self.0, msg, signature).map_err(signature::Error::from_source)
     }
 }
 
