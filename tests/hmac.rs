@@ -1,13 +1,21 @@
-use jsonwebtoken::errors::ErrorKind;
-use jsonwebtoken::jwk::Jwk;
-use jsonwebtoken::{
-    crypto::{sign, verify},
-    decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
-};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
+
+use jsonwebtoken::errors::ErrorKind;
+use jsonwebtoken::jwk::Jwk;
+use jsonwebtoken::{
+    // crypto::{sign, verify},
+    decode,
+    decode_header,
+    encode,
+    Algorithm,
+    DecodingKey,
+    EncodingKey,
+    Header,
+    Validation,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -16,23 +24,23 @@ pub struct Claims {
     exp: i64,
 }
 
-#[test]
-#[wasm_bindgen_test]
-fn sign_hs256() {
-    let result =
-        sign(b"hello world", &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
-    let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
-    assert_eq!(result, expected);
-}
+// #[test]
+// #[wasm_bindgen_test]
+// fn sign_hs256() {
+//     let result =
+//         sign(b"hello world", &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
+//     let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
+//     assert_eq!(result, expected);
+// }
 
-#[test]
-#[wasm_bindgen_test]
-fn verify_hs256() {
-    let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
-    let valid = verify(sig, b"hello world", &DecodingKey::from_secret(b"secret"), Algorithm::HS256)
-        .unwrap();
-    assert!(valid);
-}
+// #[test]
+// #[wasm_bindgen_test]
+// fn verify_hs256() {
+//     let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
+//     let valid = verify(sig, b"hello world", &DecodingKey::from_secret(b"secret"), Algorithm::HS256)
+//         .unwrap();
+//     assert!(valid);
+// }
 
 #[test]
 #[wasm_bindgen_test]
@@ -44,6 +52,7 @@ fn encode_with_custom_header() {
     };
     let header = Header { kid: Some("kid".to_string()), ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(b"secret"),
@@ -171,21 +180,19 @@ fn decode_token_missing_parts() {
 
 #[test]
 #[wasm_bindgen_test]
-#[should_panic(expected = "InvalidSignature")]
 fn decode_token_invalid_signature() {
     let token =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.wrong";
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"secret"),
         &Validation::new(Algorithm::HS256),
     );
-    claims.unwrap();
+    assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidSignature);
 }
 
 #[test]
 #[wasm_bindgen_test]
-#[should_panic(expected = "InvalidAlgorithm")]
 fn decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
     let claims = decode::<Claims>(
@@ -193,12 +200,11 @@ fn decode_token_wrong_algorithm() {
         &DecodingKey::from_secret(b"secret"),
         &Validation::new(Algorithm::RS512),
     );
-    claims.unwrap();
+    assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidAlgorithm);
 }
 
 #[test]
 #[wasm_bindgen_test]
-#[should_panic(expected = "InvalidAlgorithm")]
 fn encode_wrong_alg_family() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
@@ -206,7 +212,7 @@ fn encode_wrong_alg_family() {
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
     let claims = encode(&Header::default(), &my_claims, &EncodingKey::from_rsa_der(b"secret"));
-    claims.unwrap();
+    assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidAlgorithm);
 }
 
 #[test]

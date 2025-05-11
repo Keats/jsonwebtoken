@@ -1,14 +1,14 @@
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "use_pem")]
+use time::OffsetDateTime;
+use wasm_bindgen_test::wasm_bindgen_test;
+
 use jsonwebtoken::{
     crypto::{sign, verify},
     Algorithm, DecodingKey, EncodingKey,
 };
-use serde::{Deserialize, Serialize};
-use wasm_bindgen_test::wasm_bindgen_test;
-
 #[cfg(feature = "use_pem")]
 use jsonwebtoken::{decode, encode, Header, Validation};
-#[cfg(feature = "use_pem")]
-use time::OffsetDateTime;
 
 const RSA_ALGORITHMS: &[Algorithm] = &[
     Algorithm::RS256,
@@ -25,6 +25,8 @@ pub struct Claims {
     company: String,
     exp: i64,
 }
+
+// Todo: These no longer apply because `verify` does not exist, would probably need to convert it to test the factory for getting signers and verifiers. But I would rather this not be part of the public facing API.
 
 #[cfg(feature = "use_pem")]
 #[test]

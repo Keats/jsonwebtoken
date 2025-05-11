@@ -1,5 +1,7 @@
 # Changelog
 
+## 10.0.0 (unreleased)
+
 ## 9.3.1 (2024-02-06)
 
 - Update base64
