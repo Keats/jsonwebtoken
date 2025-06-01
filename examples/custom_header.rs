@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use jsonwebtoken::errors::ErrorKind;
+use jsonwebtoken::errors::{ErrorKind, FundamentalError};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,7 +39,7 @@ fn main() {
     ) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
-            ErrorKind::InvalidToken => panic!(), // Example on how to handle a specific error
+            ErrorKind::Fundamental(FundamentalError::InvalidToken) => panic!(), // Example on how to handle a specific error
             _ => panic!(),
         },
     };

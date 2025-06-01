@@ -1,4 +1,4 @@
-use jsonwebtoken::errors::ErrorKind;
+use jsonwebtoken::errors::{ErrorKind, FundamentalError, ValidationError};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
@@ -30,8 +30,8 @@ fn main() {
     let token_data = match decode::<Claims>(&token, &DecodingKey::from_secret(key), &validation) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
-            ErrorKind::InvalidToken => panic!("Token is invalid"), // Example on how to handle a specific error
-            ErrorKind::InvalidIssuer => panic!("Issuer is invalid"), // Example on how to handle a specific error
+            ErrorKind::Fundamental(FundamentalError::InvalidToken) => panic!("Token is invalid"), // Example on how to handle a specific error
+            ErrorKind::Validation(ValidationError::InvalidIssuer) => panic!("Issuer is invalid"), // Example on how to handle a specific error
             _ => panic!("Some other errors"),
         },
     };

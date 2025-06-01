@@ -3,7 +3,7 @@ use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{new_error, ErrorKind, Result, ValidationError};
 use crate::header::Header;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
@@ -120,7 +120,7 @@ impl EncodingKey {
 /// ```
 pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> Result<String> {
     if key.family != header.alg.family() {
-        return Err(new_error(ErrorKind::InvalidAlgorithm));
+        return Err(new_error(ErrorKind::from(ValidationError::InvalidAlgorithm)));
     }
     let encoded_header = b64_encode_part(header)?;
     let encoded_claims = b64_encode_part(claims)?;

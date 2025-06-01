@@ -5,7 +5,7 @@
 //! tweaked to remove the private bits as it's not the goal for this crate currently.
 
 use crate::{
-    errors::{self, Error, ErrorKind},
+    errors::{self, Error, ErrorKind, FundamentalError},
     Algorithm,
 };
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -209,7 +209,7 @@ impl FromStr for KeyAlgorithm {
             "RSA1_5" => Ok(KeyAlgorithm::RSA1_5),
             "RSA-OAEP" => Ok(KeyAlgorithm::RSA_OAEP),
             "RSA-OAEP-256" => Ok(KeyAlgorithm::RSA_OAEP_256),
-            _ => Err(ErrorKind::InvalidAlgorithmName.into()),
+            _ => Err(ErrorKind::from(FundamentalError::InvalidAlgorithmName).into()),
         }
     }
 }
