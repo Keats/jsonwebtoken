@@ -1,7 +1,7 @@
 use ring::{rand, signature};
 
 use crate::algorithms::Algorithm;
-use crate::errors::{ErrorKind, Result};
+use crate::errors::{ErrorKind, FundamentalError, Result};
 use crate::serialization::{b64_decode, b64_encode};
 
 /// Only used internally when validating RSA, to map from our enum to the Ring param structs.
@@ -39,11 +39,11 @@ pub(crate) fn sign(
     message: &[u8],
 ) -> Result<String> {
     let key_pair = signature::RsaKeyPair::from_der(key)
-        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+        .map_err(|e| ErrorKind::Fundamental(FundamentalError::InvalidRsaKey(e.to_string())))?;
 
     let mut signature = vec![0; key_pair.public().modulus_len()];
     let rng = rand::SystemRandom::new();
-    key_pair.sign(alg, &rng, message, &mut signature).map_err(|_| ErrorKind::RsaFailedSigning)?;
+    key_pair.sign(alg, &rng, message, &mut signature).map_err(|_| ErrorKind::Fundamental(FundamentalError::RsaFailedSigning))?;
 
     Ok(b64_encode(signature))
 }

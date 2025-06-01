@@ -7,7 +7,7 @@ use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer};
 
 use crate::algorithms::Algorithm;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{new_error, ErrorKind, Result, ValidationError};
 
 /// Contains the various validations that are applied after decoding a JWT.
 ///
@@ -264,7 +264,7 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         };
 
         if !present {
-            return Err(new_error(ErrorKind::MissingRequiredClaim(required_claim.clone())));
+            return Err(new_error(ErrorKind::from(ValidationError::MissingRequiredClaim(required_claim.clone()))));
         }
     }
 
@@ -274,30 +274,30 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp
             && exp - options.reject_tokens_expiring_in_less_than < now - options.leeway )
         {
-            return Err(new_error(ErrorKind::ExpiredSignature));
+            return Err(new_error(ValidationError::ExpiredSignature.into()));
         }
 
         if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway)
         {
-            return Err(new_error(ErrorKind::ImmatureSignature));
+            return Err(new_error(ValidationError::ImmatureSignature.into()));
         }
     }
 
     if let (TryParse::Parsed(sub), Some(correct_sub)) = (claims.sub, options.sub.as_deref()) {
         if sub != correct_sub {
-            return Err(new_error(ErrorKind::InvalidSubject));
+            return Err(new_error(ValidationError::InvalidSubject.into()));
         }
     }
 
     match (claims.iss, options.iss.as_ref()) {
         (TryParse::Parsed(Issuer::Single(iss)), Some(correct_iss)) => {
             if !correct_iss.contains(&*iss) {
-                return Err(new_error(ErrorKind::InvalidIssuer));
+                return Err(new_error(ValidationError::InvalidIssuer.into()));
             }
         }
         (TryParse::Parsed(Issuer::Multiple(iss)), Some(correct_iss)) => {
             if !is_subset(correct_iss, &iss) {
-                return Err(new_error(ErrorKind::InvalidIssuer));
+                return Err(new_error(ValidationError::InvalidIssuer.into()));
             }
         }
         _ => {}
@@ -313,16 +313,16 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         // "aud" claim when this claim is present, then the JWT MUST be
         //  rejected.
         (TryParse::Parsed(_), None) => {
-            return Err(new_error(ErrorKind::InvalidAudience));
+            return Err(new_error(ValidationError::InvalidAudience.into()));
         }
         (TryParse::Parsed(Audience::Single(aud)), Some(correct_aud)) => {
             if !correct_aud.contains(&*aud) {
-                return Err(new_error(ErrorKind::InvalidAudience));
+                return Err(new_error(ValidationError::InvalidAudience.into()));
             }
         }
         (TryParse::Parsed(Audience::Multiple(aud)), Some(correct_aud)) => {
             if !is_subset(correct_aud, &aud) {
-                return Err(new_error(ErrorKind::InvalidAudience));
+                return Err(new_error(ValidationError::InvalidAudience.into()));
             }
         }
         _ => {}
@@ -376,7 +376,7 @@ mod tests {
 
     use super::{get_current_timestamp, validate, ClaimsForValidation, Validation};
 
-    use crate::errors::ErrorKind;
+    use crate::errors::{ErrorKind, ValidationError};
     use crate::Algorithm;
     use std::collections::HashSet;
 
@@ -430,7 +430,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::ExpiredSignature => (),
+            ErrorKind::Validation(crate::errors::ValidationError::ExpiredSignature) => (),
             _ => unreachable!(),
         };
     }
@@ -443,7 +443,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::ExpiredSignature => (),
+            ErrorKind::Validation(crate::errors::ValidationError::ExpiredSignature) => (),
             _ => unreachable!(),
         };
     }
@@ -467,7 +467,7 @@ mod tests {
             let mut validation = Validation::new(Algorithm::HS256);
             validation.set_required_spec_claims(&[spec_claim]);
             let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
-            assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim(spec_claim.to_owned()));
+            assert_eq!(res.kind(), &ValidationError::MissingRequiredClaim(spec_claim.to_owned()).into());
         }
     }
 
@@ -551,7 +551,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::ImmatureSignature => (),
+            ErrorKind::Validation(crate::errors::ValidationError::ImmatureSignature)  => (),
             _ => unreachable!(),
         };
     }
@@ -606,7 +606,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidIssuer => (),
+            ErrorKind::Validation(ValidationError::InvalidIssuer) => (),
             _ => unreachable!(),
         };
     }
@@ -623,7 +623,7 @@ mod tests {
         let res = validate(deserialize_claims(&claims), &validation);
 
         match res.unwrap_err().kind() {
-            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "iss"),
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => assert_eq!(claim, "iss"),
             _ => unreachable!(),
         };
     }
@@ -652,7 +652,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidSubject => (),
+            ErrorKind::Validation(ValidationError::InvalidSubject) => (),
             _ => unreachable!(),
         };
     }
@@ -669,7 +669,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "sub"),
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => assert_eq!(claim, "sub"),
             _ => unreachable!(),
         };
     }
@@ -710,7 +710,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidAudience => (),
+            ErrorKind::Validation(ValidationError::InvalidAudience) => (),
             _ => unreachable!(),
         };
     }
@@ -727,7 +727,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidAudience => (),
+            ErrorKind::Validation(ValidationError::InvalidAudience) => (),
             _ => unreachable!(),
         };
     }
@@ -744,7 +744,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::InvalidAudience => (),
+            ErrorKind::Validation(ValidationError::InvalidAudience) => (),
             _ => unreachable!(),
         };
     }
@@ -774,7 +774,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "aud"),
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => assert_eq!(claim, "aud"),
             _ => unreachable!(),
         };
     }
@@ -795,7 +795,7 @@ mod tests {
         // It errors because it needs to validate iss/sub which are missing
         assert!(res.is_err());
         match res.unwrap_err().kind() {
-            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "iss"),
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => assert_eq!(claim, "iss"),
             t => panic!("{:?}", t),
         };
     }

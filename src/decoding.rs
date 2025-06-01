@@ -3,7 +3,7 @@ use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::verify;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{new_error, ErrorKind, FundamentalError, Result, ValidationError};
 use crate::header::Header;
 use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
@@ -36,7 +36,7 @@ macro_rules! expect_two {
         let mut i = $iter;
         match (i.next(), i.next(), i.next()) {
             (Some(first), Some(second), None) => (first, second),
-            _ => return Err(new_error(ErrorKind::InvalidToken)),
+            _ => return Err(new_error(ErrorKind::from(FundamentalError::InvalidToken))),
         }
     }};
 }
@@ -210,13 +210,13 @@ fn verify_signature<'a>(
     validation: &Validation,
 ) -> Result<(Header, &'a str)> {
     if validation.validate_signature && validation.algorithms.is_empty() {
-        return Err(new_error(ErrorKind::MissingAlgorithm));
+        return Err(new_error(ErrorKind::from(ValidationError::MissingAlgorithm)))
     }
 
     if validation.validate_signature {
         for alg in &validation.algorithms {
             if key.family != alg.family() {
-                return Err(new_error(ErrorKind::InvalidAlgorithm));
+                return Err(new_error(ErrorKind::from(ValidationError::InvalidAlgorithm)))
             }
         }
     }
@@ -226,11 +226,11 @@ fn verify_signature<'a>(
     let header = Header::from_encoded(header)?;
 
     if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
-        return Err(new_error(ErrorKind::InvalidAlgorithm));
+        return Err(new_error(ErrorKind::from(ValidationError::InvalidAlgorithm)));
     }
 
     if validation.validate_signature && !verify(signature, message.as_bytes(), key, header.alg)? {
-        return Err(new_error(ErrorKind::InvalidSignature));
+        return Err(new_error(ErrorKind::from(ValidationError::InvalidAlgorithm)));
     }
 
     Ok((header, payload))

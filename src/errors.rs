@@ -35,6 +35,28 @@ impl Error {
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub enum ErrorKind {
+    /// Errors related to malformed tokens or cryptographic key problems.
+    Fundamental(FundamentalError),
+    /// Errors that occur when a token fails claim-based validation.
+    Validation(ValidationError),
+    /// Errors originating from third-party libraries used for tasks like
+    /// base64 decoding, JSON serialization, or cryptographic operations.
+    ThirdParty(ThirdPartyError),
+}
+
+impl From<FundamentalError> for ErrorKind {
+    fn from(value: FundamentalError) -> Self {
+        Self::Fundamental(value)
+    }
+}
+
+#[non_exhaustive]
+#[derive(Clone, Debug)]
+/// Errors that indicate a fundamental issue with the JWT or cryptographic key configuration.
+/// This enum may grow additional variants, the `#[non_exhaustive]`
+/// attribute makes sure clients don't count on exhaustive matching.
+/// (Otherwise, adding a new variant could break existing code.)
+pub enum FundamentalError {
     /// When a token doesn't have a valid JWT shape
     InvalidToken,
     /// When the signature doesn't match
@@ -49,7 +71,20 @@ pub enum ErrorKind {
     InvalidAlgorithmName,
     /// When a key is provided with an invalid format
     InvalidKeyFormat,
+}
 
+impl From<ValidationError> for ErrorKind {
+    fn from(value: ValidationError) -> Self {
+        Self::Validation(value)
+    }
+}
+
+
+#[non_exhaustive]
+#[derive(Clone, Debug)]
+/// Errors which relate to the validation of a JWT's claims (such as expiration, audience, or issuer)
+/// and whether they meet the defined criteria.
+pub enum ValidationError {
     // Validation errors
     /// When a claim required by the validation is not present
     MissingRequiredClaim(String),
@@ -67,8 +102,21 @@ pub enum ErrorKind {
     /// used doesn't match the alg requested
     InvalidAlgorithm,
     /// When the Validation struct does not contain at least 1 algorithm
-    MissingAlgorithm,
+    MissingAlgorithm,   
+}
 
+
+impl From<ThirdPartyError> for ErrorKind {
+    fn from(value: ThirdPartyError) -> Self {
+        Self::ThirdParty(value)
+    }
+}
+
+#[non_exhaustive]
+#[derive(Clone, Debug)]
+/// Errors originating from external libraries/underlying systems
+/// used during the JWT encoding or decoding process.
+pub enum ThirdPartyError {
     // 3rd party errors
     /// An error happened when decoding some base64 text
     Base64(base64::DecodeError),
@@ -83,25 +131,12 @@ pub enum ErrorKind {
 impl StdError for Error {
     fn cause(&self) -> Option<&dyn StdError> {
         match &*self.0 {
-            ErrorKind::InvalidToken => None,
-            ErrorKind::InvalidSignature => None,
-            ErrorKind::InvalidEcdsaKey => None,
-            ErrorKind::RsaFailedSigning => None,
-            ErrorKind::InvalidRsaKey(_) => None,
-            ErrorKind::ExpiredSignature => None,
-            ErrorKind::MissingAlgorithm => None,
-            ErrorKind::MissingRequiredClaim(_) => None,
-            ErrorKind::InvalidIssuer => None,
-            ErrorKind::InvalidAudience => None,
-            ErrorKind::InvalidSubject => None,
-            ErrorKind::ImmatureSignature => None,
-            ErrorKind::InvalidAlgorithm => None,
-            ErrorKind::InvalidAlgorithmName => None,
-            ErrorKind::InvalidKeyFormat => None,
-            ErrorKind::Base64(err) => Some(err),
-            ErrorKind::Json(err) => Some(err.as_ref()),
-            ErrorKind::Utf8(err) => Some(err),
-            ErrorKind::Crypto(err) => Some(err),
+            ErrorKind::Fundamental(_) => None,
+            ErrorKind::Validation(_) => None,
+            ErrorKind::ThirdParty(ThirdPartyError::Base64(err)) => Some(err),
+            ErrorKind::ThirdParty(ThirdPartyError::Json(err)) => Some(err.as_ref()),
+            ErrorKind::ThirdParty(ThirdPartyError::Utf8(err)) => Some(err),
+            ErrorKind::ThirdParty(ThirdPartyError::Crypto(err)) => Some(err),
         }
     }
 }
@@ -109,28 +144,29 @@ impl StdError for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &*self.0 {
-            ErrorKind::InvalidToken
-            | ErrorKind::InvalidSignature
-            | ErrorKind::InvalidEcdsaKey
-            | ErrorKind::ExpiredSignature
-            | ErrorKind::RsaFailedSigning
-            | ErrorKind::MissingAlgorithm
-            | ErrorKind::InvalidIssuer
-            | ErrorKind::InvalidAudience
-            | ErrorKind::InvalidSubject
-            | ErrorKind::ImmatureSignature
-            | ErrorKind::InvalidAlgorithm
-            | ErrorKind::InvalidKeyFormat
-            | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
-            ErrorKind::MissingRequiredClaim(c) => write!(f, "Missing required claim: {}", c),
-            ErrorKind::InvalidRsaKey(msg) => write!(f, "RSA key invalid: {}", msg),
-            ErrorKind::Json(err) => write!(f, "JSON error: {}", err),
-            ErrorKind::Utf8(err) => write!(f, "UTF-8 error: {}", err),
-            ErrorKind::Crypto(err) => write!(f, "Crypto error: {}", err),
-            ErrorKind::Base64(err) => write!(f, "Base64 error: {}", err),
+            ErrorKind::Fundamental(FundamentalError::InvalidRsaKey(msg)) => {
+                write!(f, "RSA key invalid: {}", msg)
+            }
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => {
+                write!(f, "Missing required claim: {}", claim)
+            }
+            ErrorKind::ThirdParty(ThirdPartyError::Json(err)) => {
+                write!(f, "JSON error: {}", err)
+            }
+            ErrorKind::ThirdParty(ThirdPartyError::Utf8(err)) => {
+                write!(f, "UTF-8 error: {}", err)
+            }
+            ErrorKind::ThirdParty(ThirdPartyError::Crypto(err)) => {
+                write!(f, "Crypto error: {}", err)
+            }
+            ErrorKind::ThirdParty(ThirdPartyError::Base64(err)) => {
+                write!(f, "Base64 error: {}", err)
+            }
+            _ => write!(f, "{:?}", self.0),
         }
     }
 }
+
 
 impl PartialEq for ErrorKind {
     fn eq(&self, other: &Self) -> bool {
@@ -143,31 +179,31 @@ impl Eq for ErrorKind {}
 
 impl From<base64::DecodeError> for Error {
     fn from(err: base64::DecodeError) -> Error {
-        new_error(ErrorKind::Base64(err))
+        new_error(ErrorKind::ThirdParty(ThirdPartyError::Base64(err)))
     }
 }
 
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Error {
-        new_error(ErrorKind::Json(Arc::new(err)))
+        new_error(ErrorKind::ThirdParty(ThirdPartyError::Json(Arc::new(err))))
     }
 }
 
 impl From<::std::string::FromUtf8Error> for Error {
     fn from(err: ::std::string::FromUtf8Error) -> Error {
-        new_error(ErrorKind::Utf8(err))
+        new_error(ErrorKind::ThirdParty(ThirdPartyError::Utf8(err)))
     }
 }
 
 impl From<::ring::error::Unspecified> for Error {
     fn from(err: ::ring::error::Unspecified) -> Error {
-        new_error(ErrorKind::Crypto(err))
+        new_error(ErrorKind::ThirdParty(ThirdPartyError::Crypto(err)))
     }
 }
 
 impl From<::ring::error::KeyRejected> for Error {
     fn from(_err: ::ring::error::KeyRejected) -> Error {
-        new_error(ErrorKind::InvalidEcdsaKey)
+        new_error(ErrorKind::Fundamental(FundamentalError::InvalidEcdsaKey))
     }
 }
 
@@ -188,7 +224,7 @@ mod tests {
     fn test_error_rendering() {
         assert_eq!(
             "InvalidAlgorithmName",
-            Error::from(ErrorKind::InvalidAlgorithmName).to_string()
+            Error::from(ErrorKind::Fundamental(FundamentalError::InvalidAlgorithmName)).to_string()
         );
     }
 }

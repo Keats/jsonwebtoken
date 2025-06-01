@@ -1,4 +1,4 @@
-use jsonwebtoken::errors::ErrorKind;
+use jsonwebtoken::errors::{ErrorKind, ValidationError};
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{
     crypto::{sign, verify},
@@ -268,7 +268,7 @@ fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
     validation.insecure_disable_signature_validation();
     let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     let err = claims.unwrap_err();
-    assert_eq!(err.kind(), &ErrorKind::ExpiredSignature);
+    assert_eq!(err.kind(), &ErrorKind::Validation(ValidationError::ExpiredSignature));
 }
 
 #[test]
