@@ -264,7 +264,9 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         };
 
         if !present {
-            return Err(new_error(ErrorKind::from(ValidationError::MissingRequiredClaim(required_claim.clone()))));
+            return Err(new_error(ErrorKind::from(ValidationError::MissingRequiredClaim(
+                required_claim.clone(),
+            ))));
         }
     }
 
@@ -467,7 +469,10 @@ mod tests {
             let mut validation = Validation::new(Algorithm::HS256);
             validation.set_required_spec_claims(&[spec_claim]);
             let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
-            assert_eq!(res.kind(), &ValidationError::MissingRequiredClaim(spec_claim.to_owned()).into());
+            assert_eq!(
+                res.kind(),
+                &ValidationError::MissingRequiredClaim(spec_claim.to_owned()).into()
+            );
         }
     }
 
@@ -551,7 +556,7 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::Validation(crate::errors::ValidationError::ImmatureSignature)  => (),
+            ErrorKind::Validation(crate::errors::ValidationError::ImmatureSignature) => (),
             _ => unreachable!(),
         };
     }
@@ -623,7 +628,9 @@ mod tests {
         let res = validate(deserialize_claims(&claims), &validation);
 
         match res.unwrap_err().kind() {
-            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => assert_eq!(claim, "iss"),
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => {
+                assert_eq!(claim, "iss")
+            }
             _ => unreachable!(),
         };
     }
@@ -669,7 +676,9 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => assert_eq!(claim, "sub"),
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => {
+                assert_eq!(claim, "sub")
+            }
             _ => unreachable!(),
         };
     }
@@ -774,7 +783,9 @@ mod tests {
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
-            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => assert_eq!(claim, "aud"),
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => {
+                assert_eq!(claim, "aud")
+            }
             _ => unreachable!(),
         };
     }
@@ -795,7 +806,9 @@ mod tests {
         // It errors because it needs to validate iss/sub which are missing
         assert!(res.is_err());
         match res.unwrap_err().kind() {
-            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => assert_eq!(claim, "iss"),
+            ErrorKind::Validation(ValidationError::MissingRequiredClaim(claim)) => {
+                assert_eq!(claim, "iss")
+            }
             t => panic!("{:?}", t),
         };
     }

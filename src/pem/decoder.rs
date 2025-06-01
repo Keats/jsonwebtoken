@@ -55,7 +55,11 @@ impl PemEncodedKey {
             Ok(content) => {
                 let asn1_content = match simple_asn1::from_der(content.contents()) {
                     Ok(asn1) => asn1,
-                    Err(_) => return Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
+                    Err(_) => {
+                        return Err(
+                            ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()
+                        )
+                    }
                 };
 
                 match content.tag() {
@@ -112,7 +116,10 @@ impl PemEncodedKey {
                                     standard: Standard::Pkcs8,
                                 })
                             }
-                            None => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
+                            None => {
+                                Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat)
+                                    .into())
+                            }
                         }
                     }
 
@@ -127,7 +134,9 @@ impl PemEncodedKey {
     /// Can only be PKCS8
     pub fn as_ec_private_key(&self) -> Result<&[u8]> {
         match self.standard {
-            Standard::Pkcs1 => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
+            Standard::Pkcs1 => {
+                Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into())
+            }
             Standard::Pkcs8 => match self.pem_type {
                 PemType::EcPrivate => Ok(self.content.as_slice()),
                 _ => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
@@ -138,7 +147,9 @@ impl PemEncodedKey {
     /// Can only be PKCS8
     pub fn as_ec_public_key(&self) -> Result<&[u8]> {
         match self.standard {
-            Standard::Pkcs1 => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
+            Standard::Pkcs1 => {
+                Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into())
+            }
             Standard::Pkcs8 => match self.pem_type {
                 PemType::EcPublic => extract_first_bitstring(&self.asn1),
                 _ => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
@@ -149,7 +160,9 @@ impl PemEncodedKey {
     /// Can only be PKCS8
     pub fn as_ed_private_key(&self) -> Result<&[u8]> {
         match self.standard {
-            Standard::Pkcs1 => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
+            Standard::Pkcs1 => {
+                Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into())
+            }
             Standard::Pkcs8 => match self.pem_type {
                 PemType::EdPrivate => Ok(self.content.as_slice()),
                 _ => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
@@ -160,7 +173,9 @@ impl PemEncodedKey {
     /// Can only be PKCS8
     pub fn as_ed_public_key(&self) -> Result<&[u8]> {
         match self.standard {
-            Standard::Pkcs1 => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),
+            Standard::Pkcs1 => {
+                Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into())
+            }
             Standard::Pkcs8 => match self.pem_type {
                 PemType::EdPublic => extract_first_bitstring(&self.asn1),
                 _ => Err(ErrorKind::Fundamental(FundamentalError::InvalidKeyFormat).into()),

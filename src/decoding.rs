@@ -210,13 +210,13 @@ fn verify_signature<'a>(
     validation: &Validation,
 ) -> Result<(Header, &'a str)> {
     if validation.validate_signature && validation.algorithms.is_empty() {
-        return Err(new_error(ErrorKind::from(ValidationError::MissingAlgorithm)))
+        return Err(new_error(ErrorKind::from(ValidationError::MissingAlgorithm)));
     }
 
     if validation.validate_signature {
         for alg in &validation.algorithms {
             if key.family != alg.family() {
-                return Err(new_error(ErrorKind::from(ValidationError::InvalidAlgorithm)))
+                return Err(new_error(ErrorKind::from(ValidationError::InvalidAlgorithm)));
             }
         }
     }

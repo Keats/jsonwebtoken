@@ -79,7 +79,6 @@ impl From<ValidationError> for ErrorKind {
     }
 }
 
-
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 /// Errors which relate to the validation of a JWT's claims (such as expiration, audience, or issuer)
@@ -102,9 +101,8 @@ pub enum ValidationError {
     /// used doesn't match the alg requested
     InvalidAlgorithm,
     /// When the Validation struct does not contain at least 1 algorithm
-    MissingAlgorithm,   
+    MissingAlgorithm,
 }
-
 
 impl From<ThirdPartyError> for ErrorKind {
     fn from(value: ThirdPartyError) -> Self {
@@ -166,7 +164,6 @@ impl fmt::Display for Error {
         }
     }
 }
-
 
 impl PartialEq for ErrorKind {
     fn eq(&self, other: &Self) -> bool {

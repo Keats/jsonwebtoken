@@ -43,7 +43,9 @@ pub(crate) fn sign(
 
     let mut signature = vec![0; key_pair.public().modulus_len()];
     let rng = rand::SystemRandom::new();
-    key_pair.sign(alg, &rng, message, &mut signature).map_err(|_| ErrorKind::Fundamental(FundamentalError::RsaFailedSigning))?;
+    key_pair
+        .sign(alg, &rng, message, &mut signature)
+        .map_err(|_| ErrorKind::Fundamental(FundamentalError::RsaFailedSigning))?;
 
     Ok(b64_encode(signature))
 }
