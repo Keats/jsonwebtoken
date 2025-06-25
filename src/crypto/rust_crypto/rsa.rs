@@ -66,290 +66,80 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
     Ok(())
 }
 
-pub struct Rsa256Signer(EncodingKey);
+macro_rules! define_rsa_signer {
+    ($name:ident, $alg:expr, $hash:ty, pss = $pss:expr) => {
+        pub struct $name(EncodingKey);
 
-impl Rsa256Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        impl $name {
+            pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+                if encoding_key.family != AlgorithmFamily::Rsa {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
+
+                Ok(Self(encoding_key.clone()))
+            }
         }
 
-        Ok(Self(encoding_key.clone()))
-    }
-}
-
-impl Signer<Vec<u8>> for Rsa256Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        try_sign_rsa::<Sha256>(&self.0, msg, false)
-    }
-}
-
-impl JwtSigner for Rsa256Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::RS256
-    }
-}
-
-pub struct Rsa256Verifier(DecodingKey);
-
-impl Rsa256Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        impl Signer<Vec<u8>> for $name {
+            fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
+                try_sign_rsa::<$hash>(&self.0, msg, $pss)
+            }
         }
 
-        Ok(Self(decoding_key.clone()))
-    }
+        impl JwtSigner for $name {
+            fn algorithm(&self) -> Algorithm {
+                $alg
+            }
+        }
+    };
 }
 
-impl Verifier<Vec<u8>> for Rsa256Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        verify_rsa::<_, Sha256>(Pkcs1v15Sign::new::<Sha256>(), &self.0, msg, signature)
-    }
-}
+macro_rules! define_rsa_verifier {
+    ($name:ident, $alg:expr, $hash:ty, pss = $pss:expr) => {
+        pub struct $name(DecodingKey);
 
-impl JwtVerifier for Rsa256Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::RS256
-    }
-}
+        impl $name {
+            pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+                if decoding_key.family != AlgorithmFamily::Rsa {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
 
-pub struct Rsa384Signer(EncodingKey);
-
-impl Rsa384Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+                Ok(Self(decoding_key.clone()))
+            }
         }
 
-        Ok(Self(encoding_key.clone()))
-    }
-}
-
-impl Signer<Vec<u8>> for Rsa384Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        try_sign_rsa::<Sha384>(&self.0, msg, false)
-    }
-}
-
-impl JwtSigner for Rsa384Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::RS384
-    }
-}
-
-pub struct Rsa384Verifier(DecodingKey);
-
-impl Rsa384Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        impl Verifier<Vec<u8>> for $name {
+            fn verify(
+                &self,
+                msg: &[u8],
+                signature: &Vec<u8>,
+            ) -> std::result::Result<(), signature::Error> {
+                if $pss {
+                    verify_rsa::<Pss, $hash>(Pss::new::<$hash>(), &self.0, msg, signature)
+                } else {
+                    verify_rsa::<_, $hash>(Pkcs1v15Sign::new::<$hash>(), &self.0, msg, signature)
+                }
+            }
         }
 
-        Ok(Self(decoding_key.clone()))
-    }
-}
-
-impl Verifier<Vec<u8>> for Rsa384Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        verify_rsa::<_, Sha384>(Pkcs1v15Sign::new::<Sha384>(), &self.0, msg, signature)
-    }
-}
-
-impl JwtVerifier for Rsa384Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::RS384
-    }
-}
-
-pub struct Rsa512Signer(EncodingKey);
-
-impl Rsa512Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        impl JwtVerifier for $name {
+            fn algorithm(&self) -> Algorithm {
+                $alg
+            }
         }
-
-        Ok(Self(encoding_key.clone()))
-    }
+    };
 }
 
-impl Signer<Vec<u8>> for Rsa512Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        try_sign_rsa::<Sha512>(&self.0, msg, false)
-    }
-}
+define_rsa_signer!(Rsa256Signer, Algorithm::RS256, Sha256, pss = false);
+define_rsa_signer!(Rsa384Signer, Algorithm::RS384, Sha384, pss = false);
+define_rsa_signer!(Rsa512Signer, Algorithm::RS512, Sha512, pss = false);
+define_rsa_signer!(RsaPss256Signer, Algorithm::PS256, Sha256, pss = true);
+define_rsa_signer!(RsaPss384Signer, Algorithm::PS384, Sha384, pss = true);
+define_rsa_signer!(RsaPss512Signer, Algorithm::PS512, Sha512, pss = true);
 
-impl JwtSigner for Rsa512Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::RS512
-    }
-}
-
-pub struct Rsa512Verifier(DecodingKey);
-
-impl Rsa512Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-
-        Ok(Self(decoding_key.clone()))
-    }
-}
-
-impl Verifier<Vec<u8>> for Rsa512Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        verify_rsa::<_, Sha512>(Pkcs1v15Sign::new::<Sha512>(), &self.0, msg, signature)
-    }
-}
-
-impl JwtVerifier for Rsa512Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::RS512
-    }
-}
-
-pub struct RsaPss256Signer(EncodingKey);
-
-impl RsaPss256Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-
-        Ok(Self(encoding_key.clone()))
-    }
-}
-
-impl Signer<Vec<u8>> for RsaPss256Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        try_sign_rsa::<Sha256>(&self.0, msg, true)
-    }
-}
-
-impl JwtSigner for RsaPss256Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::PS256
-    }
-}
-
-pub struct RsaPss256Verifier(DecodingKey);
-
-impl RsaPss256Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-
-        Ok(Self(decoding_key.clone()))
-    }
-}
-
-impl Verifier<Vec<u8>> for RsaPss256Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        verify_rsa::<_, Sha256>(Pss::new::<Sha256>(), &self.0, msg, signature)
-    }
-}
-
-impl JwtVerifier for RsaPss256Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::PS256
-    }
-}
-
-pub struct RsaPss384Signer(EncodingKey);
-
-impl RsaPss384Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-
-        Ok(Self(encoding_key.clone()))
-    }
-}
-
-impl Signer<Vec<u8>> for RsaPss384Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        try_sign_rsa::<Sha384>(&self.0, msg, true)
-    }
-}
-
-impl JwtSigner for RsaPss384Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::PS384
-    }
-}
-
-pub struct RsaPss384Verifier(DecodingKey);
-
-impl RsaPss384Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-
-        Ok(Self(decoding_key.clone()))
-    }
-}
-
-impl Verifier<Vec<u8>> for RsaPss384Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        verify_rsa::<_, Sha384>(Pss::new::<Sha384>(), &self.0, msg, signature)
-    }
-}
-
-impl JwtVerifier for RsaPss384Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::PS384
-    }
-}
-
-pub struct RsaPss512Signer(EncodingKey);
-
-impl RsaPss512Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-
-        Ok(Self(encoding_key.clone()))
-    }
-}
-
-impl Signer<Vec<u8>> for RsaPss512Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        try_sign_rsa::<Sha512>(&self.0, msg, true)
-    }
-}
-
-impl JwtSigner for RsaPss512Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::PS512
-    }
-}
-
-pub struct RsaPss512Verifier(DecodingKey);
-
-impl RsaPss512Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Rsa {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-
-        Ok(Self(decoding_key.clone()))
-    }
-}
-
-impl Verifier<Vec<u8>> for RsaPss512Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        verify_rsa::<_, Sha512>(Pss::new::<Sha512>(), &self.0, msg, signature)
-    }
-}
-
-impl JwtVerifier for RsaPss512Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::PS512
-    }
-}
+define_rsa_verifier!(Rsa256Verifier, Algorithm::RS256, Sha256, pss = false);
+define_rsa_verifier!(Rsa384Verifier, Algorithm::RS384, Sha384, pss = false);
+define_rsa_verifier!(Rsa512Verifier, Algorithm::RS512, Sha512, pss = false);
+define_rsa_verifier!(RsaPss256Verifier, Algorithm::PS256, Sha256, pss = true);
+define_rsa_verifier!(RsaPss384Verifier, Algorithm::PS384, Sha384, pss = true);
+define_rsa_verifier!(RsaPss512Verifier, Algorithm::PS512, Sha512, pss = true);

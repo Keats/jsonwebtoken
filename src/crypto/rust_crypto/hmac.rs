@@ -16,170 +16,84 @@ type HmacSha256 = Hmac<Sha256>;
 type HmacSha384 = Hmac<Sha384>;
 type HmacSha512 = Hmac<Sha512>;
 
-pub struct Hs256Signer(HmacSha256);
+/// Macro to define an HMAC signer for a specific algorithm
+macro_rules! define_hmac_signer {
+    ($name:ident, $alg:expr, $hmac_type:ty) => {
+        pub struct $name($hmac_type);
 
-impl Hs256Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        let inner =
-            HmacSha256::new_from_slice(try_get_hmac_secret_from_encoding_key(encoding_key)?)
+        impl $name {
+            pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+                let inner = <$hmac_type>::new_from_slice(try_get_hmac_secret_from_encoding_key(
+                    encoding_key,
+                )?)
                 .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
 
-        Ok(Self(inner))
-    }
+                Ok(Self(inner))
+            }
+        }
+
+        impl Signer<Vec<u8>> for $name {
+            fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
+                let mut signer = self.0.clone();
+                signer.reset();
+                signer.update(msg);
+
+                Ok(signer.finalize().into_bytes().to_vec())
+            }
+        }
+
+        impl JwtSigner for $name {
+            fn algorithm(&self) -> Algorithm {
+                $alg
+            }
+        }
+    };
 }
 
-impl Signer<Vec<u8>> for Hs256Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        let mut signer = self.0.clone();
-        signer.reset();
-        signer.update(msg);
+/// Macro to define an HMAC verifier for a specific algorithm
+macro_rules! define_hmac_verifier {
+    ($name:ident, $alg:expr, $hmac_type:ty) => {
+        pub struct $name($hmac_type);
 
-        Ok(signer.finalize().into_bytes().to_vec())
-    }
-}
-
-impl JwtSigner for Hs256Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::HS256
-    }
-}
-
-pub struct Hs256Verifier(HmacSha256);
-
-impl Hs256Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        let inner =
-            HmacSha256::new_from_slice(try_get_hmac_secret_from_decoding_key(decoding_key)?)
+        impl $name {
+            pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+                let inner = <$hmac_type>::new_from_slice(try_get_hmac_secret_from_decoding_key(
+                    decoding_key,
+                )?)
                 .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
 
-        Ok(Self(inner))
-    }
+                Ok(Self(inner))
+            }
+        }
+
+        impl Verifier<Vec<u8>> for $name {
+            fn verify(
+                &self,
+                msg: &[u8],
+                signature: &Vec<u8>,
+            ) -> std::result::Result<(), signature::Error> {
+                let mut verifier = self.0.clone();
+                verifier.reset();
+                verifier.update(msg);
+
+                verifier.verify_slice(signature).map_err(signature::Error::from_source)
+            }
+        }
+
+        impl JwtVerifier for $name {
+            fn algorithm(&self) -> Algorithm {
+                $alg
+            }
+        }
+    };
 }
 
-impl Verifier<Vec<u8>> for Hs256Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        let mut verifier = self.0.clone();
-        verifier.reset();
-        verifier.update(msg);
+// Define HMAC signers using the macro
+define_hmac_signer!(Hs256Signer, Algorithm::HS256, HmacSha256);
+define_hmac_signer!(Hs384Signer, Algorithm::HS384, HmacSha384);
+define_hmac_signer!(Hs512Signer, Algorithm::HS512, HmacSha512);
 
-        verifier.verify_slice(signature).map_err(signature::Error::from_source)
-    }
-}
-
-impl JwtVerifier for Hs256Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::HS256
-    }
-}
-
-pub struct Hs384Signer(HmacSha384);
-
-impl Hs384Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        let inner =
-            HmacSha384::new_from_slice(try_get_hmac_secret_from_encoding_key(encoding_key)?)
-                .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
-
-        Ok(Self(inner))
-    }
-}
-
-impl Signer<Vec<u8>> for Hs384Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        let mut signer = self.0.clone();
-        signer.reset();
-        signer.update(msg);
-
-        Ok(signer.finalize().into_bytes().to_vec())
-    }
-}
-
-impl JwtSigner for Hs384Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::HS384
-    }
-}
-
-pub struct Hs384Verifier(HmacSha384);
-
-impl Hs384Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        let inner =
-            HmacSha384::new_from_slice(try_get_hmac_secret_from_decoding_key(decoding_key)?)
-                .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
-
-        Ok(Self(inner))
-    }
-}
-
-impl Verifier<Vec<u8>> for Hs384Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        let mut verifier = self.0.clone();
-        verifier.reset();
-        verifier.update(msg);
-
-        verifier.verify_slice(signature).map_err(signature::Error::from_source)
-    }
-}
-
-impl JwtVerifier for Hs384Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::HS384
-    }
-}
-
-pub struct Hs512Signer(HmacSha512);
-
-impl Hs512Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        let inner =
-            HmacSha512::new_from_slice(try_get_hmac_secret_from_encoding_key(encoding_key)?)
-                .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
-
-        Ok(Self(inner))
-    }
-}
-
-impl Signer<Vec<u8>> for Hs512Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
-        let mut signer = self.0.clone();
-        signer.reset();
-        signer.update(msg);
-
-        Ok(signer.finalize().into_bytes().to_vec())
-    }
-}
-
-impl JwtSigner for Hs512Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::HS512
-    }
-}
-
-pub struct Hs512Verifier(HmacSha512);
-
-impl Hs512Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        let inner =
-            HmacSha512::new_from_slice(try_get_hmac_secret_from_decoding_key(decoding_key)?)
-                .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
-
-        Ok(Self(inner))
-    }
-}
-
-impl Verifier<Vec<u8>> for Hs512Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), signature::Error> {
-        let mut verifier = self.0.clone();
-        verifier.reset();
-        verifier.update(msg);
-
-        verifier.verify_slice(signature).map_err(signature::Error::from_source)
-    }
-}
-
-impl JwtVerifier for Hs512Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::HS512
-    }
-}
+// Define HMAC verifiers using the macro
+define_hmac_verifier!(Hs256Verifier, Algorithm::HS256, HmacSha256);
+define_hmac_verifier!(Hs384Verifier, Algorithm::HS384, HmacSha384);
+define_hmac_verifier!(Hs512Verifier, Algorithm::HS512, HmacSha512);

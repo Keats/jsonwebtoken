@@ -14,118 +14,74 @@ use p384::ecdsa::{
 use rsa::pkcs8::DecodePrivateKey;
 use signature::{Error, Signer, Verifier};
 
-pub struct Es256Signer(SigningKey256);
+macro_rules! define_ecdsa_signer {
+    ($name:ident, $alg:expr, $signing_key:ty) => {
+        pub struct $name($signing_key);
 
-impl Es256Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Ec {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        impl $name {
+            pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+                if encoding_key.family != AlgorithmFamily::Ec {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
+
+                Ok(Self(
+                    <$signing_key>::from_pkcs8_der(encoding_key.inner())
+                        .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
+                ))
+            }
         }
 
-        Ok(Self(
-            SigningKey256::from_pkcs8_der(encoding_key.inner())
-                .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
-        ))
-    }
-}
-
-impl Signer<Vec<u8>> for Es256Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
-        let signature = self.0.sign_recoverable(msg).map_err(Error::from_source)?.0;
-        Ok(signature.to_vec())
-    }
-}
-
-impl JwtSigner for Es256Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::ES256
-    }
-}
-
-pub struct Es256Verifier(VerifyingKey256);
-
-impl Es256Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Ec {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        impl Signer<Vec<u8>> for $name {
+            fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
+                let signature = self.0.sign_recoverable(msg).map_err(Error::from_source)?.0;
+                Ok(signature.to_vec())
+            }
         }
 
-        Ok(Self(
-            VerifyingKey256::from_sec1_bytes(decoding_key.as_bytes())
-                .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
-        ))
-    }
+        impl JwtSigner for $name {
+            fn algorithm(&self) -> Algorithm {
+                $alg
+            }
+        }
+    };
 }
 
-impl Verifier<Vec<u8>> for Es256Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
-        self.0
-            .verify(msg, &Signature256::from_slice(signature).map_err(Error::from_source)?)
-            .map_err(Error::from_source)?;
-        Ok(())
-    }
-}
+macro_rules! define_ecdsa_verifier {
+    ($name:ident, $alg:expr, $verifying_key:ty, $signature:ty) => {
+        pub struct $name($verifying_key);
 
-impl JwtVerifier for Es256Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::ES256
-    }
-}
+        impl $name {
+            pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+                if decoding_key.family != AlgorithmFamily::Ec {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
 
-pub struct Es384Signer(SigningKey384);
-
-impl Es384Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Ec {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+                Ok(Self(
+                    <$verifying_key>::from_sec1_bytes(decoding_key.as_bytes())
+                        .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
+                ))
+            }
         }
 
-        Ok(Self(
-            SigningKey384::from_pkcs8_der(encoding_key.inner())
-                .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
-        ))
-    }
-}
-
-impl Signer<Vec<u8>> for Es384Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
-        let signature = self.0.sign_recoverable(msg).map_err(Error::from_source)?.0;
-        Ok(signature.to_vec())
-    }
-}
-
-impl JwtSigner for Es384Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::ES384
-    }
-}
-
-pub struct Es384Verifier(VerifyingKey384);
-
-impl Es384Verifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Ec {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        impl Verifier<Vec<u8>> for $name {
+            fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
+                self.0
+                    .verify(msg, &<$signature>::from_slice(signature).map_err(Error::from_source)?)
+                    .map_err(Error::from_source)?;
+                Ok(())
+            }
         }
 
-        Ok(Self(
-            VerifyingKey384::from_sec1_bytes(decoding_key.as_bytes())
-                .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
-        ))
-    }
+        impl JwtVerifier for $name {
+            fn algorithm(&self) -> Algorithm {
+                $alg
+            }
+        }
+    };
 }
 
-impl Verifier<Vec<u8>> for Es384Verifier {
-    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
-        self.0
-            .verify(msg, &Signature384::from_slice(signature).map_err(Error::from_source)?)
-            .map_err(Error::from_source)?;
-        Ok(())
-    }
-}
+define_ecdsa_signer!(Es256Signer, Algorithm::ES256, SigningKey256);
+define_ecdsa_signer!(Es384Signer, Algorithm::ES384, SigningKey384);
 
-impl JwtVerifier for Es384Verifier {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::ES384
-    }
-}
+define_ecdsa_verifier!(Es256Verifier, Algorithm::ES256, VerifyingKey256, Signature256);
+define_ecdsa_verifier!(Es384Verifier, Algorithm::ES384, VerifyingKey384, Signature384);
