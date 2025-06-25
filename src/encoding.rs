@@ -114,6 +114,14 @@ impl EncodingKey {
     pub(crate) fn inner(&self) -> &[u8] {
         &self.content
     }
+
+    pub(crate) fn try_get_hmac_secret(&self) -> Result<&[u8]> {
+        if self.family == AlgorithmFamily::Hmac {
+            Ok(self.inner())
+        } else {
+            Err(new_error(ErrorKind::InvalidKeyFormat))
+        }
+    }
 }
 
 /// Encode the header and claims given and sign the payload using the algorithm from the header and the key.

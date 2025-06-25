@@ -221,6 +221,14 @@ impl DecodingKey {
             DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
         }
     }
+
+    pub(crate) fn try_get_hmac_secret(&self) -> Result<&[u8]> {
+        if self.family == AlgorithmFamily::Hmac {
+            Ok(self.as_bytes())
+        } else {
+            Err(new_error(ErrorKind::InvalidKeyFormat))
+        }
+    }
 }
 
 /// Decode and validate a JWT

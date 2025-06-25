@@ -4,9 +4,6 @@
 use aws_lc_rs::hmac;
 use signature::{Signer, Verifier};
 
-use crate::crypto::utils::{
-    try_get_hmac_secret_from_decoding_key, try_get_hmac_secret_from_encoding_key,
-};
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::Result;
 use crate::{Algorithm, DecodingKey, EncodingKey};
@@ -17,10 +14,7 @@ macro_rules! define_hmac_signer {
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-                Ok(Self(hmac::Key::new(
-                    $hmac_alg,
-                    try_get_hmac_secret_from_encoding_key(encoding_key)?,
-                )))
+                Ok(Self(hmac::Key::new($hmac_alg, encoding_key.try_get_hmac_secret()?)))
             }
         }
 
@@ -44,10 +38,7 @@ macro_rules! define_hmac_verifier {
 
         impl $name {
             pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-                Ok(Self(hmac::Key::new(
-                    $hmac_alg,
-                    try_get_hmac_secret_from_decoding_key(decoding_key)?,
-                )))
+                Ok(Self(hmac::Key::new($hmac_alg, decoding_key.try_get_hmac_secret()?)))
             }
         }
 

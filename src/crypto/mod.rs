@@ -10,7 +10,6 @@ use crate::{DecodingKey, EncodingKey};
 pub(crate) mod aws_lc;
 #[cfg(feature = "rust_crypto")]
 pub(crate) mod rust_crypto;
-pub(crate) mod utils;
 
 use crate::serialization::{b64_decode, b64_encode};
 use signature::{Signer, Verifier};
