@@ -321,7 +321,7 @@ pub fn decode_header(token: &str) -> Result<Header> {
     Header::from_encoded(header)
 }
 
-/// Verify signature of a JWT, and return header object and raw payload
+/// Verify the signature of a JWT, and return a header object and raw payload.
 ///
 /// If the token or its signature is invalid, it will return an error.
 fn verify_signature<'a>(
@@ -333,14 +333,13 @@ fn verify_signature<'a>(
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
 
-    // Todo: This behaviour is currently not captured anywhere.
-    // if validation.validate_signature {
-    //     for alg in &validation.algorithms {
-    //         if key.family != alg.family() {
-    //             return Err(new_error(ErrorKind::InvalidAlgorithm));
-    //         }
-    //     }
-    // }
+    if validation.validate_signature {
+        for alg in &validation.algorithms {
+            if verifying_provider.algorithm().family() != alg.family() {
+                return Err(new_error(ErrorKind::InvalidAlgorithm));
+            }
+        }
+    }
 
     let (signature, message) = expect_two!(token.rsplitn(2, '.'));
     let (payload, header) = expect_two!(message.rsplitn(2, '.'));
