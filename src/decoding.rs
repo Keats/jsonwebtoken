@@ -256,23 +256,12 @@ pub fn decode<T: DeserializeOwned>(
 ) -> Result<TokenData<T>> {
     let header = decode_header(token)?;
 
-    if validation.validate_signature && !(validation.algorithms.contains(&header.alg)) {
+    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
     let verifying_provider = jwt_verifier_factory(&header.alg, key)?;
 
-    _decode(token, validation, verifying_provider)
-}
-
-/// # Todo
-///
-/// - Documentation
-pub fn _decode<T: DeserializeOwned>(
-    token: &str,
-    validation: &Validation,
-    verifying_provider: Box<dyn JwtVerifier>,
-) -> Result<TokenData<T>> {
     let (header, claims) = verify_signature(token, validation, verifying_provider)?;
 
     let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;

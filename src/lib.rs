@@ -9,13 +9,11 @@ compile_error!(
 );
 
 #[cfg(not(any(feature = "rust_crypto", feature = "aws_lc_rs")))]
-compile_error!(
-    "at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled"
-);
+compile_error!("at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled");
 
 pub use algorithms::Algorithm;
-pub use decoding::{decode, decode_header, DecodingKey, TokenData, _decode};
-pub use encoding::{encode, EncodingKey, _encode};
+pub use decoding::{decode, decode_header, DecodingKey, TokenData};
+pub use encoding::{encode, EncodingKey};
 pub use header::Header;
 pub use validation::{get_current_timestamp, Validation};
 

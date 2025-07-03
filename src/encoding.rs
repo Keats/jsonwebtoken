@@ -153,17 +153,6 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
 
     let signing_provider = jwt_signer_factory(&header.alg, key)?;
 
-    _encode(header, claims, signing_provider)
-}
-
-/// # Todo
-///
-/// - Documentation
-pub fn _encode<T: Serialize>(
-    header: &Header,
-    claims: &T,
-    signing_provider: Box<dyn JwtSigner>,
-) -> Result<String> {
     if signing_provider.algorithm() != header.alg {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
