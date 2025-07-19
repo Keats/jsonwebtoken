@@ -214,10 +214,8 @@ fn verify_signature<'a>(
     }
 
     if validation.validate_signature {
-        for alg in &validation.algorithms {
-            if key.family != alg.family() {
-                return Err(new_error(ErrorKind::InvalidAlgorithm));
-            }
+        if !validation.algorithms.iter().any(|alg| key.family == alg.family()) {
+            return Err(new_error(ErrorKind::InvalidAlgorithm));
         }
     }
 

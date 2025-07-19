@@ -198,6 +198,26 @@ fn decode_token_wrong_algorithm() {
 
 #[test]
 #[wasm_bindgen_test]
+fn decode_token_multiple_algorithms() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+
+    let mut validation = Validation::new(Algorithm::RS512);
+    validation.algorithms.push(Algorithm::HS256);
+
+    decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &validation,
+    ).unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
 #[should_panic(expected = "InvalidAlgorithm")]
 fn encode_wrong_alg_family() {
     let my_claims = Claims {
