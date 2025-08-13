@@ -1,5 +1,5 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
-//! RSA family of algorithms using [`aws_lc_rs`]
+//! RSA family of algorithms using RustCrypto.
 
 use hmac::digest::FixedOutputReset;
 use rsa::{

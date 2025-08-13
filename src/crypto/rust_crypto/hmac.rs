@@ -1,5 +1,5 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
-//! HMAC family of algorithms using `RustCtypto`'s [`hmac`].
+//! HMAC family of algorithms using `RustCrypto`'s [`hmac`].
 
 use hmac::{Hmac, Mac};
 use sha2::{Sha256, Sha384, Sha512};
