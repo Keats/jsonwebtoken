@@ -1,83 +1,86 @@
 name: ci
 on:
-  push:
-    branches:
-      - master
-  pull_request:
+    push:
+        branches:
+            - master
+    pull_request:
 
 jobs:
-  style:
-    name: Format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - name: Check format
-        run: cargo fmt --check
+    style:
+        name: Format
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Install Rust
+                uses: dtolnay/rust-toolchain@stable
+                with:
+                    components: rustfmt
+            -   name: Check format
+                run: cargo fmt --check
 
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+    clippy:
+        name: Clippy
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                backend: [ aws_lc_rs, rust_crypto ]
+        steps:
+            -   uses: actions/checkout@v3
+            -   uses: dtolnay/rust-toolchain@stable
+                with:
+                    components: clippy
+            -   run: cargo clippy --all-targets --features ${{ matrix.backend }} -- -D warnings
 
-  tests:
-    name: Tests
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        build: [pinned, stable, nightly]
-        include:
-          - build: pinned
-            os: ubuntu-20.04
-            rust: 1.73.0
-          - build: stable
-            os: ubuntu-20.04
-            rust: stable
-          - build: nightly
-            os: ubuntu-20.04
-            rust: nightly
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+    tests:
+        name: Tests
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                build: [ pinned, stable, nightly ]
+                backend: [ aws_lc_rs, rust_crypto ]
+                include:
+                    -   build: pinned
+                        os: ubuntu-20.04
+                        rust: 1.73.0
+                    -   build: stable
+                        os: ubuntu-20.04
+                        rust: stable
+                    -   build: nightly
+                        os: ubuntu-20.04
+                        rust: nightly
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Install Rust
+                uses: dtolnay/rust-toolchain@master
+                with:
+                    toolchain: ${{ matrix.rust }}
 
-      - name: Build System Info
-        run: rustc --version
+            -   name: Build System Info
+                run: rustc --version
 
-      - name: Run tests default features
-        run: cargo test
+            -   name: Run tests default features
+                run: cargo test --features ${{ matrix.backend }}
 
-      - name: Run tests no features
-        run: cargo test --no-default-features
+            -   name: Run tests no features
+                run: cargo test --no-default-features --features ${{ matrix.backend }}
 
-  wasm:
-    name: Run tests in wasm
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
+    wasm:
+        name: Run tests in wasm
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v3
+            -   name: Install Rust
+                uses: dtolnay/rust-toolchain@stable
+                with:
+                    targets: wasm32-unknown-unknown
 
-      - uses: actions/setup-node@v4
+            -   uses: actions/setup-node@v4
 
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
+            -   name: Install wasm-pack
+                run: cargo install wasm-pack
 
-      - name: Run tests default features
-        run: wasm-pack test --node
+            -   name: Run tests default features
+                run: wasm-pack test --node --features rust_crypto
 
-      - name: Run tests no features
-        run: wasm-pack test --node --no-default-features
-
+            -   name: Run tests no features
+                run: wasm-pack test --node --no-default-features --features rust_crypto
