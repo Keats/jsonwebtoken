@@ -385,7 +385,7 @@ mod tests {
 
     use super::{get_current_timestamp, validate, ClaimsForValidation, Validation};
 
-    fn deserialize_claims(claims: &serde_json::Value) -> ClaimsForValidation {
+    fn deserialize_claims(claims: &serde_json::Value) -> ClaimsForValidation<'_> {
         serde::Deserialize::deserialize(claims).unwrap()
     }
 
