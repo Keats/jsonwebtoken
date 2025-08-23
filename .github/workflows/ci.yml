@@ -80,7 +80,7 @@ jobs:
                 run: cargo install wasm-pack
 
             -   name: Run tests default features
-                run: wasm-pack test --node --features rust_crypto
+                run: wasm-pack test --node --features rust_crypto,getrandom/js
 
             -   name: Run tests no features
-                run: wasm-pack test --node --no-default-features --features rust_crypto
+                run: wasm-pack test --node --no-default-features --features rust_crypto,getrandom/js
