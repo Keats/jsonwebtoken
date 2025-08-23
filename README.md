@@ -8,11 +8,13 @@ See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more inf
 Add the following to Cargo.toml:
 
 ```toml
-jsonwebtoken = "9"
+jsonwebtoken = { version = "10", features = ["aws_lc_rs"] }
 # If you do not need pem decoding, you can disable the default feature `use_pem` that way:
-# jsonwebtoken = {version = "9", default-features = false }
+# jsonwebtoken = {version = "10", default-features = false, features = ["aws_lc_rs"] }
 serde = {version = "1.0", features = ["derive"] }
 ```
+
+Two crypto backends are available via features, `aws_lc_rs` and `rust_crypto`, exactly one of which must be enabled.
 
 The minimum required Rust version (MSRV) is specified in the `rust-version` field in this project's [Cargo.toml](Cargo.toml).
 
