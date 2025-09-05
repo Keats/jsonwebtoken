@@ -40,13 +40,13 @@ jobs:
                 backend: [ aws_lc_rs, rust_crypto ]
                 include:
                     -   build: pinned
-                        os: ubuntu-20.04
+                        os: ubuntu-24.04
                         rust: 1.73.0
                     -   build: stable
-                        os: ubuntu-20.04
+                        os: ubuntu-latest
                         rust: stable
                     -   build: nightly
-                        os: ubuntu-20.04
+                        os: ubuntu-latest
                         rust: nightly
         steps:
             -   uses: actions/checkout@v3
