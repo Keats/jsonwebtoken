@@ -41,7 +41,7 @@ jobs:
                 include:
                     -   build: pinned
                         os: ubuntu-24.04
-                        rust: 1.73.0
+                        rust: 1.85.0
                     -   build: stable
                         os: ubuntu-latest
                         rust: stable
