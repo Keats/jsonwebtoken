@@ -259,7 +259,7 @@ impl DecodingKey {
 /// use serde::{Deserialize, Serialize};
 /// use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 ///
-/// #[derive(Debug, Serialize, Deserialize)]
+/// #[derive(Debug, Clone, Serialize, Deserialize)]
 /// struct Claims {
 ///    sub: String,
 ///    company: String
@@ -269,7 +269,7 @@ impl DecodingKey {
 /// // Claims is a struct that implements Deserialize
 /// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
 /// ```
-pub fn decode<T: DeserializeOwned>(
+pub fn decode<T: DeserializeOwned + Clone>(
     token: &str,
     key: &DecodingKey,
     validation: &Validation,
