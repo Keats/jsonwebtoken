@@ -1,4 +1,4 @@
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use wasm_bindgen_test::wasm_bindgen_test;
 
 use jsonwebtoken::Header;

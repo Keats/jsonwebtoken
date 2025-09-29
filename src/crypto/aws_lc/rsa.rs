@@ -7,7 +7,7 @@ use signature::{Signer, Verifier};
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::decoding::DecodingKeyKind;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 
 /// Try to sign the `message` using an `RSA` `algorithm`.

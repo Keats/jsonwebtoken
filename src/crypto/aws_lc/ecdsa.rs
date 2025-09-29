@@ -3,12 +3,12 @@
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 use aws_lc_rs::rand::SystemRandom;
 use aws_lc_rs::signature::{
-    EcdsaKeyPair, VerificationAlgorithm, ECDSA_P256_SHA256_FIXED, ECDSA_P256_SHA256_FIXED_SIGNING,
-    ECDSA_P384_SHA384_FIXED, ECDSA_P384_SHA384_FIXED_SIGNING,
+    ECDSA_P256_SHA256_FIXED, ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED,
+    ECDSA_P384_SHA384_FIXED_SIGNING, EcdsaKeyPair, VerificationAlgorithm,
 };
 use signature::{Error, Signer, Verifier};
 

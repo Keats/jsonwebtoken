@@ -6,12 +6,12 @@
 
 use std::{fmt, str::FromStr};
 
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::serialization::b64_encode;
 use crate::{
-    errors::{self, Error, ErrorKind},
     Algorithm, EncodingKey,
+    errors::{self, Error, ErrorKind},
 };
 
 #[cfg(feature = "aws_lc_rs")]
@@ -23,7 +23,7 @@ use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 #[cfg(feature = "rust_crypto")]
 use p384::ecdsa::SigningKey as P384SigningKey;
 #[cfg(feature = "rust_crypto")]
-use rsa::{pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts, RsaPrivateKey};
+use rsa::{RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts};
 #[cfg(feature = "rust_crypto")]
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
@@ -462,7 +462,7 @@ fn extract_ec_public_key_coordinates(
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
     use aws_lc_rs::signature::{
-        EcdsaKeyPair, ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED_SIGNING,
+        ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED_SIGNING, EcdsaKeyPair,
     };
 
     let (signing_alg, curve, pub_elem_bytes) = match alg {
@@ -664,12 +664,12 @@ mod tests {
     use serde_json::json;
     use wasm_bindgen_test::wasm_bindgen_test;
 
+    use crate::Algorithm;
     use crate::jwk::{
         AlgorithmParameters, Jwk, JwkSet, KeyAlgorithm, OctetKeyType, RSAKeyParameters,
         ThumbprintHash,
     };
     use crate::serialization::b64_encode;
-    use crate::Algorithm;
 
     #[test]
     #[wasm_bindgen_test]

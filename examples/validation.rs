@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use jsonwebtoken::errors::ErrorKind;
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Claims {

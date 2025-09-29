@@ -6,8 +6,9 @@ use wasm_bindgen_test::wasm_bindgen_test;
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::jwk::Jwk;
 use jsonwebtoken::{
+    Algorithm, DecodingKey, EncodingKey, Header, Validation,
     crypto::{sign, verify},
-    decode, decode_header, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+    decode, decode_header, encode,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
@@ -174,8 +175,7 @@ fn decode_token_missing_parts() {
 #[test]
 #[wasm_bindgen_test]
 fn decode_token_invalid_signature() {
-    let token =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"secret"),

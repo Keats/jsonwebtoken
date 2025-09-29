@@ -2,9 +2,9 @@
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
-use aws_lc_rs::signature::{Ed25519KeyPair, VerificationAlgorithm, ED25519};
+use aws_lc_rs::signature::{ED25519, Ed25519KeyPair, VerificationAlgorithm};
 use signature::{Error, Signer, Verifier};
 
 pub struct EdDSASigner(Ed25519KeyPair);

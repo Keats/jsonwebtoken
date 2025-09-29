@@ -7,7 +7,7 @@ use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer};
 
 use crate::algorithms::Algorithm;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 
 /// Contains the various validations that are applied after decoding a JWT.
 ///
@@ -390,10 +390,10 @@ mod tests {
     use serde_json::json;
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::errors::ErrorKind;
     use crate::Algorithm;
+    use crate::errors::ErrorKind;
 
-    use super::{get_current_timestamp, validate, ClaimsForValidation, Validation};
+    use super::{ClaimsForValidation, Validation, get_current_timestamp, validate};
 
     fn deserialize_claims(claims: &serde_json::Value) -> ClaimsForValidation<'_> {
         serde::Deserialize::deserialize(claims).unwrap()

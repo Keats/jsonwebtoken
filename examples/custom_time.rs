@@ -64,7 +64,7 @@ mod jwt_numeric_date {
         use time::{Duration, OffsetDateTime};
 
         use jsonwebtoken::{
-            decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+            Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode,
         };
 
         use super::super::{Claims, SECRET};

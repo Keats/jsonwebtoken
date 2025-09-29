@@ -3,7 +3,7 @@
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 use p256::ecdsa::{
     Signature as Signature256, SigningKey as SigningKey256, VerifyingKey as VerifyingKey256,

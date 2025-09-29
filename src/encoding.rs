@@ -1,19 +1,19 @@
 use std::fmt::{Debug, Formatter};
 
 use base64::{
-    engine::general_purpose::{STANDARD, URL_SAFE},
     Engine,
+    engine::general_purpose::{STANDARD, URL_SAFE},
 };
 use serde::ser::Serialize;
 
+use crate::Algorithm;
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::JwtSigner;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::header::Header;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_encode, b64_encode_part};
-use crate::Algorithm;
 // Crypto
 #[cfg(feature = "aws_lc_rs")]
 use crate::crypto::aws_lc::{

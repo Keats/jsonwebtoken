@@ -2,8 +2,8 @@
 use std::marker::PhantomData;
 
 use crate::crypto::sign;
-use crate::errors::{new_error, ErrorKind, Result};
-use crate::serialization::{b64_encode_part, DecodedJwtPartClaims};
+use crate::errors::{ErrorKind, Result, new_error};
+use crate::serialization::{DecodedJwtPartClaims, b64_encode_part};
 use crate::validation::validate;
 use crate::{DecodingKey, EncodingKey, Header, TokenData, Validation};
 

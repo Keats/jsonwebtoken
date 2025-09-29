@@ -1,10 +1,10 @@
-use ed25519_dalek::pkcs8::EncodePrivateKey;
 use ed25519_dalek::SigningKey;
+use ed25519_dalek::pkcs8::EncodePrivateKey;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
 use jsonwebtoken::{
-    decode, encode, get_current_timestamp, Algorithm, DecodingKey, EncodingKey, Validation,
+    Algorithm, DecodingKey, EncodingKey, Validation, decode, encode, get_current_timestamp,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

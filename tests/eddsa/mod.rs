@@ -4,11 +4,11 @@ use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
 
 use jsonwebtoken::{
-    crypto::{sign, verify},
     Algorithm, DecodingKey, EncodingKey,
+    crypto::{sign, verify},
 };
 #[cfg(feature = "use_pem")]
-use jsonwebtoken::{decode, encode, Header, Validation};
+use jsonwebtoken::{Header, Validation, decode, encode};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {

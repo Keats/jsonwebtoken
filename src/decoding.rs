@@ -1,18 +1,18 @@
 use std::fmt::{Debug, Formatter};
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::de::DeserializeOwned;
 
+use crate::Algorithm;
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::JwtVerifier;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::header::Header;
 use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
-use crate::serialization::{b64_decode, DecodedJwtPartClaims};
-use crate::validation::{validate, Validation};
-use crate::Algorithm;
+use crate::serialization::{DecodedJwtPartClaims, b64_decode};
+use crate::validation::{Validation, validate};
 // Crypto
 #[cfg(feature = "aws_lc_rs")]
 use crate::crypto::aws_lc::{

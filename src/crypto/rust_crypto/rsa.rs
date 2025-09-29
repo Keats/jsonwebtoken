@@ -3,12 +3,12 @@
 
 use hmac::digest::FixedOutputReset;
 use rsa::{
+    BigUint, Pkcs1v15Sign, Pss, RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
     pkcs1v15::SigningKey,
     pkcs8::AssociatedOid,
     pss::BlindedSigningKey,
     traits::SignatureScheme,
-    BigUint, Pkcs1v15Sign, Pss, RsaPublicKey,
 };
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use signature::{RandomizedSigner, SignatureEncoding, Signer, Verifier};
@@ -16,7 +16,7 @@ use signature::{RandomizedSigner, SignatureEncoding, Signer, Verifier};
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::decoding::DecodingKeyKind;
-use crate::errors::{new_error, ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 
 fn try_sign_rsa<H>(

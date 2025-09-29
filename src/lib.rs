@@ -12,10 +12,10 @@ compile_error!(
 compile_error!("at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled");
 
 pub use algorithms::Algorithm;
-pub use decoding::{decode, decode_header, DecodingKey, TokenData};
-pub use encoding::{encode, EncodingKey};
+pub use decoding::{DecodingKey, TokenData, decode, decode_header};
+pub use encoding::{EncodingKey, encode};
 pub use header::Header;
-pub use validation::{get_current_timestamp, Validation};
+pub use validation::{Validation, get_current_timestamp};
 
 mod algorithms;
 /// Lower level functions, if you want to do something other than JWTs
