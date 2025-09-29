@@ -8,7 +8,7 @@ description = "Create and decode JWTs in a strongly typed way."
 homepage = "https://github.com/Keats/jsonwebtoken"
 repository = "https://github.com/Keats/jsonwebtoken"
 keywords = ["jwt", "api", "token", "jwk"]
-edition = "2021"
+edition = "2024"
 include = [
     "src/**/*",
     "benches/**/*",
