@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::de::DeserializeOwned;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::verify;
+use crate::crypto::JwtVerifier;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 use crate::jwk::{AlgorithmParameters, Jwk};
@@ -10,6 +10,28 @@ use crate::jwk::{AlgorithmParameters, Jwk};
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_decode, DecodedJwtPartClaims};
 use crate::validation::{validate, Validation};
+use crate::Algorithm;
+// Crypto
+#[cfg(feature = "aws_lc_rs")]
+use crate::crypto::aws_lc::{
+    ecdsa::{Es256Verifier, Es384Verifier},
+    eddsa::EdDSAVerifier,
+    hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
+    rsa::{
+        Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
+        RsaPss512Verifier,
+    },
+};
+#[cfg(feature = "rust_crypto")]
+use crate::crypto::rust_crypto::{
+    ecdsa::{Es256Verifier, Es384Verifier},
+    eddsa::EdDSAVerifier,
+    hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
+    rsa::{
+        Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
+        RsaPss512Verifier,
+    },
+};
 
 /// The return type of a successful call to [decode](fn.decode.html).
 #[derive(Debug)]
@@ -199,41 +221,14 @@ impl DecodingKey {
             DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
         }
     }
-}
 
-/// Verify signature of a JWT, and return header object and raw payload
-///
-/// If the token or its signature is invalid, it will return an error.
-fn verify_signature<'a>(
-    token: &'a str,
-    key: &DecodingKey,
-    validation: &Validation,
-) -> Result<(Header, &'a str)> {
-    if validation.validate_signature && validation.algorithms.is_empty() {
-        return Err(new_error(ErrorKind::MissingAlgorithm));
-    }
-
-    if validation.validate_signature {
-        for alg in &validation.algorithms {
-            if key.family != alg.family() {
-                return Err(new_error(ErrorKind::InvalidAlgorithm));
-            }
+    pub(crate) fn try_get_hmac_secret(&self) -> Result<&[u8]> {
+        if self.family == AlgorithmFamily::Hmac {
+            Ok(self.as_bytes())
+        } else {
+            Err(new_error(ErrorKind::InvalidKeyFormat))
         }
     }
-
-    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
-    let header = Header::from_encoded(header)?;
-
-    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
-        return Err(new_error(ErrorKind::InvalidAlgorithm));
-    }
-
-    if validation.validate_signature && !verify(signature, message.as_bytes(), key, header.alg)? {
-        return Err(new_error(ErrorKind::InvalidSignature));
-    }
-
-    Ok((header, payload))
 }
 
 /// Decode and validate a JWT
@@ -259,16 +254,44 @@ pub fn decode<T: DeserializeOwned>(
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
-    match verify_signature(token, key, validation) {
-        Err(e) => Err(e),
-        Ok((header, claims)) => {
-            let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
-            let claims = decoded_claims.deserialize()?;
-            validate(decoded_claims.deserialize()?, validation)?;
+    let header = decode_header(token)?;
 
-            Ok(TokenData { header, claims })
-        }
+    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
+
+    let verifying_provider = jwt_verifier_factory(&header.alg, key)?;
+
+    let (header, claims) = verify_signature(token, validation, verifying_provider)?;
+
+    let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
+    let claims = decoded_claims.deserialize()?;
+    validate(decoded_claims.deserialize()?, validation)?;
+
+    Ok(TokenData { header, claims })
+}
+
+/// Return the correct [`JwtVerifier`] based on the `algorithm`.
+pub fn jwt_verifier_factory(
+    algorithm: &Algorithm,
+    key: &DecodingKey,
+) -> Result<Box<dyn JwtVerifier>> {
+    let jwt_encoder = match algorithm {
+        Algorithm::HS256 => Box::new(Hs256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS384 => Box::new(Hs384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::HS512 => Box::new(Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::ES256 => Box::new(Es256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::ES384 => Box::new(Es384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::RS256 => Box::new(Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::RS384 => Box::new(Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::RS512 => Box::new(Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::PS256 => Box::new(RsaPss256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::PS384 => Box::new(RsaPss384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::PS512 => Box::new(RsaPss512Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::EdDSA => Box::new(EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
+    };
+
+    Ok(jwt_encoder)
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
@@ -285,4 +308,41 @@ pub fn decode_header(token: &str) -> Result<Header> {
     let (_, message) = expect_two!(token.rsplitn(2, '.'));
     let (_, header) = expect_two!(message.rsplitn(2, '.'));
     Header::from_encoded(header)
+}
+
+/// Verify the signature of a JWT, and return a header object and raw payload.
+///
+/// If the token or its signature is invalid, it will return an error.
+fn verify_signature<'a>(
+    token: &'a str,
+    validation: &Validation,
+    verifying_provider: Box<dyn JwtVerifier>,
+) -> Result<(Header, &'a str)> {
+    if validation.validate_signature && validation.algorithms.is_empty() {
+        return Err(new_error(ErrorKind::MissingAlgorithm));
+    }
+
+    if validation.validate_signature {
+        for alg in &validation.algorithms {
+            if verifying_provider.algorithm().family() != alg.family() {
+                return Err(new_error(ErrorKind::InvalidAlgorithm));
+            }
+        }
+    }
+
+    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
+    let header = Header::from_encoded(header)?;
+
+    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+
+    if validation.validate_signature
+        && verifying_provider.verify(message.as_bytes(), &b64_decode(signature)?).is_err()
+    {
+        return Err(new_error(ErrorKind::InvalidSignature));
+    }
+
+    Ok((header, payload))
 }

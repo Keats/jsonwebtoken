@@ -195,12 +195,14 @@ pub(crate) struct ClaimsForValidation<'a> {
     #[serde(borrow)]
     aud: TryParse<Audience<'a>>,
 }
+
 #[derive(Debug)]
 enum TryParse<T> {
     Parsed(T),
     FailedToParse,
     NotPresent,
 }
+
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for TryParse<T> {
     fn deserialize<D: serde::Deserializer<'de>>(
         deserializer: D,
@@ -212,6 +214,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for TryParse<T> {
         })
     }
 }
+
 impl<T> Default for TryParse<T> {
     fn default() -> Self {
         Self::NotPresent
@@ -237,6 +240,7 @@ enum Issuer<'a> {
 /// We use this struct in this case.
 #[derive(Deserialize, PartialEq, Eq, Hash)]
 struct BorrowedCowIfPossible<'a>(#[serde(borrow)] Cow<'a, str>);
+
 impl std::borrow::Borrow<str> for BorrowedCowIfPossible<'_> {
     fn borrow(&self) -> &str {
         &self.0
@@ -371,16 +375,17 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use serde_json::json;
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use super::{get_current_timestamp, validate, ClaimsForValidation, Validation};
-
     use crate::errors::ErrorKind;
     use crate::Algorithm;
-    use std::collections::HashSet;
 
-    fn deserialize_claims(claims: &serde_json::Value) -> ClaimsForValidation {
+    use super::{get_current_timestamp, validate, ClaimsForValidation, Validation};
+
+    fn deserialize_claims(claims: &serde_json::Value) -> ClaimsForValidation<'_> {
         serde::Deserialize::deserialize(claims).unwrap()
     }
 

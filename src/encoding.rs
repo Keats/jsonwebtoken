@@ -2,12 +2,32 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto;
+use crate::crypto::JwtSigner;
 use crate::errors::{new_error, ErrorKind, Result};
 use crate::header::Header;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
-use crate::serialization::b64_encode_part;
+use crate::serialization::{b64_encode, b64_encode_part};
+use crate::Algorithm;
+// Crypto
+#[cfg(feature = "aws_lc_rs")]
+use crate::crypto::aws_lc::{
+    ecdsa::{Es256Signer, Es384Signer},
+    eddsa::EdDSASigner,
+    hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
+    rsa::{
+        Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer,
+    },
+};
+#[cfg(feature = "rust_crypto")]
+use crate::crypto::rust_crypto::{
+    ecdsa::{Es256Signer, Es384Signer},
+    eddsa::EdDSASigner,
+    hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
+    rsa::{
+        Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer,
+    },
+};
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
@@ -94,6 +114,14 @@ impl EncodingKey {
     pub(crate) fn inner(&self) -> &[u8] {
         &self.content
     }
+
+    pub(crate) fn try_get_hmac_secret(&self) -> Result<&[u8]> {
+        if self.family == AlgorithmFamily::Hmac {
+            Ok(self.inner())
+        } else {
+            Err(new_error(ErrorKind::InvalidKeyFormat))
+        }
+    }
 }
 
 /// Encode the header and claims given and sign the payload using the algorithm from the header and the key.
@@ -122,10 +150,41 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
     if key.family != header.alg.family() {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
-    let encoded_header = b64_encode_part(header)?;
+
+    let signing_provider = jwt_signer_factory(&header.alg, key)?;
+
+    if signing_provider.algorithm() != header.alg {
+        return Err(new_error(ErrorKind::InvalidAlgorithm));
+    }
+
+    let encoded_header = b64_encode_part(&header)?;
     let encoded_claims = b64_encode_part(claims)?;
     let message = [encoded_header, encoded_claims].join(".");
-    let signature = crypto::sign(message.as_bytes(), key, header.alg)?;
+
+    let signature = b64_encode(signing_provider.sign(message.as_bytes()));
 
     Ok([message, signature].join("."))
+}
+
+/// Return the correct [`JwtSigner`] based on the `algorithm`.
+pub(crate) fn jwt_signer_factory(
+    algorithm: &Algorithm,
+    key: &EncodingKey,
+) -> Result<Box<dyn JwtSigner>> {
+    let jwt_signer = match algorithm {
+        Algorithm::HS256 => Box::new(Hs256Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::HS384 => Box::new(Hs384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::HS512 => Box::new(Hs512Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::ES256 => Box::new(Es256Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::ES384 => Box::new(Es384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::RS256 => Box::new(Rsa256Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::RS384 => Box::new(Rsa384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::RS512 => Box::new(Rsa512Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::PS256 => Box::new(RsaPss256Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::PS384 => Box::new(RsaPss384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::PS512 => Box::new(RsaPss512Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::EdDSA => Box::new(EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
+    };
+
+    Ok(jwt_signer)
 }

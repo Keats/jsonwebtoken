@@ -1,5 +1,9 @@
 # Changelog
 
+## 10.0.0 (unreleased)
+
+- Introduce alternative crypto backends (AWS-LC, RustCrypto)
+
 ## 9.3.1 (2024-02-06)
 
 - Update base64
