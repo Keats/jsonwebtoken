@@ -332,14 +332,13 @@ pub fn decode_header(token: impl AsRef<[u8]>) -> Result<Header> {
     Header::from_encoded(header)
 }
 
-/// Verify the signature of a JWT, and return a header object and raw payload.
-///
-/// If the token or its signature is invalid, it will return an error.
-fn verify_signature<'a>(
-    token: &'a [u8],
+pub(crate) fn verify_signature_body(
+    message: &[u8],
+    signature: &[u8],
+    header: &Header,
     validation: &Validation,
     verifying_provider: Box<dyn JwtVerifier>,
-) -> Result<(Header, &'a [u8])> {
+) -> Result<()> {
     if validation.validate_signature && validation.algorithms.is_empty() {
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
@@ -352,10 +351,6 @@ fn verify_signature<'a>(
         }
     }
 
-    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
-    let header = Header::from_encoded(header)?;
-
     if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
@@ -365,6 +360,22 @@ fn verify_signature<'a>(
     {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
+
+    Ok(())
+}
+
+/// Verify the signature of a JWT, and return a header object and raw payload.
+///
+/// If the token or its signature is invalid, it will return an error.
+fn verify_signature<'a>(
+    token: &'a [u8],
+    validation: &Validation,
+    verifying_provider: Box<dyn JwtVerifier>,
+) -> Result<(Header, &'a [u8])> {
+    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
+    let header = Header::from_encoded(header)?;
+    verify_signature_body(message, signature, &header, validation, verifying_provider)?;
 
     Ok((header, payload))
 }

@@ -111,6 +111,28 @@ RSA/EC, the key should always be the content of the private key in PEM or DER fo
 If your key is in PEM format, it is better performance wise to generate the `EncodingKey` once in a `lazy_static` or
 something similar and reuse it.
 
+### Encoding and decoding JWS
+
+JWS is handled the same way as JWT, but using `encode_jws` and `decode_jws`:
+
+```rust
+let encoded = encode_jws(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
+my_claims = decode_jws(&encoded, &DecodingKey::from_secret("secret".as_ref()), &Validation::default())?.claims;
+```
+
+`encode_jws` returns a `Jws<C>` struct which can be placed in other structs or serialized/deserialized from JSON directly.
+
+The generic parameter in `Jws<C>` indicates the claims type and prevents accidentally encoding or decoding the wrong claims type
+when the Jws is nested in another struct.
+
+### JWK Thumbprints
+
+If you have a JWK object, you can generate a thumbprint like
+
+```
+let tp = my_jwk.thumbprint(&jsonwebtoken::DIGEST_SHA256);
+```
+
 ### Decoding
 
 ```rust
