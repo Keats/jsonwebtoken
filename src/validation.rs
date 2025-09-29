@@ -275,6 +275,11 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     if options.validate_exp || options.validate_nbf {
         let now = get_current_timestamp();
 
+        if matches!(claims.exp, TryParse::Parsed(exp) if exp < options.reject_tokens_expiring_in_less_than)
+        {
+            return Err(new_error(ErrorKind::InvalidToken));
+        }
+
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp
             && exp - options.reject_tokens_expiring_in_less_than < now - options.leeway )
         {
@@ -821,5 +826,18 @@ mod tests {
 
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
+    }
+
+    // https://github.com/Keats/jsonwebtoken/issues/388
+    #[test]
+    #[wasm_bindgen_test]
+    fn doesnt_panic_with_leeway_overflow() {
+        let claims = json!({ "exp": 1 });
+
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.reject_tokens_expiring_in_less_than = 100;
+
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
     }
 }
