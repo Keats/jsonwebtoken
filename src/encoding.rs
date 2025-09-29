@@ -1,6 +1,9 @@
 use std::fmt::{Debug, Formatter};
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{
+    engine::general_purpose::{STANDARD, URL_SAFE},
+    Engine,
+};
 use serde::ser::Serialize;
 
 use crate::algorithms::AlgorithmFamily;
@@ -36,7 +39,7 @@ use crate::crypto::rust_crypto::{
 #[derive(Clone)]
 pub struct EncodingKey {
     pub(crate) family: AlgorithmFamily,
-    content: Vec<u8>,
+    pub(crate) content: Vec<u8>,
 }
 
 impl EncodingKey {
@@ -53,6 +56,12 @@ impl EncodingKey {
     /// If you have a base64 HMAC secret, use that.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
         let out = STANDARD.decode(secret)?;
+        Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
+    }
+
+    /// For loading websafe base64 HMAC secrets, ex: ACME EAB credentials.
+    pub fn from_urlsafe_base64_secret(secret: &str) -> Result<Self> {
+        let out = URL_SAFE.decode(secret)?;
         Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
     }
 

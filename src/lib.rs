@@ -26,6 +26,7 @@ mod encoding;
 pub mod errors;
 mod header;
 pub mod jwk;
+pub mod jws;
 #[cfg(feature = "use_pem")]
 mod pem;
 mod serialization;
