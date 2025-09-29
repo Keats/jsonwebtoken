@@ -5,7 +5,7 @@ use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 const SECRET: &str = "some-secret";
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 struct Claims {
     sub: String,
     #[serde(with = "jwt_numeric_date")]

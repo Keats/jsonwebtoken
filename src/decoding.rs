@@ -97,7 +97,7 @@ impl DecodingKey {
     pub fn family(&self) -> AlgorithmFamily {
         self.family
     }
-    
+
     /// If you're using HMAC, use this.
     pub fn from_secret(secret: &[u8]) -> Self {
         DecodingKey {
@@ -270,10 +270,11 @@ impl DecodingKey {
 /// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
 /// ```
 pub fn decode<T: DeserializeOwned + Clone>(
-    token: &str,
+    token: impl AsRef<[u8]>,
     key: &DecodingKey,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
+    let token = token.as_ref();
     let header = decode_header(token)?;
 
     if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
@@ -324,9 +325,10 @@ pub fn jwt_verifier_factory(
 /// let token = "a.jwt.token".to_string();
 /// let header = decode_header(&token);
 /// ```
-pub fn decode_header(token: &str) -> Result<Header> {
-    let (_, message) = expect_two!(token.rsplitn(2, '.'));
-    let (_, header) = expect_two!(message.rsplitn(2, '.'));
+pub fn decode_header(token: impl AsRef<[u8]>) -> Result<Header> {
+    let token = token.as_ref();
+    let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (_, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
     Header::from_encoded(header)
 }
 
@@ -334,10 +336,10 @@ pub fn decode_header(token: &str) -> Result<Header> {
 ///
 /// If the token or its signature is invalid, it will return an error.
 fn verify_signature<'a>(
-    token: &'a str,
+    token: &'a [u8],
     validation: &Validation,
     verifying_provider: Box<dyn JwtVerifier>,
-) -> Result<(Header, &'a str)> {
+) -> Result<(Header, &'a [u8])> {
     if validation.validate_signature && validation.algorithms.is_empty() {
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
@@ -350,8 +352,8 @@ fn verify_signature<'a>(
         }
     }
 
-    let (signature, message) = expect_two!(token.rsplitn(2, '.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, '.'));
+    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
     let header = Header::from_encoded(header)?;
 
     if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
@@ -359,7 +361,7 @@ fn verify_signature<'a>(
     }
 
     if validation.validate_signature
-        && verifying_provider.verify(message.as_bytes(), &b64_decode(signature)?).is_err()
+        && verifying_provider.verify(message, &b64_decode(signature)?).is_err()
     {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
