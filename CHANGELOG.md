@@ -2,7 +2,7 @@
 
 ## 10.0.0 (unreleased)
 
-- BREAKING: use traits for crypto backends, you have to choose between `aws_lc_rs` and `rust_crypto`
+- BREAKING: now using traits for crypto backends, you have to choose between `aws_lc_rs` and `rust_crypto`
 - Add `Clone` bound to `decode`
 
 ## 9.3.1 (2024-02-06)
