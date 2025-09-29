@@ -23,7 +23,6 @@ impl AlgorithmFamily {
                 Algorithm::RS512,
                 Algorithm::PS256,
                 Algorithm::PS384,
-                Algorithm::PS384,
                 Algorithm::PS512,
             ],
             Self::Ec => &[Algorithm::ES256, Algorithm::ES384],
