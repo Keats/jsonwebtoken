@@ -251,6 +251,14 @@ impl DecodingKey {
     }
 }
 
+impl TryFrom<&Jwk> for DecodingKey {
+    type Error = crate::errors::Error;
+
+    fn try_from(jwk: &Jwk) -> Result<Self> {
+        Self::from_jwk(jwk)
+    }
+}
+
 /// Decode and validate a JWT
 ///
 /// If the token or its signature is invalid or the claims fail validation, it will return an error.
