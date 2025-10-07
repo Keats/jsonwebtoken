@@ -292,6 +292,23 @@ pub fn decode<T: DeserializeOwned + Clone>(
     Ok(TokenData { header, claims })
 }
 
+/// Decode a JWT with NO VALIDATION
+///
+/// DANGER: This performs zero validation on the JWT
+pub fn insecure_decode<T: DeserializeOwned + Clone>(
+    token: impl AsRef<[u8]>,
+) -> Result<TokenData<T>> {
+    let token = token.as_ref();
+
+    let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
+
+    let header = Header::from_encoded(header)?;
+    let claims = DecodedJwtPartClaims::from_jwt_part_claims(payload)?.deserialize()?;
+
+    Ok(TokenData { header, claims })
+}
+
 /// Return the correct [`JwtVerifier`] based on the `algorithm`.
 pub fn jwt_verifier_factory(
     algorithm: &Algorithm,
