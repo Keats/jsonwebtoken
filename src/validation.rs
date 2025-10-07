@@ -156,6 +156,10 @@ impl Validation {
     /// Whether to validate the JWT cryptographic signature.
     /// Disabling validation is dangerous, only do it if you know what you're doing.
     /// With validation disabled you should not trust any of the values of the claims.
+    #[deprecated(
+        since = "10.1.0",
+        note = "Use `jsonwebtoken::dangerous::insecure_decode` if you require this functionality."
+    )]
     pub fn insecure_disable_signature_validation(&mut self) {
         self.validate_signature = false;
     }
