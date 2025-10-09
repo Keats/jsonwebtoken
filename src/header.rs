@@ -1,3 +1,4 @@
+//! Traits and datastructures for JWT Headers
 use std::collections::HashMap;
 use std::result;
 
@@ -25,12 +26,19 @@ const ENC_A256GCM: &str = "A256GCM";
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[allow(clippy::upper_case_acronyms, non_camel_case_types)]
 pub enum Enc {
+    /// HMAC-256
     A128CBC_HS256,
+    /// HMAC-384
     A192CBC_HS384,
+    /// HMAC-512
     A256CBC_HS512,
+    /// AES-GCM 128
     A128GCM,
+    /// AES-GCM 192
     A192GCM,
+    /// AES-GCM 256
     A256GCM,
+    /// Other encryption type
     Other(String),
 }
 
@@ -76,7 +84,9 @@ impl<'de> Deserialize<'de> for Enc {
 /// Defined in [RFC7516#4.1.3](https://datatracker.ietf.org/doc/html/rfc7516#section-4.1.3).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Zip {
+    /// Basic Deflate Compression
     Deflate,
+    /// Other Compression
     Other(String),
 }
 
@@ -103,6 +113,25 @@ impl<'de> Deserialize<'de> for Zip {
             ZIP_SERIAL_DEFLATE => Ok(Zip::Deflate),
             _ => Ok(Zip::Other(s)),
         }
+    }
+}
+
+/// Getter for `alg` attribute of a JWT Header
+/// This must be implemented by custom header structs
+pub trait Alg {
+    /// Getter for `alg`
+    fn alg(&self) -> &Algorithm;
+}
+
+/// Decodes a JWT part from b64
+pub trait FromEncoded {
+    /// Converts an encoded JWT part into the Header struct if possible
+    fn from_encoded<T: AsRef<[u8]>>(encoded_part: T) -> Result<Self>
+    where
+        Self: Sized + serde::de::DeserializeOwned,
+    {
+        let decoded = b64_decode(encoded_part)?;
+        Ok(serde_json::from_slice(&decoded)?)
     }
 }
 
@@ -213,12 +242,6 @@ impl Header {
         }
     }
 
-    /// Converts an encoded part into the Header struct if possible
-    pub(crate) fn from_encoded<T: AsRef<[u8]>>(encoded_part: T) -> Result<Self> {
-        let decoded = b64_decode(encoded_part)?;
-        Ok(serde_json::from_slice(&decoded)?)
-    }
-
     /// Decodes the X.509 certificate chain into ASN.1 DER format.
     pub fn x5c_der(&self) -> Result<Option<Vec<Vec<u8>>>> {
         Ok(self
@@ -237,3 +260,11 @@ impl Default for Header {
         Header::new(Algorithm::default())
     }
 }
+
+impl Alg for Header {
+    fn alg(&self) -> &Algorithm {
+        &self.alg
+    }
+}
+
+impl FromEncoded for Header {}

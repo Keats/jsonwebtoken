@@ -7,7 +7,7 @@ use crate::Algorithm;
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::JwtVerifier;
 use crate::errors::{ErrorKind, Result, new_error};
-use crate::header::Header;
+use crate::header::{Alg, FromEncoded, Header};
 use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
@@ -37,15 +37,16 @@ use crate::crypto::rust_crypto::{
 
 /// The return type of a successful call to [decode](fn.decode.html).
 #[derive(Debug)]
-pub struct TokenData<T> {
+pub struct TokenData<H, T> {
     /// The decoded JWT header
-    pub header: Header,
+    pub header: H,
     /// The decoded JWT claims
     pub claims: T,
 }
 
-impl<T> Clone for TokenData<T>
+impl<H, T> Clone for TokenData<H, T>
 where
+    H: Clone,
     T: Clone,
 {
     fn clone(&self) -> Self {
@@ -281,21 +282,40 @@ pub fn decode<T: DeserializeOwned + Clone>(
     token: impl AsRef<[u8]>,
     key: &DecodingKey,
     validation: &Validation,
-) -> Result<TokenData<T>> {
-    let token = token.as_ref();
-    let header = decode_header(token)?;
+) -> Result<TokenData<Header, T>> {
+    decode_with_custom_header(token, key, validation)
+}
 
-    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+/// Decode and validate a JWT with a custom header
+///
+/// If the token or its signature is invalid, or the claims fail validation, this will return an
+/// error.
+pub fn decode_with_custom_header<H, T>(
+    token: impl AsRef<[u8]>,
+    key: &DecodingKey,
+    validation: &Validation,
+) -> Result<TokenData<H, T>>
+where
+    H: DeserializeOwned + Clone + FromEncoded + Alg,
+    T: DeserializeOwned + Clone,
+{
+    let token = token.as_ref();
+
+    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
+    let header = H::from_encoded(header)?;
+
+    if validation.validate_signature && !validation.algorithms.contains(header.alg()) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    let verifying_provider = jwt_verifier_factory(&header.alg, key)?;
+    let verifying_provider = jwt_verifier_factory(header.alg(), key)?;
+    verify_signature_body(message, signature, &header, validation, verifying_provider)?;
 
-    let (header, claims) = verify_signature(token, validation, verifying_provider)?;
-
-    let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
-    let claims = decoded_claims.deserialize()?;
+    let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(payload)?;
     validate(decoded_claims.deserialize()?, validation)?;
+
+    let claims = decoded_claims.deserialize()?;
 
     Ok(TokenData { header, claims })
 }
@@ -357,10 +377,21 @@ pub fn decode_header(token: impl AsRef<[u8]>) -> Result<Header> {
     Header::from_encoded(header)
 }
 
+/// Decode only the custom header of a JWT without decoding or validating the payload
+pub fn decode_custom_header<H>(token: impl AsRef<[u8]>) -> Result<H>
+where
+    H: DeserializeOwned + Clone + Alg + FromEncoded,
+{
+    let token = token.as_ref();
+    let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (_, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
+    H::from_encoded(header)
+}
+
 pub(crate) fn verify_signature_body(
     message: &[u8],
     signature: &[u8],
-    header: &Header,
+    header: &impl Alg,
     validation: &Validation,
     verifying_provider: Box<dyn JwtVerifier>,
 ) -> Result<()> {
@@ -376,7 +407,7 @@ pub(crate) fn verify_signature_body(
         }
     }
 
-    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+    if validation.validate_signature && !validation.algorithms.contains(header.alg()) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
@@ -387,20 +418,4 @@ pub(crate) fn verify_signature_body(
     }
 
     Ok(())
-}
-
-/// Verify the signature of a JWT, and return a header object and raw payload.
-///
-/// If the token or its signature is invalid, it will return an error.
-fn verify_signature<'a>(
-    token: &'a [u8],
-    validation: &Validation,
-    verifying_provider: Box<dyn JwtVerifier>,
-) -> Result<(Header, &'a [u8])> {
-    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
-    let header = Header::from_encoded(header)?;
-    verify_signature_body(message, signature, &header, validation, verifying_provider)?;
-
-    Ok((header, payload))
 }

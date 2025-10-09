@@ -14,7 +14,9 @@ compile_error!(
 compile_error!("at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled");
 
 pub use algorithms::Algorithm;
-pub use decoding::{DecodingKey, TokenData, decode, decode_header};
+pub use decoding::{
+    DecodingKey, TokenData, decode, decode_custom_header, decode_header, decode_with_custom_header,
+};
 pub use encoding::{EncodingKey, encode};
 pub use header::Header;
 pub use validation::{Validation, get_current_timestamp};
@@ -31,7 +33,7 @@ mod decoding;
 mod encoding;
 /// All the errors that can be encountered while encoding/decoding JWTs
 pub mod errors;
-mod header;
+pub mod header;
 pub mod jwk;
 pub mod jws;
 #[cfg(feature = "use_pem")]
