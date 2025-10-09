@@ -268,3 +268,120 @@ impl Alg for Header {
 }
 
 impl FromEncoded for Header {}
+
+/// A truly basic JWT header, the alg defaults to HS256 and typ is automatically
+/// set to `JWT`. All the other fields are optional.
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BasicHeader {
+    /// The type of JWS: it can only be "JWT" here
+    ///
+    /// Defined in [RFC7515#4.1.9](https://tools.ietf.org/html/rfc7515#section-4.1.9).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub typ: Option<String>,
+    /// The algorithm used
+    ///
+    /// Defined in [RFC7515#4.1.1](https://tools.ietf.org/html/rfc7515#section-4.1.1).
+    pub alg: Algorithm,
+    /// Content type
+    ///
+    /// Defined in [RFC7519#5.2](https://tools.ietf.org/html/rfc7519#section-5.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cty: Option<String>,
+    /// JSON Key URL
+    ///
+    /// Defined in [RFC7515#4.1.2](https://tools.ietf.org/html/rfc7515#section-4.1.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jku: Option<String>,
+    /// JSON Web Key
+    ///
+    /// Defined in [RFC7515#4.1.3](https://tools.ietf.org/html/rfc7515#section-4.1.3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jwk: Option<Jwk>,
+    /// Key ID
+    ///
+    /// Defined in [RFC7515#4.1.4](https://tools.ietf.org/html/rfc7515#section-4.1.4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kid: Option<String>,
+    /// X.509 URL
+    ///
+    /// Defined in [RFC7515#4.1.5](https://tools.ietf.org/html/rfc7515#section-4.1.5).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5u: Option<String>,
+    /// X.509 certificate chain. A Vec of base64 encoded ASN.1 DER certificates.
+    ///
+    /// Defined in [RFC7515#4.1.6](https://tools.ietf.org/html/rfc7515#section-4.1.6).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5c: Option<Vec<String>>,
+    /// X.509 SHA1 certificate thumbprint
+    ///
+    /// Defined in [RFC7515#4.1.7](https://tools.ietf.org/html/rfc7515#section-4.1.7).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5t: Option<String>,
+    /// X.509 SHA256 certificate thumbprint
+    ///
+    /// Defined in [RFC7515#4.1.8](https://tools.ietf.org/html/rfc7515#section-4.1.8).
+    ///
+    /// This will be serialized/deserialized as "x5t#S256", as defined by the RFC.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "x5t#S256")]
+    pub x5t_s256: Option<String>,
+    /// Critical - indicates header fields that must be understood by the receiver.
+    ///
+    /// Defined in [RFC7515#4.1.6](https://tools.ietf.org/html/rfc7515#section-4.1.6).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crit: Option<Vec<String>>,
+    /// See `Enc` for description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enc: Option<Enc>,
+    /// See `Zip` for description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zip: Option<Zip>,
+    /// ACME: The URL to which this JWS object is directed
+    ///
+    /// Defined in [RFC8555#6.4](https://datatracker.ietf.org/doc/html/rfc8555#section-6.4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    /// ACME: Random data for preventing replay attacks.
+    ///
+    /// Defined in [RFC8555#6.5.2](https://datatracker.ietf.org/doc/html/rfc8555#section-6.5.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+}
+
+impl BasicHeader {
+    /// Returns a JWT header with the algorithm given
+    pub fn new(algorithm: Algorithm) -> Self {
+        Self {
+            typ: Some("JWT".to_string()),
+            alg: algorithm,
+            cty: None,
+            jku: None,
+            jwk: None,
+            kid: None,
+            x5u: None,
+            x5c: None,
+            x5t: None,
+            x5t_s256: None,
+            crit: None,
+            enc: None,
+            zip: None,
+            url: None,
+            nonce: None,
+        }
+    }
+}
+
+impl Default for BasicHeader {
+    /// Returns a JWT header using the default Algorithm, HS256
+    fn default() -> Self {
+        Self::new(Algorithm::default())
+    }
+}
+
+impl Alg for BasicHeader {
+    fn alg(&self) -> &Algorithm {
+        &self.alg
+    }
+}
+
+impl FromEncoded for BasicHeader {}
