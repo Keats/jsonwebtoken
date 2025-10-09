@@ -1,6 +1,8 @@
 //! Create and parses JWT (JSON Web Tokens)
 //!
-//! Documentation:  [stable](https://docs.rs/jsonwebtoken/)
+//! Documentation:  [stable](https://docs.rs/jsonwebtoken)
+//!
+
 #![deny(missing_docs)]
 
 #[cfg(all(feature = "rust_crypto", feature = "aws_lc_rs"))]

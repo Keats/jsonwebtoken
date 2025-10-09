@@ -1,6 +1,11 @@
 //! The cryptography of the `jsonwebtoken` crate is decoupled behind
 //! [`JwtSigner`] and [`JwtVerifier`] traits. These make use of `RustCrypto`'s
 //! [`Signer`] and [`Verifier`] traits respectively.
+//!
+//! [`JwtSigner`]: crate::crypto::JwtSigner
+//! [`JwtVerifier`]: crate::crypto::JwtVerifier
+//! [`Signer`]: signature::Signer
+//! [`Verifier`]: signature::Verifier
 
 use crate::algorithms::Algorithm;
 use crate::errors::Result;
