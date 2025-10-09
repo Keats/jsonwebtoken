@@ -17,6 +17,11 @@ pub use encoding::{EncodingKey, encode};
 pub use header::Header;
 pub use validation::{Validation, get_current_timestamp};
 
+/// Dangerous decoding functions that should be audited and used with extreme care.
+pub mod dangerous {
+    pub use super::decoding::insecure_decode;
+}
+
 mod algorithms;
 /// Lower level functions, if you want to do something other than JWTs
 pub mod crypto;
