@@ -3,11 +3,13 @@ use std::collections::HashMap;
 use std::result;
 
 use base64::{Engine, engine::general_purpose::STANDARD};
+use jsonwebtoken_proc_macros::header;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::algorithms::Algorithm;
 use crate::errors::Result;
 use crate::jwk::Jwk;
+use crate::macros::Header;
 use crate::serialization::b64_decode;
 
 const ZIP_SERIAL_DEFLATE: &str = "DEF";
@@ -137,7 +139,7 @@ pub trait FromEncoded {
 
 /// A basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Header, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Header {
     /// The type of JWS: it can only be "JWT" here
     ///
@@ -254,24 +256,10 @@ impl Header {
     }
 }
 
-impl Default for Header {
-    /// Returns a JWT header using the default Algorithm, HS256
-    fn default() -> Self {
-        Header::new(Algorithm::default())
-    }
-}
-
-impl Alg for Header {
-    fn alg(&self) -> &Algorithm {
-        &self.alg
-    }
-}
-
-impl FromEncoded for Header {}
-
 /// A truly basic JWT header, the alg defaults to HS256 and typ is automatically
 /// set to `JWT`. All the other fields are optional.
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[header]
+#[derive(Hash, PartialEq, Eq)]
 pub struct BasicHeader {
     /// The type of JWS: it can only be "JWT" here
     ///
@@ -370,18 +358,3 @@ impl BasicHeader {
         }
     }
 }
-
-impl Default for BasicHeader {
-    /// Returns a JWT header using the default Algorithm, HS256
-    fn default() -> Self {
-        Self::new(Algorithm::default())
-    }
-}
-
-impl Alg for BasicHeader {
-    fn alg(&self) -> &Algorithm {
-        &self.alg
-    }
-}
-
-impl FromEncoded for BasicHeader {}

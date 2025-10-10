@@ -153,10 +153,9 @@ impl Debug for EncodingKey {
 /// If the algorithm given is RSA or EC, the key needs to be in the PEM format.
 ///
 /// ```rust
-/// use serde::{Deserialize, Serialize};
-/// use jsonwebtoken::{encode, Algorithm, Header, EncodingKey};
+/// use jsonwebtoken::{encode, macros::claims, Algorithm, Header, EncodingKey};
 ///
-/// #[derive(Debug, Serialize, Deserialize)]
+/// #[claims]
 /// struct Claims {
 ///    sub: String,
 ///    company: String

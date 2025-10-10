@@ -13,6 +13,14 @@ compile_error!(
 #[cfg(not(any(feature = "rust_crypto", feature = "aws_lc_rs")))]
 compile_error!("at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled");
 
+// hidden export of `self` as `jsonwebtoken` required by proc macros
+#[doc(hidden)]
+extern crate self as jsonwebtoken;
+
+// hidden re-export of serde for proc macros
+#[doc(hidden)]
+pub use serde;
+
 pub use algorithms::Algorithm;
 pub use decoding::{
     DecodingKey, TokenData, decode, decode_custom_header, decode_header, decode_with_custom_header,
@@ -33,10 +41,17 @@ mod decoding;
 mod encoding;
 /// All the errors that can be encountered while encoding/decoding JWTs
 pub mod errors;
-pub mod header;
 pub mod jwk;
 pub mod jws;
 #[cfg(feature = "use_pem")]
 mod pem;
 mod serialization;
 mod validation;
+
+#[doc(hidden)]
+pub mod header;
+
+/// Derive macros for custom JWT Header and Claims
+pub mod macros {
+    pub use jsonwebtoken_proc_macros::{Header, claims, header};
+}

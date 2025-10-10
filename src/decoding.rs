@@ -325,7 +325,7 @@ where
 /// DANGER: This performs zero validation on the JWT
 pub fn insecure_decode<T: DeserializeOwned + Clone>(
     token: impl AsRef<[u8]>,
-) -> Result<TokenData<T>> {
+) -> Result<TokenData<Header, T>> {
     let token = token.as_ref();
 
     let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));

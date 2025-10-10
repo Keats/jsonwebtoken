@@ -44,6 +44,9 @@ rand = { version = "0.8.5", optional = true, features = ["std"], default-feature
 rsa = { version = "0.9.6", optional = true }
 sha2 = { version = "0.10.7", optional = true, features = ["oid"] }
 
+# proc-macros (e.g. Header, claims)
+jsonwebtoken-proc-macros = { path = "jsonwebtoken-proc-macros" }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
 getrandom = "0.2"
