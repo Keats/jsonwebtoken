@@ -5,13 +5,18 @@
 
 #![deny(missing_docs)]
 
-#[cfg(all(feature = "rust_crypto", feature = "aws_lc_rs"))]
+#[cfg(any(
+    all(feature = "rust_crypto", any(feature = "aws_lc_rs", feature = "botan")),
+    all(feature = "aws_lc_rs", feature = "botan")
+))]
 compile_error!(
-    "feature \"rust_crypto\" and feature \"aws_lc_rs\" cannot be enabled at the same time"
+    "only one of the features \"rust_crypto\", \"aws_lc_rs\" or \"botan\" may be enabled at the same time"
 );
 
-#[cfg(not(any(feature = "rust_crypto", feature = "aws_lc_rs")))]
-compile_error!("at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled");
+#[cfg(not(any(feature = "rust_crypto", feature = "aws_lc_rs", feature = "botan")))]
+compile_error!(
+    "at least one of the features \"rust_crypto\", \"aws_lc_rs\" or \"botan\" must be enabled"
+);
 
 pub use algorithms::Algorithm;
 pub use decoding::{DecodingKey, TokenData, decode, decode_header};

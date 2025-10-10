@@ -15,7 +15,7 @@ jsonwebtoken = { version = "10", features = ["aws_lc_rs"] }
 serde = {version = "1.0", features = ["derive"] }
 ```
 
-Two crypto backends are available via features, `aws_lc_rs` and `rust_crypto`, exactly one of which must be enabled.
+Three crypto backends are available via features, `aws_lc_rs`, `botan` and `rust_crypto`, exactly one of which must be enabled.
 
 The minimum required Rust version (MSRV) is specified in the `rust-version` field in this project's [Cargo.toml](Cargo.toml).
 

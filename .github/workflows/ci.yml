@@ -23,7 +23,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                backend: [ aws_lc_rs, rust_crypto ]
+                backend: [ aws_lc_rs, botan, rust_crypto ]
         steps:
             -   uses: actions/checkout@v3
             -   uses: dtolnay/rust-toolchain@stable
@@ -37,7 +37,7 @@ jobs:
         strategy:
             matrix:
                 build: [ pinned, stable, nightly ]
-                backend: [ aws_lc_rs, rust_crypto ]
+                backend: [ aws_lc_rs, botan, rust_crypto ]
                 include:
                     -   build: pinned
                         os: ubuntu-24.04

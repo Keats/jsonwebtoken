@@ -18,6 +18,8 @@ use crate::{
 use aws_lc_rs::{digest, signature as aws_sig};
 #[cfg(feature = "aws_lc_rs")]
 use aws_sig::KeyPair;
+#[cfg(feature = "botan")]
+use botan::{HashFunction, Privkey};
 #[cfg(feature = "rust_crypto")]
 use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 #[cfg(feature = "rust_crypto")]
@@ -456,6 +458,16 @@ fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<
     Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
 }
 
+#[cfg(feature = "botan")]
+fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+    let privkey = Privkey::load_rsa_pkcs1(key_content)
+        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+    let pubkey = privkey.pubkey()?;
+    let n = pubkey.get_field("n")?.to_bin()?;
+    let e = pubkey.get_field("e")?.to_bin()?;
+    Ok((n, e))
+}
+
 #[cfg(feature = "aws_lc_rs")]
 fn extract_ec_public_key_coordinates(
     key_content: &[u8],
@@ -517,6 +529,23 @@ fn extract_ec_public_key_coordinates(
     }
 }
 
+#[cfg(feature = "botan")]
+fn extract_ec_public_key_coordinates(
+    key_content: &[u8],
+    alg: Algorithm,
+) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
+    let privkey = Privkey::load_der(key_content).map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+    let pubkey = privkey.pubkey()?;
+    let x = pubkey.get_field("public_x")?.to_bin()?;
+    let y = pubkey.get_field("public_y")?.to_bin()?;
+
+    match alg {
+        Algorithm::ES256 => Ok((EllipticCurve::P256, x, y)),
+        Algorithm::ES384 => Ok((EllipticCurve::P384, x, y)),
+        _ => Err(ErrorKind::InvalidEcdsaKey.into()),
+    }
+}
+
 #[cfg(feature = "aws_lc_rs")]
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
     let algorithm = match hash_function {
@@ -534,6 +563,20 @@ fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
         ThumbprintHash::SHA384 => Sha384::digest(data).to_vec(),
         ThumbprintHash::SHA512 => Sha512::digest(data).to_vec(),
     }
+}
+
+#[cfg(feature = "botan")]
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
+    let algo = match hash_function {
+        ThumbprintHash::SHA256 => "SHA-256",
+        ThumbprintHash::SHA384 => "SHA-384",
+        ThumbprintHash::SHA512 => "SHA-512",
+    };
+
+    let mut hash_function =
+        HashFunction::new(algo).expect("Constructing botan hash function must work");
+    hash_function.update(data).expect("Updating botan hash function must work");
+    hash_function.finish().expect("Finishing botan hash function must work")
 }
 
 impl Jwk {

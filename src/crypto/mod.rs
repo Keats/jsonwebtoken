@@ -13,6 +13,8 @@ use crate::{DecodingKey, EncodingKey};
 
 #[cfg(feature = "aws_lc_rs")]
 pub(crate) mod aws_lc;
+#[cfg(feature = "botan")]
+pub(crate) mod botan;
 #[cfg(feature = "rust_crypto")]
 pub(crate) mod rust_crypto;
 

@@ -78,6 +78,9 @@ pub enum ErrorKind {
     Json(Arc<serde_json::Error>),
     /// Some of the text was invalid UTF-8
     Utf8(::std::string::FromUtf8Error),
+    #[cfg(feature = "botan")]
+    /// An error happened when interacting with botan
+    Botan(botan::Error),
 }
 
 impl StdError for Error {
@@ -102,6 +105,8 @@ impl StdError for Error {
             ErrorKind::Base64(err) => Some(err),
             ErrorKind::Json(err) => Some(err.as_ref()),
             ErrorKind::Utf8(err) => Some(err),
+            #[cfg(feature = "botan")]
+            ErrorKind::Botan(err) => Some(err),
         }
     }
 }
@@ -128,6 +133,8 @@ impl fmt::Display for Error {
             ErrorKind::Json(err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Base64(err) => write!(f, "Base64 error: {}", err),
+            #[cfg(feature = "botan")]
+            ErrorKind::Botan(err) => write!(f, "Botan error: {}", err),
         }
     }
 }
@@ -162,6 +169,13 @@ impl From<::std::string::FromUtf8Error> for Error {
 impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Error {
         new_error(kind)
+    }
+}
+
+#[cfg(feature = "botan")]
+impl From<botan::Error> for Error {
+    fn from(err: botan::Error) -> Self {
+        new_error(ErrorKind::Botan(err))
     }
 }
 
