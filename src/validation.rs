@@ -183,7 +183,7 @@ pub fn get_current_timestamp() -> u64 {
 #[cfg(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi"))))]
 #[must_use]
 pub fn get_current_timestamp() -> u64 {
-    js_sys::Date::new_0().get_time() as u64 / 1000
+    (ic_cdk::api::time() / 1_000_000_000) as u64
 }
 
 #[derive(Deserialize)]
