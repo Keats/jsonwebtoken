@@ -11,7 +11,7 @@ pub struct EdDSASigner(Ed25519KeyPair);
 
 impl EdDSASigner {
     pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family != AlgorithmFamily::Ed {
+        if encoding_key.family() != AlgorithmFamily::Ed {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
 
@@ -38,7 +38,7 @@ pub struct EdDSAVerifier(DecodingKey);
 
 impl EdDSAVerifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-        if decoding_key.family != AlgorithmFamily::Ed {
+        if decoding_key.family() != AlgorithmFamily::Ed {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
 

@@ -49,7 +49,7 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
 ) -> std::result::Result<(), signature::Error> {
     let digest = H::digest(msg);
 
-    match &decoding_key.kind {
+    match decoding_key.kind() {
         DecodingKeyKind::SecretOrDer(bytes) => {
             RsaPublicKey::from_pkcs1_der(bytes)
                 .map_err(signature::Error::from_source)?
@@ -72,7 +72,7 @@ macro_rules! define_rsa_signer {
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-                if encoding_key.family != AlgorithmFamily::Rsa {
+                if encoding_key.family() != AlgorithmFamily::Rsa {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
@@ -100,7 +100,7 @@ macro_rules! define_rsa_verifier {
 
         impl $name {
             pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-                if decoding_key.family != AlgorithmFamily::Rsa {
+                if decoding_key.family() != AlgorithmFamily::Rsa {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
