@@ -1,13 +1,13 @@
 //! JSON Web Signatures data type.
 use std::marker::PhantomData;
 
-use crate::crypto::sign;
+use crate::crypto::{CryptoProvider, sign};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::serialization::{DecodedJwtPartClaims, b64_encode_part};
 use crate::validation::validate;
 use crate::{DecodingKey, EncodingKey, Header, TokenData, Validation};
 
-use crate::decoding::{jwt_verifier_factory, verify_signature_body};
+use crate::decoding::verify_signature_body;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -67,7 +67,8 @@ pub fn decode<T: DeserializeOwned>(
     let header = Header::from_encoded(&jws.protected)?;
     let message = [jws.protected.as_str(), jws.payload.as_str()].join(".");
 
-    let verifying_provider = jwt_verifier_factory(&header.alg, key)?;
+    let verifying_provider = (CryptoProvider::get_default_or_install_from_crate_features()
+        .verifier_factory)(&header.alg, key)?;
     verify_signature_body(
         message.as_bytes(),
         jws.signature.as_bytes(),

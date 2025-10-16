@@ -68,6 +68,7 @@ default = ["use_pem"]
 use_pem = ["pem", "simple_asn1"]
 rust_crypto = ["ed25519-dalek", "hmac", "p256", "p384", "rand", "rsa", "sha2"]
 aws_lc_rs = ["aws-lc-rs"]
+custom-provider = []
 
 [[bench]]
 name = "jwt"
