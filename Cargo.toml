@@ -65,9 +65,9 @@ criterion = { version = "0.4", default-features = false }
 
 [features]
 default = ["use_pem"]
-use_pem = ["pem", "simple_asn1"]
-rust_crypto = ["ed25519-dalek", "hmac", "p256", "p384", "rand", "rsa", "sha2"]
-aws_lc_rs = ["aws-lc-rs"]
+use_pem = ["dep:pem", "dep:simple_asn1"]
+rust_crypto = ["dep:ed25519-dalek", "dep:hmac", "dep:p256", "dep:p384", "dep:rand", "dep:rsa", "dep:sha2"]
+aws_lc_rs = ["dep:aws-lc-rs"]
 
 [[bench]]
 name = "jwt"
