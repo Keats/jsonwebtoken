@@ -113,14 +113,16 @@ something similar and reuse it.
 
 ### Encoding and decoding JWS
 
-JWS is handled the same way as JWT, but using `encode_jws` and `decode_jws`:
+JWS is handled the same way as JWT, but using `jsonwebtoken::jws::encode` and `jsonwebtoken::jws::decode`:
 
 ```rust
-let encoded = encode_jws(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
-my_claims = decode_jws(&encoded, &DecodingKey::from_secret("secret".as_ref()), &Validation::default())?.claims;
+use jsonwebtoken::jws::{encode, decode};
+
+let encoded = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
+my_claims = decode(&encoded, &DecodingKey::from_secret("secret".as_ref()), &Validation::default())?.claims;
 ```
 
-`encode_jws` returns a `Jws<C>` struct which can be placed in other structs or serialized/deserialized from JSON directly.
+`jsonwebtoken::jws::encode` returns a `Jws<C>` struct which can be placed in other structs or serialized/deserialized from JSON directly.
 
 The generic parameter in `Jws<C>` indicates the claims type and prevents accidentally encoding or decoding the wrong claims type
 when the Jws is nested in another struct.
