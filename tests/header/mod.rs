@@ -1,7 +1,10 @@
 use base64::{Engine, engine::general_purpose::STANDARD};
 use wasm_bindgen_test::wasm_bindgen_test;
 
-use jsonwebtoken::Header;
+use jsonwebtoken::{
+    Algorithm,
+    header::{Alg, FromEncoded, Header},
+};
 
 static CERT_CHAIN: [&str; 3] = include!("cert_chain.json");
 
@@ -37,4 +40,32 @@ fn x5c_der_invalid_chain() {
     let header = Header { x5c, ..Default::default() };
 
     assert!(header.x5c_der().is_err());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn decode_custom_header() {
+    #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
+    struct CustomHeader {
+        alg: Algorithm,
+        typ: String,
+        nonstandard_header: String,
+    }
+    impl Alg for CustomHeader {
+        fn alg(&self) -> &Algorithm {
+            &self.alg
+        }
+    }
+    impl FromEncoded for CustomHeader {}
+
+    let expected = CustomHeader {
+        alg: Algorithm::HS256,
+        typ: "JWT".into(),
+        nonstandard_header: "traits are awesome".into(),
+    };
+
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsIm5vbnN0YW5kYXJkX2hlYWRlciI6InRyYWl0cyBhcmUgYXdlc29tZSJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNzU5OTY4MTQ1fQ.c2VjcmV0";
+
+    let header = jsonwebtoken::decode_custom_header::<CustomHeader>(token).unwrap();
+    assert_eq!(header, expected);
 }

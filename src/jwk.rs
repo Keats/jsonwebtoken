@@ -596,7 +596,7 @@ impl Jwk {
 
     /// Compute the thumbprint of the JWK.
     ///
-    /// Per [RFC-7638](https://datatracker.ietf.org/doc/html/rfc7638)
+    /// Per (RFC-7638)[<https://datatracker.ietf.org/doc/html/rfc7638>]
     pub fn thumbprint(&self, hash_function: ThumbprintHash) -> String {
         let pre = match &self.algorithm {
             AlgorithmParameters::EllipticCurve(a) => match a.curve {

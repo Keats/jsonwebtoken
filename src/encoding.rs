@@ -10,7 +10,7 @@ use crate::Algorithm;
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::JwtSigner;
 use crate::errors::{ErrorKind, Result, new_error};
-use crate::header::Header;
+use crate::header::Alg;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{b64_encode, b64_encode_part};
@@ -153,10 +153,9 @@ impl Debug for EncodingKey {
 /// If the algorithm given is RSA or EC, the key needs to be in the PEM format.
 ///
 /// ```rust
-/// use serde::{Deserialize, Serialize};
-/// use jsonwebtoken::{encode, Algorithm, Header, EncodingKey};
+/// use jsonwebtoken::{encode, macros::claims, Algorithm, Header, EncodingKey};
 ///
-/// #[derive(Debug, Serialize, Deserialize)]
+/// #[claims]
 /// struct Claims {
 ///    sub: String,
 ///    company: String
@@ -171,14 +170,18 @@ impl Debug for EncodingKey {
 /// // This will create a JWT using HS256 as algorithm
 /// let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())).unwrap();
 /// ```
-pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> Result<String> {
-    if key.family != header.alg.family() {
+pub fn encode<H: Serialize + Alg, T: Serialize>(
+    header: &H,
+    claims: &T,
+    key: &EncodingKey,
+) -> Result<String> {
+    if key.family != header.alg().family() {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    let signing_provider = jwt_signer_factory(&header.alg, key)?;
+    let signing_provider = jwt_signer_factory(header.alg(), key)?;
 
-    if signing_provider.algorithm() != header.alg {
+    if signing_provider.algorithm() != *header.alg() {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 

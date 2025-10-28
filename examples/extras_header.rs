@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use jsonwebtoken::errors::ErrorKind;
-use jsonwebtoken::macros::{claims, header};
 use jsonwebtoken::{
-    Algorithm, DecodingKey, EncodingKey, Validation, decode_with_custom_header, encode,
+    Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode, macros::claims,
 };
 
 #[claims]
@@ -11,14 +10,6 @@ struct Claims {
     sub: String,
     company: String,
     exp: u64,
-}
-
-#[header]
-#[derive(PartialEq, Eq)] // only required for assertions in tests, not required by jsonwebtoken
-struct CustomHeader {
-    alg: Algorithm,
-    custom: String,
-    another_custom_field: Option<usize>,
 }
 
 fn main() {
@@ -29,11 +20,7 @@ fn main() {
     let mut extras = HashMap::with_capacity(1);
     extras.insert("custom".to_string(), "header".to_string());
 
-    let header = CustomHeader {
-        alg: Algorithm::HS512,
-        custom: "custom".into(),
-        another_custom_field: 42.into(),
-    };
+    let header = Header { alg: Algorithm::HS512, extras, ..Default::default() };
 
     let token = match encode(&header, &my_claims, &EncodingKey::from_secret(key)) {
         Ok(t) => t,
@@ -41,7 +28,7 @@ fn main() {
     };
     println!("{:?}", token);
 
-    let token_data = match decode_with_custom_header::<CustomHeader, Claims>(
+    let token_data = match decode::<Claims>(
         &token,
         &DecodingKey::from_secret(key),
         &Validation::new(Algorithm::HS512),

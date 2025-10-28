@@ -5,7 +5,10 @@ use crate::crypto::sign;
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::serialization::{DecodedJwtPartClaims, b64_encode_part};
 use crate::validation::validate;
-use crate::{DecodingKey, EncodingKey, Header, TokenData, Validation};
+use crate::{
+    DecodingKey, EncodingKey, TokenData, Validation,
+    header::{FromEncoded, Header},
+};
 
 use crate::decoding::{jwt_verifier_factory, verify_signature_body};
 use serde::de::DeserializeOwned;
@@ -63,7 +66,7 @@ pub fn decode<T: DeserializeOwned>(
     jws: &Jws<T>,
     key: &DecodingKey,
     validation: &Validation,
-) -> Result<TokenData<T>> {
+) -> Result<TokenData<Header, T>> {
     let header = Header::from_encoded(&jws.protected)?;
     let message = [jws.protected.as_str(), jws.payload.as_str()].join(".");
 
