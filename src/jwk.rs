@@ -8,24 +8,12 @@ use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
+use crate::crypto::CryptoProvider;
 use crate::serialization::b64_encode;
 use crate::{
     Algorithm, EncodingKey,
     errors::{self, Error, ErrorKind},
 };
-
-#[cfg(feature = "aws_lc_rs")]
-use aws_lc_rs::{digest, signature as aws_sig};
-#[cfg(feature = "aws_lc_rs")]
-use aws_sig::KeyPair;
-#[cfg(feature = "rust_crypto")]
-use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
-#[cfg(feature = "rust_crypto")]
-use p384::ecdsa::SigningKey as P384SigningKey;
-#[cfg(feature = "rust_crypto")]
-use rsa::{RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts};
-#[cfg(feature = "rust_crypto")]
-use sha2::{Digest, Sha256, Sha384, Sha512};
 
 /// The intended usage of the public `KeyType`. This enum is serialized `untagged`
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -439,103 +427,6 @@ pub struct Jwk {
     pub algorithm: AlgorithmParameters,
 }
 
-#[cfg(feature = "aws_lc_rs")]
-fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
-    let key_pair = aws_sig::RsaKeyPair::from_der(key_content)
-        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
-    let public = key_pair.public_key();
-    let components = aws_sig::RsaPublicKeyComponents::<Vec<u8>>::from(public);
-    Ok((components.n, components.e))
-}
-
-#[cfg(feature = "rust_crypto")]
-fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
-    let private_key = RsaPrivateKey::from_pkcs1_der(key_content)
-        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
-    let public_key = private_key.to_public_key();
-    Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
-}
-
-#[cfg(feature = "aws_lc_rs")]
-fn extract_ec_public_key_coordinates(
-    key_content: &[u8],
-    alg: Algorithm,
-) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
-    use aws_lc_rs::signature::{
-        ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED_SIGNING, EcdsaKeyPair,
-    };
-
-    let (signing_alg, curve, pub_elem_bytes) = match alg {
-        Algorithm::ES256 => (&ECDSA_P256_SHA256_FIXED_SIGNING, EllipticCurve::P256, 32),
-        Algorithm::ES384 => (&ECDSA_P384_SHA384_FIXED_SIGNING, EllipticCurve::P384, 48),
-        _ => return Err(ErrorKind::InvalidEcdsaKey.into()),
-    };
-
-    let key_pair = EcdsaKeyPair::from_pkcs8(signing_alg, key_content)
-        .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
-
-    let pub_bytes = key_pair.public_key().as_ref();
-    if pub_bytes[0] != 4 {
-        return Err(ErrorKind::InvalidEcdsaKey.into());
-    }
-
-    let (x, y) = pub_bytes[1..].split_at(pub_elem_bytes);
-    Ok((curve, x.to_vec(), y.to_vec()))
-}
-
-#[cfg(feature = "rust_crypto")]
-fn extract_ec_public_key_coordinates(
-    key_content: &[u8],
-    alg: Algorithm,
-) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
-    match alg {
-        Algorithm::ES256 => {
-            let signing_key = P256SigningKey::from_pkcs8_der(key_content)
-                .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
-            let public_key = signing_key.verifying_key();
-            let encoded = public_key.to_encoded_point(false);
-            match encoded.coordinates() {
-                p256::elliptic_curve::sec1::Coordinates::Uncompressed { x, y } => {
-                    Ok((EllipticCurve::P256, x.to_vec(), y.to_vec()))
-                }
-                _ => Err(ErrorKind::InvalidEcdsaKey.into()),
-            }
-        }
-        Algorithm::ES384 => {
-            let signing_key = P384SigningKey::from_pkcs8_der(key_content)
-                .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
-            let public_key = signing_key.verifying_key();
-            let encoded = public_key.to_encoded_point(false);
-            match encoded.coordinates() {
-                p384::elliptic_curve::sec1::Coordinates::Uncompressed { x, y } => {
-                    Ok((EllipticCurve::P384, x.to_vec(), y.to_vec()))
-                }
-                _ => Err(ErrorKind::InvalidEcdsaKey.into()),
-            }
-        }
-        _ => Err(ErrorKind::InvalidEcdsaKey.into()),
-    }
-}
-
-#[cfg(feature = "aws_lc_rs")]
-fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
-    let algorithm = match hash_function {
-        ThumbprintHash::SHA256 => &digest::SHA256,
-        ThumbprintHash::SHA384 => &digest::SHA384,
-        ThumbprintHash::SHA512 => &digest::SHA512,
-    };
-    digest::digest(algorithm, data).as_ref().to_vec()
-}
-
-#[cfg(feature = "rust_crypto")]
-fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
-    match hash_function {
-        ThumbprintHash::SHA256 => Sha256::digest(data).to_vec(),
-        ThumbprintHash::SHA384 => Sha384::digest(data).to_vec(),
-        ThumbprintHash::SHA512 => Sha512::digest(data).to_vec(),
-    }
-}
-
 impl Jwk {
     /// Find whether the Algorithm is implemented and supported
     pub fn is_supported(&self) -> bool {
@@ -571,7 +462,11 @@ impl Jwk {
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Rsa => {
-                    let (n, e) = extract_rsa_public_key_components(&key.content)?;
+                    let (n, e) = (CryptoProvider::get_default_or_install_from_crate_features()
+                        .jwk_utils
+                        .extract_rsa_public_key_components)(
+                        &key.content
+                    )?;
                     AlgorithmParameters::RSA(RSAKeyParameters {
                         key_type: RSAKeyType::RSA,
                         n: b64_encode(n),
@@ -579,7 +474,12 @@ impl Jwk {
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Ec => {
-                    let (curve, x, y) = extract_ec_public_key_coordinates(&key.content, alg)?;
+                    let (curve, x, y) =
+                        (CryptoProvider::get_default_or_install_from_crate_features()
+                            .jwk_utils
+                            .extract_ec_public_key_coordinates)(
+                            &key.content, alg
+                        )?;
                     AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
                         key_type: EllipticCurveKeyType::EC,
                         curve,
@@ -640,7 +540,10 @@ impl Jwk {
                 }
             },
         };
-        b64_encode(compute_digest(pre.as_bytes(), hash_function))
+
+        b64_encode((CryptoProvider::get_default_or_install_from_crate_features()
+            .jwk_utils
+            .compute_digest)(pre.as_bytes(), hash_function))
     }
 }
 
