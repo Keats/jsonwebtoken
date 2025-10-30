@@ -277,7 +277,7 @@ impl TryFrom<&Jwk> for DecodingKey {
 /// // Claims is a struct that implements Deserialize
 /// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
 /// ```
-pub fn decode<T: DeserializeOwned + Clone>(
+pub fn decode<T: DeserializeOwned>(
     token: impl AsRef<[u8]>,
     key: &DecodingKey,
     validation: &Validation,
@@ -303,9 +303,7 @@ pub fn decode<T: DeserializeOwned + Clone>(
 /// Decode a JWT with NO VALIDATION
 ///
 /// DANGER: This performs zero validation on the JWT
-pub fn insecure_decode<T: DeserializeOwned + Clone>(
-    token: impl AsRef<[u8]>,
-) -> Result<TokenData<T>> {
+pub fn insecure_decode<T: DeserializeOwned>(token: impl AsRef<[u8]>) -> Result<TokenData<T>> {
     let token = token.as_ref();
 
     let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
