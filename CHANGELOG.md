@@ -1,5 +1,9 @@
 # Changelog
 
+## 10.2.0 (2025-11-06)
+
+- Remove `Clone` bound from decode functions
+
 ## 10.1.0 (2025-10-18)
 
 - add `dangerous::insecure_decode`
