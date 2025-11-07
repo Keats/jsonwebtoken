@@ -355,6 +355,33 @@ pub fn decode_header(token: impl AsRef<[u8]>) -> Result<Header> {
     Header::from_encoded(header)
 }
 
+/// Decode a JWT without any signature verification/validations and return its header as a custom type.
+///
+/// If the token has an invalid format (ie 3 parts separated by a `.`), it will return an error.
+///
+/// ```rust
+/// use jsonwebtoken::decode_header_as;
+/// use serde::Deserialize;
+///
+/// #[derive(Deserialize)]
+/// struct MyHeader {
+///     iss: String,
+/// }
+///
+/// let token = "a.jwt.token".to_string();
+/// let header: Result<MyHeader, _> = decode_header_as(&token);
+/// ```
+pub fn decode_header_as<T>(token: impl AsRef<[u8]>) -> Result<T>
+where
+    T: DeserializeOwned,
+{
+    let token = token.as_ref();
+    let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (_, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
+    let decoded = b64_decode(header)?;
+    Ok(serde_json::from_slice(&decoded)?)
+}
+
 pub(crate) fn verify_signature_body(
     message: &[u8],
     signature: &[u8],
