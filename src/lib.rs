@@ -7,11 +7,11 @@
 
 #[cfg(all(feature = "rust_crypto", feature = "aws_lc_rs"))]
 compile_error!(
-    "feature \"rust_crypto\" and feature \"aws_lc_rs\" cannot be enabled at the same time"
+    "Feature \"rust_crypto\" and \"aws_lc_rs\" are mutually exclusive and cannot be enabled at the same time"
 );
 
 #[cfg(not(any(feature = "rust_crypto", feature = "aws_lc_rs")))]
-compile_error!("at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled");
+compile_error!("Exactly one of the \"rust_crypto\" or \"aws_lc_rs\" features must be enabled");
 
 pub use algorithms::Algorithm;
 pub use decoding::{DecodingKey, TokenData, decode, decode_header};
