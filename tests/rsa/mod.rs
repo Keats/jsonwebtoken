@@ -10,6 +10,7 @@ use jsonwebtoken::{
 #[cfg(feature = "use_pem")]
 use jsonwebtoken::{Header, Validation, decode, encode};
 
+#[cfg(feature = "rsa")]
 const RSA_ALGORITHMS: &[Algorithm] = &[
     Algorithm::RS256,
     Algorithm::RS384,
@@ -26,7 +27,7 @@ pub struct Claims {
     exp: i64,
 }
 
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rsa"))]
 #[test]
 #[wasm_bindgen_test]
 fn round_trip_sign_verification_pem_pkcs1() {
@@ -58,7 +59,7 @@ fn round_trip_sign_verification_pem_pkcs1() {
     }
 }
 
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rsa"))]
 #[test]
 #[wasm_bindgen_test]
 fn round_trip_sign_verification_pem_pkcs8() {
@@ -90,6 +91,7 @@ fn round_trip_sign_verification_pem_pkcs8() {
     }
 }
 
+#[cfg(all(feature = "use_pem", feature = "rsa"))]
 #[test]
 #[wasm_bindgen_test]
 fn round_trip_sign_verification_der() {
@@ -105,7 +107,7 @@ fn round_trip_sign_verification_der() {
     }
 }
 
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rsa"))]
 #[test]
 #[wasm_bindgen_test]
 fn round_trip_claim() {
@@ -142,7 +144,7 @@ fn round_trip_claim() {
     }
 }
 
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rsa"))]
 #[test]
 #[wasm_bindgen_test]
 fn rsa_modulus_exponent() {
@@ -169,7 +171,7 @@ fn rsa_modulus_exponent() {
     assert!(res.is_ok());
 }
 
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rsa"))]
 #[test]
 #[wasm_bindgen_test]
 fn rsa_jwk() {
@@ -206,7 +208,7 @@ fn rsa_jwk() {
 }
 
 // https://jwt.io/ is often used for examples so ensure their example works with jsonwebtoken
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rsa"))]
 #[test]
 #[wasm_bindgen_test]
 fn roundtrip_with_jwtio_example_jey() {
@@ -243,7 +245,7 @@ fn roundtrip_with_jwtio_example_jey() {
     }
 }
 
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rsa"))]
 #[test]
 #[wasm_bindgen_test]
 fn rsa_jwk_from_key() {

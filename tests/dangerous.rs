@@ -9,6 +9,7 @@ pub struct Claims {
     exp: i64,
 }
 
+#[cfg(feature = "rsa")]
 #[test]
 #[wasm_bindgen_test]
 fn dangerous_insecure_decode_valid_jwt() {
@@ -26,6 +27,7 @@ fn dangerous_insecure_decode_valid_jwt() {
     assert_eq!(1759826217, claims.exp);
 }
 
+#[cfg(feature = "rsa")]
 #[test]
 #[wasm_bindgen_test]
 fn dangerous_insecure_decode_invalid_sig() {

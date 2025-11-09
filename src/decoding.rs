@@ -29,10 +29,12 @@ use crate::crypto::rust_crypto::{
     ecdsa::{Es256Verifier, Es384Verifier},
     eddsa::EdDSAVerifier,
     hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
-    rsa::{
-        Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
-        RsaPss512Verifier,
-    },
+};
+
+#[cfg(all(feature = "rust_crypto", feature = "rsa"))]
+use crate::crypto::rust_crypto::rsa::{
+    Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
+    RsaPss512Verifier,
 };
 
 /// The return type of a successful call to [decode](fn.decode.html).
@@ -68,13 +70,19 @@ macro_rules! expect_two {
 #[derive(Clone)]
 pub(crate) enum DecodingKeyKind {
     SecretOrDer(Vec<u8>),
-    RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
+    #[cfg(feature = "rsa")]
+    RsaModulusExponent {
+        n: Vec<u8>,
+        e: Vec<u8>,
+    },
 }
 
 impl Debug for DecodingKeyKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::SecretOrDer(_) => f.debug_tuple("SecretOrDer").field(&"[redacted]").finish(),
+
+            #[cfg(feature = "rsa")]
             Self::RsaModulusExponent { .. } => f
                 .debug_struct("RsaModulusExponent")
                 .field("n", &"[redacted]")
@@ -112,9 +120,9 @@ impl DecodingKey {
         Ok(DecodingKey { family: AlgorithmFamily::Hmac, kind: DecodingKeyKind::SecretOrDer(out) })
     }
 
+    #[cfg(all(feature = "use_pem", feature = "rsa"))]
     /// If you are loading a public RSA key in a PEM format, use this.
     /// Only exists if the feature `use_pem` is enabled.
-    #[cfg(feature = "use_pem")]
     pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
@@ -124,6 +132,7 @@ impl DecodingKey {
         })
     }
 
+    #[cfg(feature = "rsa")]
     /// If you have (n, e) RSA public key components as strings, use this.
     pub fn from_rsa_components(modulus: &str, exponent: &str) -> Result<Self> {
         let n = b64_decode(modulus)?;
@@ -134,6 +143,7 @@ impl DecodingKey {
         })
     }
 
+    #[cfg(feature = "rsa")]
     /// If you have (n, e) RSA public key components already decoded, use this.
     pub fn from_rsa_raw_components(modulus: &[u8], exponent: &[u8]) -> Self {
         DecodingKey {
@@ -182,6 +192,7 @@ impl DecodingKey {
         })
     }
 
+    #[cfg(feature = "rsa")]
     /// If you know what you're doing and have a RSA DER encoded public key, use this.
     pub fn from_rsa_der(der: &[u8]) -> Self {
         DecodingKey {
@@ -218,6 +229,7 @@ impl DecodingKey {
     /// If you have a key in Jwk format
     pub fn from_jwk(jwk: &Jwk) -> Result<Self> {
         match &jwk.algorithm {
+            #[cfg(feature = "rsa")]
             AlgorithmParameters::RSA(params) => {
                 DecodingKey::from_rsa_components(&params.n, &params.e)
             }
@@ -238,6 +250,7 @@ impl DecodingKey {
     pub(crate) fn as_bytes(&self) -> &[u8] {
         match &self.kind {
             DecodingKeyKind::SecretOrDer(b) => b,
+            #[cfg(feature = "rsa")]
             DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
         }
     }
@@ -326,11 +339,17 @@ pub fn jwt_verifier_factory(
         Algorithm::HS512 => Box::new(Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES256 => Box::new(Es256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES384 => Box::new(Es384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        #[cfg(feature = "rsa")]
         Algorithm::RS256 => Box::new(Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        #[cfg(feature = "rsa")]
         Algorithm::RS384 => Box::new(Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        #[cfg(feature = "rsa")]
         Algorithm::RS512 => Box::new(Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        #[cfg(feature = "rsa")]
         Algorithm::PS256 => Box::new(RsaPss256Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        #[cfg(feature = "rsa")]
         Algorithm::PS384 => Box::new(RsaPss384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        #[cfg(feature = "rsa")]
         Algorithm::PS512 => Box::new(RsaPss512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::EdDSA => Box::new(EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
     };

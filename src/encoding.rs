@@ -29,9 +29,12 @@ use crate::crypto::rust_crypto::{
     ecdsa::{Es256Signer, Es384Signer},
     eddsa::EdDSASigner,
     hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
-    rsa::{
-        Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer,
-    },
+};
+
+// only if rust_crpyto and rsa is enabled
+#[cfg(all(feature = "rust_crypto", feature = "rsa"))]
+use crate::crypto::rust_crypto::rsa::{
+    Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer,
 };
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
@@ -74,7 +77,7 @@ impl EncodingKey {
     /// According to the [ring doc](https://docs.rs/ring/latest/ring/signature/struct.RsaKeyPair.html#method.from_pkcs8),
     /// the key should be at least 2047 bits.
     ///
-    #[cfg(feature = "use_pem")]
+    #[cfg(all(feature = "use_pem", feature = "rsa"))]
     pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
@@ -112,6 +115,7 @@ impl EncodingKey {
         Ok(EncodingKey { family: AlgorithmFamily::Ed, content: content.to_vec() })
     }
 
+    #[cfg(feature = "rsa")]
     /// If you know what you're doing and have the DER-encoded key, for RSA only
     pub fn from_rsa_der(der: &[u8]) -> Self {
         EncodingKey { family: AlgorithmFamily::Rsa, content: der.to_vec() }
@@ -202,11 +206,17 @@ pub(crate) fn jwt_signer_factory(
         Algorithm::HS512 => Box::new(Hs512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES256 => Box::new(Es256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES384 => Box::new(Es384Signer::new(key)?) as Box<dyn JwtSigner>,
+        #[cfg(feature = "rsa")]
         Algorithm::RS256 => Box::new(Rsa256Signer::new(key)?) as Box<dyn JwtSigner>,
+        #[cfg(feature = "rsa")]
         Algorithm::RS384 => Box::new(Rsa384Signer::new(key)?) as Box<dyn JwtSigner>,
+        #[cfg(feature = "rsa")]
         Algorithm::RS512 => Box::new(Rsa512Signer::new(key)?) as Box<dyn JwtSigner>,
+        #[cfg(feature = "rsa")]
         Algorithm::PS256 => Box::new(RsaPss256Signer::new(key)?) as Box<dyn JwtSigner>,
+        #[cfg(feature = "rsa")]
         Algorithm::PS384 => Box::new(RsaPss384Signer::new(key)?) as Box<dyn JwtSigner>,
+        #[cfg(feature = "rsa")]
         Algorithm::PS512 => Box::new(RsaPss512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::EdDSA => Box::new(EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
     };

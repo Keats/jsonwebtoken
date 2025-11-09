@@ -7,6 +7,8 @@ use crate::errors::{Error, ErrorKind, Result};
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum AlgorithmFamily {
     Hmac,
+
+    #[cfg(feature = "rsa")]
     Rsa,
     Ec,
     Ed,
@@ -17,6 +19,7 @@ impl AlgorithmFamily {
     pub fn algorithms(&self) -> &[Algorithm] {
         match self {
             Self::Hmac => &[Algorithm::HS256, Algorithm::HS384, Algorithm::HS512],
+            #[cfg(feature = "rsa")]
             Self::Rsa => &[
                 Algorithm::RS256,
                 Algorithm::RS384,
@@ -48,17 +51,23 @@ pub enum Algorithm {
     /// ECDSA using SHA-384
     ES384,
 
+    #[cfg(feature = "rsa")]
     /// RSASSA-PKCS1-v1_5 using SHA-256
     RS256,
+    #[cfg(feature = "rsa")]
     /// RSASSA-PKCS1-v1_5 using SHA-384
     RS384,
+    #[cfg(feature = "rsa")]
     /// RSASSA-PKCS1-v1_5 using SHA-512
     RS512,
 
+    #[cfg(feature = "rsa")]
     /// RSASSA-PSS using SHA-256
     PS256,
+    #[cfg(feature = "rsa")]
     /// RSASSA-PSS using SHA-384
     PS384,
+    #[cfg(feature = "rsa")]
     /// RSASSA-PSS using SHA-512
     PS512,
 
@@ -75,11 +84,17 @@ impl FromStr for Algorithm {
             "HS512" => Ok(Algorithm::HS512),
             "ES256" => Ok(Algorithm::ES256),
             "ES384" => Ok(Algorithm::ES384),
+            #[cfg(feature = "rsa")]
             "RS256" => Ok(Algorithm::RS256),
+            #[cfg(feature = "rsa")]
             "RS384" => Ok(Algorithm::RS384),
+            #[cfg(feature = "rsa")]
             "PS256" => Ok(Algorithm::PS256),
+            #[cfg(feature = "rsa")]
             "PS384" => Ok(Algorithm::PS384),
+            #[cfg(feature = "rsa")]
             "PS512" => Ok(Algorithm::PS512),
+            #[cfg(feature = "rsa")]
             "RS512" => Ok(Algorithm::RS512),
             "EdDSA" => Ok(Algorithm::EdDSA),
             _ => Err(ErrorKind::InvalidAlgorithmName.into()),
@@ -91,6 +106,7 @@ impl Algorithm {
     pub(crate) fn family(self) -> AlgorithmFamily {
         match self {
             Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => AlgorithmFamily::Hmac,
+            #[cfg(feature = "rsa")]
             Algorithm::RS256
             | Algorithm::RS384
             | Algorithm::RS512
@@ -115,12 +131,15 @@ mod tests {
         assert!(Algorithm::from_str("HS256").is_ok());
         assert!(Algorithm::from_str("HS384").is_ok());
         assert!(Algorithm::from_str("HS512").is_ok());
-        assert!(Algorithm::from_str("RS256").is_ok());
-        assert!(Algorithm::from_str("RS384").is_ok());
-        assert!(Algorithm::from_str("RS512").is_ok());
-        assert!(Algorithm::from_str("PS256").is_ok());
-        assert!(Algorithm::from_str("PS384").is_ok());
-        assert!(Algorithm::from_str("PS512").is_ok());
+        #[cfg(feature = "rsa")]
+        {
+            assert!(Algorithm::from_str("RS256").is_ok());
+            assert!(Algorithm::from_str("RS384").is_ok());
+            assert!(Algorithm::from_str("RS512").is_ok());
+            assert!(Algorithm::from_str("PS256").is_ok());
+            assert!(Algorithm::from_str("PS384").is_ok());
+            assert!(Algorithm::from_str("PS512").is_ok());
+        }
         assert!(Algorithm::from_str("").is_err());
     }
 }

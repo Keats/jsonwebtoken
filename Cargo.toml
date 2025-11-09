@@ -64,10 +64,10 @@ time = { version = "0.3", features = ["wasm-bindgen"] }
 criterion = { version = "0.4", default-features = false }
 
 [features]
-default = ["use_pem"]
+default = ["use_pem", "rsa"]
 use_pem = ["pem", "simple_asn1"]
-rust_crypto = ["ed25519-dalek", "hmac", "p256", "p384", "rand", "rsa", "sha2"]
-aws_lc_rs = ["aws-lc-rs"]
+rust_crypto = ["ed25519-dalek", "hmac", "p256", "p384", "rand", "sha2"]
+aws_lc_rs = ["aws-lc-rs", "rsa"]
 
 [[bench]]
 name = "jwt"

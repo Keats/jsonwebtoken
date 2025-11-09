@@ -22,7 +22,7 @@ use aws_sig::KeyPair;
 use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 #[cfg(feature = "rust_crypto")]
 use p384::ecdsa::SigningKey as P384SigningKey;
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(feature = "rust_crypto", feature = "rsa"))]
 use rsa::{RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts};
 #[cfg(feature = "rust_crypto")]
 use sha2::{Digest, Sha256, Sha384, Sha512};
@@ -177,10 +177,13 @@ pub enum KeyAlgorithm {
     /// ECDSA using SHA-384
     ES384,
 
+    #[cfg(feature = "rsa")]
     /// RSASSA-PKCS1-v1_5 using SHA-256
     RS256,
+    #[cfg(feature = "rsa")]
     /// RSASSA-PKCS1-v1_5 using SHA-384
     RS384,
+    #[cfg(feature = "rsa")]
     /// RSASSA-PKCS1-v1_5 using SHA-512
     RS512,
 
@@ -219,11 +222,17 @@ impl FromStr for KeyAlgorithm {
             "HS512" => Ok(KeyAlgorithm::HS512),
             "ES256" => Ok(KeyAlgorithm::ES256),
             "ES384" => Ok(KeyAlgorithm::ES384),
+            #[cfg(feature = "rsa")]
             "RS256" => Ok(KeyAlgorithm::RS256),
+            #[cfg(feature = "rsa")]
             "RS384" => Ok(KeyAlgorithm::RS384),
+            #[cfg(feature = "rsa")]
             "PS256" => Ok(KeyAlgorithm::PS256),
+            #[cfg(feature = "rsa")]
             "PS384" => Ok(KeyAlgorithm::PS384),
+            #[cfg(feature = "rsa")]
             "PS512" => Ok(KeyAlgorithm::PS512),
+            #[cfg(feature = "rsa")]
             "RS512" => Ok(KeyAlgorithm::RS512),
             "EdDSA" => Ok(KeyAlgorithm::EdDSA),
             "RSA1_5" => Ok(KeyAlgorithm::RSA1_5),
@@ -417,6 +426,7 @@ pub struct OctetKeyPairParameters {
 #[serde(untagged)]
 pub enum AlgorithmParameters {
     EllipticCurve(EllipticCurveKeyParameters),
+    #[cfg(feature = "rsa")]
     RSA(RSAKeyParameters),
     OctetKey(OctetKeyParameters),
     OctetKeyPair(OctetKeyPairParameters),
@@ -448,7 +458,7 @@ fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<
     Ok((components.n, components.e))
 }
 
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(feature = "rust_crypto", feature = "rsa"))]
 fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let private_key = RsaPrivateKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
@@ -553,11 +563,17 @@ impl Jwk {
                     Algorithm::HS512 => KeyAlgorithm::HS512,
                     Algorithm::ES256 => KeyAlgorithm::ES256,
                     Algorithm::ES384 => KeyAlgorithm::ES384,
+                    #[cfg(feature = "rsa")]
                     Algorithm::RS256 => KeyAlgorithm::RS256,
+                    #[cfg(feature = "rsa")]
                     Algorithm::RS384 => KeyAlgorithm::RS384,
+                    #[cfg(feature = "rsa")]
                     Algorithm::RS512 => KeyAlgorithm::RS512,
+                    #[cfg(feature = "rsa")]
                     Algorithm::PS256 => KeyAlgorithm::PS256,
+                    #[cfg(feature = "rsa")]
                     Algorithm::PS384 => KeyAlgorithm::PS384,
+                    #[cfg(feature = "rsa")]
                     Algorithm::PS512 => KeyAlgorithm::PS512,
                     Algorithm::EdDSA => KeyAlgorithm::EdDSA,
                 }),
@@ -570,6 +586,7 @@ impl Jwk {
                         value: b64_encode(&key.content),
                     })
                 }
+                #[cfg(feature = "rsa")]
                 crate::algorithms::AlgorithmFamily::Rsa => {
                     let (n, e) = extract_rsa_public_key_components(&key.content)?;
                     AlgorithmParameters::RSA(RSAKeyParameters {
@@ -611,6 +628,7 @@ impl Jwk {
                 }
                 EllipticCurve::Ed25519 => panic!("EllipticCurve can't contain this curve type"),
             },
+            #[cfg(feature = "rsa")]
             AlgorithmParameters::RSA(a) => {
                 format!(
                     r#"{{"e":"{}","kty":{},"n":"{}"}}"#,
@@ -711,6 +729,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "rsa")]
     #[wasm_bindgen_test]
     fn check_thumbprint() {
         let tp = Jwk {

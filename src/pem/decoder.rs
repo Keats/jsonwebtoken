@@ -168,6 +168,7 @@ impl PemEncodedKey {
         }
     }
 
+    #[cfg(feature = "rsa")]
     /// Can be PKCS1 or PKCS8
     pub fn as_rsa_key(&self) -> Result<&[u8]> {
         match self.standard {

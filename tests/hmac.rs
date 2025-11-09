@@ -19,6 +19,7 @@ pub struct Claims {
     exp: i64,
 }
 
+#[cfg(feature = "rsa")]
 #[test]
 #[wasm_bindgen_test]
 fn sign_hs256() {
@@ -185,6 +186,7 @@ fn decode_token_invalid_signature() {
     assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidSignature);
 }
 
+#[cfg(feature = "rsa")]
 #[test]
 #[wasm_bindgen_test]
 fn decode_token_wrong_algorithm() {
@@ -197,6 +199,7 @@ fn decode_token_wrong_algorithm() {
     assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidAlgorithm);
 }
 
+#[cfg(feature = "rsa")]
 #[test]
 #[wasm_bindgen_test]
 fn encode_wrong_alg_family() {
@@ -271,6 +274,7 @@ fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
     assert_eq!(err.kind(), &ErrorKind::ExpiredSignature);
 }
 
+#[cfg(feature = "rsa")]
 #[test]
 #[wasm_bindgen_test]
 fn verify_hs256_rfc7517_appendix_a1() {
