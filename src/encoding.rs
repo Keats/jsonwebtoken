@@ -26,7 +26,7 @@ use crate::crypto::aws_lc::{
 };
 #[cfg(feature = "rust_crypto")]
 use crate::crypto::rust_crypto::{
-    ecdsa::{Es256Signer, Es384Signer},
+    ecdsa::{Es256Signer, Es384Signer, Es256KSigner},
     eddsa::EdDSASigner,
     hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
     rsa::{
@@ -202,6 +202,7 @@ pub(crate) fn jwt_signer_factory(
         Algorithm::HS512 => Box::new(Hs512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES256 => Box::new(Es256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES384 => Box::new(Es384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::ES256K => Box::new(Es256KSigner::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS256 => Box::new(Rsa256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS384 => Box::new(Rsa384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS512 => Box::new(Rsa512Signer::new(key)?) as Box<dyn JwtSigner>,

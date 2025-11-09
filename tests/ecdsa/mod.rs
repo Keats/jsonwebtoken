@@ -106,6 +106,46 @@ fn ec_x_y() {
 #[cfg(feature = "use_pem")]
 #[test]
 #[wasm_bindgen_test]
+fn es256k() {
+    use jsonwebtoken::jwk::Jwk;
+    use k256::schnorr::SigningKey;
+    use serde_json::json;
+
+    // Private key errors out with invalid format or something?
+    let privkey = include_str!("private_es256k_key.pem");
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+
+    let jwk: Jwk = serde_json::from_value(json!({
+        "kty": "EC",
+        "x": "PIfJJc3sLXFLWsO6M-Hu7EUpdR56biBrImow8kA4SzY",
+        "y": "iwxBRgkMP8Pi9cBtINdqictnRuswTOzYiwS4l53x9Rk",
+        "crv": "secp256k1",
+        "kid": "ec01",
+        "alg": "ES256K",
+        "use": "sig"
+    })).unwrap();
+
+    let encrypted = encode(
+        &Header::new(Algorithm::ES256K),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey.as_ref()).unwrap(),
+    )
+    .unwrap();
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_jwk(&jwk).unwrap(),
+        &Validation::new(Algorithm::ES256),
+    );
+    assert!(res.is_ok());
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
 fn ed_jwk() {
     use jsonwebtoken::jwk::Jwk;
     use serde_json::json;
