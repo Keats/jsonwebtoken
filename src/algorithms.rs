@@ -25,7 +25,7 @@ impl AlgorithmFamily {
                 Algorithm::PS384,
                 Algorithm::PS512,
             ],
-            Self::Ec => &[Algorithm::ES256, Algorithm::ES384],
+            Self::Ec => &[Algorithm::ES256, Algorithm::ES384, Algorithm::ES256K],
             Self::Ed => &[Algorithm::EdDSA],
         }
     }
@@ -47,6 +47,9 @@ pub enum Algorithm {
     ES256,
     /// ECDSA using SHA-384
     ES384,
+
+    /// ECDSA using secp256k1
+    ES256K,
 
     /// RSASSA-PKCS1-v1_5 using SHA-256
     RS256,
@@ -74,6 +77,7 @@ impl FromStr for Algorithm {
             "HS384" => Ok(Algorithm::HS384),
             "HS512" => Ok(Algorithm::HS512),
             "ES256" => Ok(Algorithm::ES256),
+            "ES256K" => Ok(Algorithm::ES256K),
             "ES384" => Ok(Algorithm::ES384),
             "RS256" => Ok(Algorithm::RS256),
             "RS384" => Ok(Algorithm::RS384),
@@ -97,7 +101,7 @@ impl Algorithm {
             | Algorithm::PS256
             | Algorithm::PS384
             | Algorithm::PS512 => AlgorithmFamily::Rsa,
-            Algorithm::ES256 | Algorithm::ES384 => AlgorithmFamily::Ec,
+            Algorithm::ES256 | Algorithm::ES384 | Algorithm::ES256K => AlgorithmFamily::Ec,
             Algorithm::EdDSA => AlgorithmFamily::Ed,
         }
     }
@@ -112,6 +116,7 @@ mod tests {
     #[test]
     #[wasm_bindgen_test]
     fn generate_algorithm_enum_from_str() {
+        assert!(Algorithm::from_str("ES256K").is_ok());
         assert!(Algorithm::from_str("HS256").is_ok());
         assert!(Algorithm::from_str("HS384").is_ok());
         assert!(Algorithm::from_str("HS512").is_ok());

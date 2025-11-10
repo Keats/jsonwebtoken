@@ -23,6 +23,8 @@ use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 #[cfg(feature = "rust_crypto")]
 use p384::ecdsa::SigningKey as P384SigningKey;
 #[cfg(feature = "rust_crypto")]
+use k256::ecdsa::SigningKey as K256SigningKey;
+#[cfg(feature = "rust_crypto")]
 use rsa::{RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts};
 #[cfg(feature = "rust_crypto")]
 use sha2::{Digest, Sha256, Sha384, Sha512};
@@ -177,6 +179,9 @@ pub enum KeyAlgorithm {
     /// ECDSA using SHA-384
     ES384,
 
+    /// ECDSA using secp256k
+    ES256K,
+
     /// RSASSA-PKCS1-v1_5 using SHA-256
     RS256,
     /// RSASSA-PKCS1-v1_5 using SHA-384
@@ -219,6 +224,7 @@ impl FromStr for KeyAlgorithm {
             "HS512" => Ok(KeyAlgorithm::HS512),
             "ES256" => Ok(KeyAlgorithm::ES256),
             "ES384" => Ok(KeyAlgorithm::ES384),
+            "ES256K" => Ok(KeyAlgorithm::ES256K),
             "RS256" => Ok(KeyAlgorithm::RS256),
             "RS384" => Ok(KeyAlgorithm::RS384),
             "PS256" => Ok(KeyAlgorithm::PS256),
@@ -319,6 +325,9 @@ pub enum EllipticCurve {
     /// P-521 curve -- unsupported by `ring`.
     #[serde(rename = "P-521")]
     P521,
+    /// K-256 curve
+    #[serde(rename = "secp256k1")]
+    Secp256k1,
     /// Ed25519 curve
     #[serde(rename = "Ed25519")]
     Ed25519,
@@ -501,6 +510,18 @@ fn extract_ec_public_key_coordinates(
                 _ => Err(ErrorKind::InvalidEcdsaKey.into()),
             }
         }
+        Algorithm::ES256K => {
+            let signing_key = K256SigningKey::from_pkcs8_der(key_content)
+                .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+            let public_key = signing_key.verifying_key();
+            let encoded = public_key.to_encoded_point(false);
+            match encoded.coordinates() {
+                k256::elliptic_curve::sec1::Coordinates::Uncompressed { x, y } => {
+                    Ok((EllipticCurve::Secp256k1, x.to_vec(), y.to_vec()))
+                }
+                _ => Err(ErrorKind::InvalidEcdsaKey.into())
+            }
+        }
         Algorithm::ES384 => {
             let signing_key = P384SigningKey::from_pkcs8_der(key_content)
                 .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
@@ -553,6 +574,7 @@ impl Jwk {
                     Algorithm::HS512 => KeyAlgorithm::HS512,
                     Algorithm::ES256 => KeyAlgorithm::ES256,
                     Algorithm::ES384 => KeyAlgorithm::ES384,
+                    Algorithm::ES256K => KeyAlgorithm::ES256K,
                     Algorithm::RS256 => KeyAlgorithm::RS256,
                     Algorithm::RS384 => KeyAlgorithm::RS384,
                     Algorithm::RS512 => KeyAlgorithm::RS512,
@@ -600,7 +622,7 @@ impl Jwk {
     pub fn thumbprint(&self, hash_function: ThumbprintHash) -> String {
         let pre = match &self.algorithm {
             AlgorithmParameters::EllipticCurve(a) => match a.curve {
-                EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
+                EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 | EllipticCurve::Secp256k1 => {
                     format!(
                         r#"{{"crv":{},"kty":{},"x":"{}","y":"{}"}}"#,
                         serde_json::to_string(&a.curve).unwrap(),
@@ -627,7 +649,7 @@ impl Jwk {
                 )
             }
             AlgorithmParameters::OctetKeyPair(a) => match a.curve {
-                EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
+                EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 | EllipticCurve::Secp256k1 => {
                     panic!("OctetKeyPair can't contain this curve type")
                 }
                 EllipticCurve::Ed25519 => {

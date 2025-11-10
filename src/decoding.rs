@@ -26,7 +26,7 @@ use crate::crypto::aws_lc::{
 };
 #[cfg(feature = "rust_crypto")]
 use crate::crypto::rust_crypto::{
-    ecdsa::{Es256Verifier, Es384Verifier},
+    ecdsa::{Es256Verifier, Es384Verifier, Es256KVerifier},
     eddsa::EdDSAVerifier,
     hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
     rsa::{
@@ -326,6 +326,7 @@ pub fn jwt_verifier_factory(
         Algorithm::HS512 => Box::new(Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES256 => Box::new(Es256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES384 => Box::new(Es384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::ES256K => Box::new(Es256KVerifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS256 => Box::new(Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS384 => Box::new(Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS512 => Box::new(Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,
