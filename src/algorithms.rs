@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::{Error, ErrorKind, Result};
 
+/// Supported families of algorithms.
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum AlgorithmFamily {
     Hmac,
@@ -88,7 +89,7 @@ impl FromStr for Algorithm {
 }
 
 impl Algorithm {
-    pub(crate) fn family(self) -> AlgorithmFamily {
+    pub fn family(self) -> AlgorithmFamily {
         match self {
             Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => AlgorithmFamily::Hmac,
             Algorithm::RS256
