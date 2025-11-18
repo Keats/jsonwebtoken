@@ -93,7 +93,8 @@ impl FromStr for Algorithm {
 }
 
 impl Algorithm {
-    pub(crate) fn family(self) -> AlgorithmFamily {
+    /// The family of the algorithm.
+    pub fn family(self) -> AlgorithmFamily {
         match self {
             Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => AlgorithmFamily::Hmac,
             Algorithm::RS256
