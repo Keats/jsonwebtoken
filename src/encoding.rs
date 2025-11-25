@@ -17,7 +17,7 @@ use crate::serialization::{b64_encode, b64_encode_part};
 // Crypto
 #[cfg(feature = "aws_lc_rs")]
 use crate::crypto::aws_lc::{
-    ecdsa::{Es256Signer, Es384Signer},
+    ecdsa::{Es256Signer, Es384Signer, Es256KSigner},
     eddsa::EdDSASigner,
     hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
     rsa::{

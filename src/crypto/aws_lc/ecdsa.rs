@@ -76,8 +76,59 @@ macro_rules! define_ecdsa_verifier {
     };
 }
 
+macro_rules! define_ecdsa_signer_not_implemented {
+    ($name:ident, $alg:expr) => {
+        pub struct $name;
+
+        impl $name {
+            pub(crate) fn new(_encoding_key: &EncodingKey) -> Result<Self> {
+                return Err(new_error(ErrorKind::InvalidKeyFormat));
+            }
+        }
+
+        impl Signer<Vec<u8>> for $name {
+            fn try_sign(&self, _msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
+                return Err(Error::from_source(new_error(ErrorKind::InvalidKeyFormat)));
+            }
+        }
+
+        impl JwtSigner for $name {
+            fn algorithm(&self) -> Algorithm {
+                $alg
+            }
+        }
+    }
+}
+
+macro_rules! define_ecdsa_verifier_not_implemented {
+    ($name:ident, $alg:expr) => {
+        pub struct $name;
+
+        impl $name {
+            pub(crate) fn new(_decoding_key: &DecodingKey) -> Result<Self> {
+                return Err(new_error(ErrorKind::InvalidKeyFormat));
+            }
+        }
+
+        impl Verifier<Vec<u8>> for $name {
+            fn verify(&self, _msg: &[u8], _signature: &Vec<u8>) -> std::result::Result<(), Error> {
+                return Err(Error::from_source(new_error(ErrorKind::InvalidKeyFormat)));
+            }
+        }
+
+        impl JwtVerifier for $name {
+            fn algorithm(&self) -> Algorithm {
+                $alg
+            }
+        }
+    };
+}
+
 define_ecdsa_signer!(Es256Signer, Algorithm::ES256, &ECDSA_P256_SHA256_FIXED_SIGNING);
 define_ecdsa_verifier!(Es256Verifier, Algorithm::ES256, ECDSA_P256_SHA256_FIXED);
 
 define_ecdsa_signer!(Es384Signer, Algorithm::ES384, &ECDSA_P384_SHA384_FIXED_SIGNING);
 define_ecdsa_verifier!(Es384Verifier, Algorithm::ES384, ECDSA_P384_SHA384_FIXED);
+
+define_ecdsa_signer_not_implemented!(Es256KSigner, Algorithm::ES256K);
+define_ecdsa_verifier_not_implemented!(Es256KVerifier, Algorithm::ES256K);

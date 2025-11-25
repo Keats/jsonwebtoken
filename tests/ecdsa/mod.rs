@@ -103,7 +103,7 @@ fn ec_x_y() {
     assert!(res.is_ok());
 }
 
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rust_crypto"))]
 #[test]
 #[wasm_bindgen_test]
 fn es256k_pem() {
@@ -131,7 +131,7 @@ fn es256k_pem() {
     assert!(res.is_ok());
 }
 
-#[cfg(feature = "use_pem")]
+#[cfg(all(feature = "use_pem", feature = "rust_crypto"))]
 #[test]
 #[wasm_bindgen_test]
 fn es256k_jwk() {

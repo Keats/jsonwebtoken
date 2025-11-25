@@ -16,7 +16,7 @@ use crate::validation::{Validation, validate};
 // Crypto
 #[cfg(feature = "aws_lc_rs")]
 use crate::crypto::aws_lc::{
-    ecdsa::{Es256Verifier, Es384Verifier},
+    ecdsa::{Es256Verifier, Es384Verifier, Es256KVerifier},
     eddsa::EdDSAVerifier,
     hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
     rsa::{
