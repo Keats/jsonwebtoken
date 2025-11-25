@@ -103,6 +103,65 @@ fn ec_x_y() {
     assert!(res.is_ok());
 }
 
+#[cfg(all(feature = "use_pem", feature = "rust_crypto"))]
+#[test]
+#[wasm_bindgen_test]
+fn es256k_pem() {
+    let privkey = include_str!("private_es256k_key.pem");
+    let pubkey = include_str!("public_es256k_key.pem");
+
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+
+    let encrypted = encode(
+        &Header::new(Algorithm::ES256K),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey.as_ref()).unwrap(),
+    )
+    .unwrap();
+
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_ec_pem(pubkey.as_ref()).unwrap(),
+        &Validation::new(Algorithm::ES256K),
+    );
+    assert!(res.is_ok());
+}
+
+#[cfg(all(feature = "use_pem", feature = "rust_crypto"))]
+#[test]
+#[wasm_bindgen_test]
+fn es256k_jwk() {
+    use jsonwebtoken::jwk::Jwk;
+
+    let privkey = include_str!("private_es256k_key.pem");
+    let pubkey = include_str!("public_es256k_jwk.json");
+    let jwk: Jwk = serde_json::from_str(pubkey).unwrap();
+
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+
+    let encrypted = encode(
+        &Header::new(Algorithm::ES256K),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey.as_ref()).unwrap(),
+    )
+    .unwrap();
+
+    let res = decode::<Claims>(
+        &encrypted,
+        &DecodingKey::from_jwk(&jwk).unwrap(),
+        &Validation::new(Algorithm::ES256K),
+    );
+    assert!(res.is_ok());
+}
+
 #[cfg(feature = "use_pem")]
 #[test]
 #[wasm_bindgen_test]
