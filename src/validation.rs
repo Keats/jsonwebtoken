@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer};
 
-use crate::algorithms::Algorithm;
+use crate::algorithms::{Algorithm, AlgorithmFamily};
 use crate::errors::{ErrorKind, Result, new_error};
 
 /// Contains the various validations that are applied after decoding a JWT.
@@ -111,12 +111,21 @@ pub struct Validation {
 impl Validation {
     /// Create a default validation setup allowing the given alg
     pub fn new(alg: Algorithm) -> Validation {
+        Self::new_impl(vec![alg])
+    }
+
+    /// Create a default validation setup allowing any algorithm in the family
+    pub fn new_for_family(family: AlgorithmFamily) -> Validation {
+        Self::new_impl(family.algorithms().into_iter().copied().collect())
+    }
+
+    fn new_impl(algorithms: Vec<Algorithm>) -> Validation {
         let mut required_claims = HashSet::with_capacity(1);
         required_claims.insert("exp".to_owned());
 
         Validation {
             required_spec_claims: required_claims,
-            algorithms: vec![alg],
+            algorithms,
             leeway: 60,
             reject_tokens_expiring_in_less_than: 0,
 
