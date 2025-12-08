@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::errors::{Error, ErrorKind, Result};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[allow(missing_docs)]
 pub enum AlgorithmFamily {
     Hmac,
     Rsa,
