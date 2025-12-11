@@ -11,7 +11,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use crate::crypto::CryptoProvider;
 use crate::serialization::b64_encode;
 use crate::{
-    Algorithm, EncodingKey,
+    Algorithm, DecodingKey, EncodingKey,
+    decoding::DecodingKeyKind,
     errors::{self, Error, ErrorKind},
 };
 
@@ -218,6 +219,25 @@ impl FromStr for KeyAlgorithm {
             "RSA-OAEP" => Ok(KeyAlgorithm::RSA_OAEP),
             "RSA-OAEP-256" => Ok(KeyAlgorithm::RSA_OAEP_256),
             _ => Err(ErrorKind::InvalidAlgorithmName.into()),
+        }
+    }
+}
+
+impl From<Algorithm> for KeyAlgorithm {
+    fn from(algorithm: Algorithm) -> Self {
+        match algorithm {
+            Algorithm::HS256 => KeyAlgorithm::HS256,
+            Algorithm::HS384 => KeyAlgorithm::HS384,
+            Algorithm::HS512 => KeyAlgorithm::HS512,
+            Algorithm::ES256 => KeyAlgorithm::ES256,
+            Algorithm::ES384 => KeyAlgorithm::ES384,
+            Algorithm::RS256 => KeyAlgorithm::RS256,
+            Algorithm::RS384 => KeyAlgorithm::RS384,
+            Algorithm::RS512 => KeyAlgorithm::RS512,
+            Algorithm::PS256 => KeyAlgorithm::PS256,
+            Algorithm::PS384 => KeyAlgorithm::PS384,
+            Algorithm::PS512 => KeyAlgorithm::PS512,
+            Algorithm::EdDSA => KeyAlgorithm::EdDSA,
         }
     }
 }
@@ -437,23 +457,7 @@ impl Jwk {
     }
     pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> crate::errors::Result<Self> {
         Ok(Self {
-            common: CommonParameters {
-                key_algorithm: Some(match alg {
-                    Algorithm::HS256 => KeyAlgorithm::HS256,
-                    Algorithm::HS384 => KeyAlgorithm::HS384,
-                    Algorithm::HS512 => KeyAlgorithm::HS512,
-                    Algorithm::ES256 => KeyAlgorithm::ES256,
-                    Algorithm::ES384 => KeyAlgorithm::ES384,
-                    Algorithm::RS256 => KeyAlgorithm::RS256,
-                    Algorithm::RS384 => KeyAlgorithm::RS384,
-                    Algorithm::RS512 => KeyAlgorithm::RS512,
-                    Algorithm::PS256 => KeyAlgorithm::PS256,
-                    Algorithm::PS384 => KeyAlgorithm::PS384,
-                    Algorithm::PS512 => KeyAlgorithm::PS512,
-                    Algorithm::EdDSA => KeyAlgorithm::EdDSA,
-                }),
-                ..Default::default()
-            },
+            common: CommonParameters { key_algorithm: Some(alg.into()), ..Default::default() },
             algorithm: match key.family() {
                 crate::algorithms::AlgorithmFamily::Hmac => {
                     AlgorithmParameters::OctetKey(OctetKeyParameters {
@@ -463,8 +467,7 @@ impl Jwk {
                 }
                 crate::algorithms::AlgorithmFamily::Rsa => {
                     let (n, e) = (CryptoProvider::get_default()
-                        .jwk_utils
-                        .extract_rsa_public_key_components)(
+                        .rsa_pub_components_from_private_key)(
                         key.inner()
                     )?;
                     AlgorithmParameters::RSA(RSAKeyParameters {
@@ -475,8 +478,7 @@ impl Jwk {
                 }
                 crate::algorithms::AlgorithmFamily::Ec => {
                     let (curve, x, y) = (CryptoProvider::get_default()
-                        .jwk_utils
-                        .extract_ec_public_key_coordinates)(
+                        .ec_pub_components_from_private_key)(
                         key.inner(), alg
                     )?;
                     AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
@@ -487,7 +489,63 @@ impl Jwk {
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Ed => {
-                    unimplemented!();
+                    unimplemented!("Edwards curve is not supported");
+                }
+            },
+        })
+    }
+
+    pub fn from_decoding_key(
+        key: &DecodingKey,
+        alg: Option<Algorithm>,
+    ) -> crate::errors::Result<Self> {
+        Ok(Self {
+            common: CommonParameters { key_algorithm: alg.map(|a| a.into()), ..Default::default() },
+            algorithm: match key.family() {
+                crate::algorithms::AlgorithmFamily::Hmac => {
+                    let secret = match &key.kind() {
+                        DecodingKeyKind::SecretOrDer(secret) => secret,
+                        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
+                    };
+
+                    AlgorithmParameters::OctetKey(OctetKeyParameters {
+                        key_type: OctetKeyType::Octet,
+                        value: b64_encode(secret),
+                    })
+                }
+                crate::algorithms::AlgorithmFamily::Rsa => {
+                    let (n, e) = match &key.kind() {
+                        DecodingKeyKind::RsaModulusExponent { n, e } => {
+                            (b64_encode(n), b64_encode(e))
+                        }
+                        DecodingKeyKind::SecretOrDer(der) => {
+                            let (n, e) = (CryptoProvider::get_default()
+                                .rsa_pub_components_from_public_key)(
+                                der
+                            )?;
+                            (b64_encode(n), b64_encode(e))
+                        }
+                    };
+
+                    AlgorithmParameters::RSA(RSAKeyParameters { key_type: RSAKeyType::RSA, n, e })
+                }
+                crate::algorithms::AlgorithmFamily::Ec => {
+                    let (curve, x, y) = match &key.kind() {
+                        DecodingKeyKind::SecretOrDer(pub_bytes) => {
+                            crate::crypto::ec_components_from_public_key(pub_bytes)?
+                        }
+                        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
+                    };
+
+                    AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
+                        key_type: EllipticCurveKeyType::EC,
+                        curve,
+                        x: b64_encode(x),
+                        y: b64_encode(y),
+                    })
+                }
+                crate::algorithms::AlgorithmFamily::Ed => {
+                    unimplemented!("Edwards curve is not supported");
                 }
             },
         })
@@ -540,10 +598,7 @@ impl Jwk {
             },
         };
 
-        b64_encode((CryptoProvider::get_default().jwk_utils.compute_digest)(
-            pre.as_bytes(),
-            hash_function,
-        ))
+        b64_encode((CryptoProvider::get_default().compute_digest)(pre.as_bytes(), hash_function))
     }
 }
 
@@ -573,6 +628,7 @@ mod tests {
         ThumbprintHash,
     };
     use crate::serialization::b64_encode;
+    use crate::{DecodingKey, EncodingKey};
 
     #[test]
     #[wasm_bindgen_test]
@@ -626,5 +682,33 @@ mod tests {
         }
             .thumbprint(ThumbprintHash::SHA256);
         assert_eq!(tp.as_str(), "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
+    }
+
+    #[test]
+    #[cfg(feature = "use_pem")]
+    fn check_jwk_from_decoding_key_rsa() {
+        let enc_key =
+            EncodingKey::from_rsa_pem(include_bytes!("../tests/rsa/private_rsa_key_pkcs8.pem"))
+                .unwrap();
+        let dec_key =
+            DecodingKey::from_rsa_pem(include_bytes!("../tests/rsa/public_rsa_key_pkcs8.pem"))
+                .unwrap();
+        let expected_jwk = Jwk::from_encoding_key(&enc_key, Algorithm::RS256).unwrap();
+        let jwk = Jwk::from_decoding_key(&dec_key, Some(Algorithm::RS256)).unwrap();
+        assert_eq!(jwk, expected_jwk);
+    }
+
+    #[test]
+    #[cfg(feature = "use_pem")]
+    fn check_jwk_from_decoding_key_ec() {
+        let enc_key =
+            EncodingKey::from_ec_pem(include_bytes!("../tests/ecdsa/private_ecdsa_key.pem"))
+                .unwrap();
+        let dec_key =
+            DecodingKey::from_ec_pem(include_bytes!("../tests/ecdsa/public_ecdsa_key.pem"))
+                .unwrap();
+        let expected_jwk = Jwk::from_encoding_key(&enc_key, Algorithm::ES256).unwrap();
+        let jwk = Jwk::from_decoding_key(&dec_key, Some(Algorithm::ES256)).unwrap();
+        assert_eq!(jwk, expected_jwk);
     }
 }
