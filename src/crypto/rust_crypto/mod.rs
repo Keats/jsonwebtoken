@@ -1,11 +1,15 @@
-use ::rsa::{RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts};
+use ::rsa::{
+    RsaPrivateKey, RsaPublicKey,
+    pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
+    traits::PublicKeyParts,
+};
 use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 use p384::ecdsa::SigningKey as P384SigningKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
 use crate::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier},
+    crypto::{CryptoProvider, JwtSigner, JwtVerifier},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -15,14 +19,20 @@ mod eddsa;
 mod hmac;
 mod rsa;
 
-fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+fn rsa_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let private_key = RsaPrivateKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let public_key = private_key.to_public_key();
     Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
 }
 
-fn extract_ec_public_key_coordinates(
+fn rsa_components_from_public_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+    let public_key = RsaPublicKey::from_pkcs1_der(key_content)
+        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+    Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
+}
+
+fn ec_components_from_private_key(
     key_content: &[u8],
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
@@ -108,9 +118,8 @@ fn new_verifier(
 pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     signer_factory: new_signer,
     verifier_factory: new_verifier,
-    jwk_utils: JwkUtils {
-        extract_rsa_public_key_components,
-        extract_ec_public_key_coordinates,
-        compute_digest,
-    },
+    rsa_pub_components_from_private_key: rsa_components_from_private_key,
+    rsa_pub_components_from_public_key: rsa_components_from_public_key,
+    ec_pub_components_from_private_key: ec_components_from_private_key,
+    compute_digest,
 };
