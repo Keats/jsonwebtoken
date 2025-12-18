@@ -18,13 +18,13 @@ use crate::{
 use aws_lc_rs::{digest, signature as aws_sig};
 #[cfg(feature = "aws_lc_rs")]
 use aws_sig::KeyPair;
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 use p384::ecdsa::SigningKey as P384SigningKey;
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 use rsa::{RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts};
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
 /// The intended usage of the public `KeyType`. This enum is serialized `untagged`
@@ -448,7 +448,7 @@ fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<
     Ok((components.n, components.e))
 }
 
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let private_key = RsaPrivateKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
@@ -483,7 +483,7 @@ fn extract_ec_public_key_coordinates(
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 fn extract_ec_public_key_coordinates(
     key_content: &[u8],
     alg: Algorithm,
@@ -527,7 +527,7 @@ fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
     digest::digest(algorithm, data).as_ref().to_vec()
 }
 
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
     match hash_function {
         ThumbprintHash::SHA256 => Sha256::digest(data).to_vec(),

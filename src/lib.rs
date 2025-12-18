@@ -5,11 +5,6 @@
 
 #![deny(missing_docs)]
 
-#[cfg(all(feature = "rust_crypto", feature = "aws_lc_rs"))]
-compile_error!(
-    "feature \"rust_crypto\" and feature \"aws_lc_rs\" cannot be enabled at the same time"
-);
-
 #[cfg(not(any(feature = "rust_crypto", feature = "aws_lc_rs")))]
 compile_error!("at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled");
 

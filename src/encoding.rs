@@ -24,7 +24,7 @@ use crate::crypto::aws_lc::{
         Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer,
     },
 };
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 use crate::crypto::rust_crypto::{
     ecdsa::{Es256Signer, Es384Signer},
     eddsa::EdDSASigner,

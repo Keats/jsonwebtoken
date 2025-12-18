@@ -24,7 +24,7 @@ use crate::crypto::aws_lc::{
         RsaPss512Verifier,
     },
 };
-#[cfg(feature = "rust_crypto")]
+#[cfg(all(not(feature = "aws_lc_rs"), feature = "rust_crypto"))]
 use crate::crypto::rust_crypto::{
     ecdsa::{Es256Verifier, Es384Verifier},
     eddsa::EdDSAVerifier,
