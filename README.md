@@ -8,14 +8,14 @@ See [JSON Web Tokens](https://en.wikipedia.org/wiki/JSON_Web_Token) for more inf
 Add the following to Cargo.toml:
 
 ```toml
-# You will have to select either `aws_lc_rs` or `rust_crypto` as backend if you're not using your own
+# You must select exactly one crypto backend: aws_lc_rs, rust_crypto, or openssl_crypto
 jsonwebtoken = { version = "10", features = ["aws_lc_rs"] }
 # If you do not need pem decoding, you can disable the default feature `use_pem` that way:
 # jsonwebtoken = {version = "10", default-features = false, features = ["aws_lc_rs"] }
 serde = {version = "1.0", features = ["derive"] }
 ```
 
-Two crypto backends are available via features, `aws_lc_rs` and `rust_crypto`, exactly one of which must be enabled.
+Three crypto backends are available via features: `aws_lc_rs`, `rust_crypto`, and `openssl_crypto`. Exactly one must be enabled.
 
 The minimum required Rust version (MSRV) is specified in the `rust-version` field in this project's [Cargo.toml](Cargo.toml).
 

@@ -456,6 +456,16 @@ fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<
     Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
 }
 
+#[cfg(feature = "openssl_crypto")]
+fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+    use openssl::rsa::Rsa;
+    let rsa = Rsa::private_key_from_der(key_content)
+        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+    let n = rsa.n().to_vec();
+    let e = rsa.e().to_vec();
+    Ok((n, e))
+}
+
 #[cfg(feature = "aws_lc_rs")]
 fn extract_ec_public_key_coordinates(
     key_content: &[u8],
@@ -517,6 +527,37 @@ fn extract_ec_public_key_coordinates(
     }
 }
 
+#[cfg(feature = "openssl_crypto")]
+fn extract_ec_public_key_coordinates(
+    key_content: &[u8],
+    alg: Algorithm,
+) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
+    use openssl::bn::BigNumContext;
+    use openssl::pkey::PKey;
+
+    let curve = match alg {
+        Algorithm::ES256 => EllipticCurve::P256,
+        Algorithm::ES384 => EllipticCurve::P384,
+        _ => return Err(ErrorKind::InvalidEcdsaKey.into()),
+    };
+
+    let ec_key = PKey::private_key_from_der(key_content)
+        .and_then(|pkey| pkey.ec_key())
+        .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+
+    let public_key = ec_key.public_key();
+
+    let mut ctx = BigNumContext::new().map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+    let mut x = openssl::bn::BigNum::new().map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+    let mut y = openssl::bn::BigNum::new().map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+
+    public_key
+        .affine_coordinates(ec_key.group(), &mut x, &mut y, &mut ctx)
+        .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+
+    Ok((curve, x.to_vec(), y.to_vec()))
+}
+
 #[cfg(feature = "aws_lc_rs")]
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
     let algorithm = match hash_function {
@@ -534,6 +575,19 @@ fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
         ThumbprintHash::SHA384 => Sha384::digest(data).to_vec(),
         ThumbprintHash::SHA512 => Sha512::digest(data).to_vec(),
     }
+}
+
+#[cfg(feature = "openssl_crypto")]
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
+    use openssl::hash::{MessageDigest, hash};
+
+    let digest = match hash_function {
+        ThumbprintHash::SHA256 => MessageDigest::sha256(),
+        ThumbprintHash::SHA384 => MessageDigest::sha384(),
+        ThumbprintHash::SHA512 => MessageDigest::sha512(),
+    };
+
+    hash(digest, data).map(|d| d.to_vec()).expect("Failed to compute digest")
 }
 
 impl Jwk {

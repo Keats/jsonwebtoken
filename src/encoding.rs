@@ -24,6 +24,15 @@ use crate::crypto::aws_lc::{
         Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer,
     },
 };
+#[cfg(feature = "openssl_crypto")]
+use crate::crypto::openssl::{
+    ecdsa::{Es256Signer, Es384Signer},
+    eddsa::EdDSASigner,
+    hmac::{Hs256Signer, Hs384Signer, Hs512Signer},
+    rsa::{
+        Rsa256Signer, Rsa384Signer, Rsa512Signer, RsaPss256Signer, RsaPss384Signer, RsaPss512Signer,
+    },
+};
 #[cfg(feature = "rust_crypto")]
 use crate::crypto::rust_crypto::{
     ecdsa::{Es256Signer, Es384Signer},

@@ -10,8 +10,20 @@ compile_error!(
     "feature \"rust_crypto\" and feature \"aws_lc_rs\" cannot be enabled at the same time"
 );
 
-#[cfg(not(any(feature = "rust_crypto", feature = "aws_lc_rs")))]
-compile_error!("at least one of the features \"rust_crypto\" or \"aws_lc_rs\" must be enabled");
+#[cfg(all(feature = "rust_crypto", feature = "openssl_crypto"))]
+compile_error!(
+    "feature \"rust_crypto\" and feature \"openssl_crypto\" cannot be enabled at the same time"
+);
+
+#[cfg(all(feature = "aws_lc_rs", feature = "openssl_crypto"))]
+compile_error!(
+    "feature \"aws_lc_rs\" and feature \"openssl_crypto\" cannot be enabled at the same time"
+);
+
+#[cfg(not(any(feature = "rust_crypto", feature = "aws_lc_rs", feature = "openssl_crypto")))]
+compile_error!(
+    "at least one of the features \"rust_crypto\", \"aws_lc_rs\", or \"openssl_crypto\" must be enabled"
+);
 
 pub use algorithms::Algorithm;
 pub use decoding::{DecodingKey, TokenData, decode, decode_header};

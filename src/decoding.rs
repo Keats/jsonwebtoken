@@ -24,6 +24,16 @@ use crate::crypto::aws_lc::{
         RsaPss512Verifier,
     },
 };
+#[cfg(feature = "openssl_crypto")]
+use crate::crypto::openssl::{
+    ecdsa::{Es256Verifier, Es384Verifier},
+    eddsa::EdDSAVerifier,
+    hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
+    rsa::{
+        Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
+        RsaPss512Verifier,
+    },
+};
 #[cfg(feature = "rust_crypto")]
 use crate::crypto::rust_crypto::{
     ecdsa::{Es256Verifier, Es384Verifier},
