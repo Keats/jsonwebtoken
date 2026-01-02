@@ -5,10 +5,15 @@ use serde::{Deserialize, Serialize};
 use crate::errors::{Error, ErrorKind, Result};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
+/// Supported families of algorithms.
 pub enum AlgorithmFamily {
+    /// HMAC shared secret family.
     Hmac,
+    /// RSA-based public key family.
     Rsa,
+    /// Edwards curve public key family.
     Ec,
+    /// Elliptic curve public key family.
     Ed,
 }
 
@@ -34,6 +39,7 @@ impl AlgorithmFamily {
 /// The algorithms supported for signing/verifying JWTs
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Default, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum Algorithm {
     /// HMAC using SHA-256
     #[default]
