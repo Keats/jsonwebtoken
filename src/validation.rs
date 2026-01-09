@@ -200,10 +200,11 @@ pub(crate) struct ClaimsForValidation<'a> {
     aud: TryParse<Audience<'a>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 enum TryParse<T> {
     Parsed(T),
     FailedToParse,
+    #[default]
     NotPresent,
 }
 
@@ -216,12 +217,6 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for TryParse<T> {
             Ok(None) => TryParse::NotPresent,
             Err(_) => TryParse::FailedToParse,
         })
-    }
-}
-
-impl<T> Default for TryParse<T> {
-    fn default() -> Self {
-        Self::NotPresent
     }
 }
 

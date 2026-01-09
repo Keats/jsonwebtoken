@@ -1,5 +1,14 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+## 10.3.0 (2026-01-08)
+
+- Update rsa to 0.9.10, aws-lc-rs to 1.15.2, p384 to 0.13.1,sha2 to 0.10.9,wasm-bindgen-test 0.3.56 and ed25519-dalek to
+  2.2.0
+- Fix: When the prime number is equal to 1, there may be a panic in the RSA Crate
+- Update the component version in ci.yml
+
 ## 10.2.0 (2025-11-06)
 
 - Remove `Clone` bound from decode functions
@@ -34,7 +43,6 @@
 
 - Supports deserialization of unsupported algorithms for JWKs
 
-
 ## 9.0.0 (2023-10-16)
 
 - Update ring
@@ -45,12 +53,10 @@
 - Update base64
 - Implement Clone for TokenData<T> if T impls Clone
 
-
 ## 8.2.0 (2022-12-03)
 
 - Add DecodingKey::from_jwk
 - Can now use PEM certificates if you have the `use_pem` feature enabled
-
 
 ## 8.1.1 (2022-06-17)
 
@@ -65,9 +71,8 @@
 
 - Fix documentation of leeway
 
-
 ## 8.0.0 (2022-02-02)
- 
+
 - Add EdDSA algorithm
 - `sign`/`verify` now takes a `&[u8]` instead of `&str` to be more flexible
 - `DecodingKey` now own its data
@@ -104,7 +109,7 @@
 - Add support for PS256, PS384 and PS512
 - Add support for verifying with modulus/exponent components for RSA
 - Update to 2018 edition
-- Changed aud field type in Validation to `Option<HashSet<String>>`.  Audience 
+- Changed aud field type in Validation to `Option<HashSet<String>>`. Audience
   validation now tests for "any-of-these" audience membership.
 - Add support for keys in PEM format
 - Add EncodingKey/DecodingKey API to improve performance and UX
@@ -143,6 +148,7 @@
 ## 3.0.0 (2017-09-08)
 
 ### Breaking changes
+
 - Remove `validate_signature` from `Validation`, use `decode_header` instead if you don't know the alg used
 - Make `typ` optional in header, some providers apparently don't use it
 
