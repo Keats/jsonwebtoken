@@ -37,7 +37,7 @@ fn verify_rsa(
     msg: &[u8],
     signature: &[u8],
 ) -> std::result::Result<(), signature::Error> {
-    match &decoding_key.kind {
+    match decoding_key.kind() {
         DecodingKeyKind::SecretOrDer(bytes) => {
             let public_key = crypto_sig::UnparsedPublicKey::new(algorithm, bytes);
             public_key.verify(msg, signature).map_err(signature::Error::from_source)?;
@@ -57,7 +57,7 @@ macro_rules! define_rsa_signer {
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-                if encoding_key.family != AlgorithmFamily::Rsa {
+                if encoding_key.family() != AlgorithmFamily::Rsa {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
@@ -85,7 +85,7 @@ macro_rules! define_rsa_verifier {
 
         impl $name {
             pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-                if decoding_key.family != AlgorithmFamily::Rsa {
+                if decoding_key.family() != AlgorithmFamily::Rsa {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 

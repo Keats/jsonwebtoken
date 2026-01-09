@@ -5,10 +5,15 @@ use serde::{Deserialize, Serialize};
 use crate::errors::{Error, ErrorKind, Result};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
+/// Supported families of algorithms.
 pub enum AlgorithmFamily {
+    /// HMAC shared secret family.
     Hmac,
+    /// RSA-based public key family.
     Rsa,
+    /// Edwards curve public key family.
     Ec,
+    /// Elliptic curve public key family.
     Ed,
 }
 
