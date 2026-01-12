@@ -48,6 +48,8 @@ pub enum ErrorKind {
     InvalidRsaKey(String),
     /// We could not sign with the given key
     RsaFailedSigning,
+    /// Signing failed
+    Signing(String),
     /// When the algorithm from string doesn't match the one passed to `from_str`
     InvalidAlgorithmName,
     /// When a key is provided with an invalid format
@@ -91,6 +93,7 @@ impl StdError for Error {
             ErrorKind::InvalidEcdsaKey => None,
             ErrorKind::InvalidEddsaKey => None,
             ErrorKind::RsaFailedSigning => None,
+            ErrorKind::Signing(_) => None,
             ErrorKind::InvalidRsaKey(_) => None,
             ErrorKind::ExpiredSignature => None,
             ErrorKind::MissingAlgorithm => None,
@@ -129,6 +132,7 @@ impl fmt::Display for Error {
             | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
             ErrorKind::MissingRequiredClaim(c) => write!(f, "Missing required claim: {}", c),
             ErrorKind::InvalidRsaKey(msg) => write!(f, "RSA key invalid: {}", msg),
+            ErrorKind::Signing(msg) => write!(f, "Signing failed: {}", msg),
             ErrorKind::Json(err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Base64(err) => write!(f, "Base64 error: {}", err),
@@ -167,6 +171,12 @@ impl From<::std::string::FromUtf8Error> for Error {
 impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Error {
         new_error(kind)
+    }
+}
+
+impl From<signature::Error> for Error {
+    fn from(err: signature::Error) -> Error {
+        new_error(ErrorKind::Signing(err.to_string()))
     }
 }
 
