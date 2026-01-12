@@ -10,7 +10,7 @@ jobs:
         name: Format
         runs-on: ubuntu-latest
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v6
             -   name: Install Rust
                 uses: dtolnay/rust-toolchain@stable
                 with:
@@ -68,13 +68,13 @@ jobs:
         name: Run tests in wasm
         runs-on: ubuntu-latest
         steps:
-            -   uses: actions/checkout@v3
+            -   uses: actions/checkout@v6
             -   name: Install Rust
                 uses: dtolnay/rust-toolchain@stable
                 with:
                     targets: wasm32-unknown-unknown
 
-            -   uses: actions/setup-node@v4
+            -   uses: actions/setup-node@v6
 
             -   name: Install wasm-pack
                 run: cargo install wasm-pack
