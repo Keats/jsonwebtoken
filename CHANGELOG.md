@@ -1,5 +1,9 @@
 # Changelog
 
+## 10.3.0 (unreleased)
+
+- Export everything needed to define your own CryptoProvider
+
 ## 10.2.0 (2025-11-06)
 
 - Remove `Clone` bound from decode functions
