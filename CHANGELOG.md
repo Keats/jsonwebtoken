@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 10.3.0 (2026-01-08)
+## unreleased
 
 - Update rsa to 0.9.10, aws-lc-rs to 1.15.2, p384 to 0.13.1,sha2 to 0.10.9,wasm-bindgen-test to 0.3.56 and ed25519-dalek
   to 2.2.0
