@@ -176,6 +176,8 @@ pub enum KeyAlgorithm {
     ES256,
     /// ECDSA using SHA-384
     ES384,
+    /// ECDSA using SHA-512
+    ES512,
 
     /// RSASSA-PKCS1-v1_5 using SHA-256
     RS256,
@@ -219,6 +221,7 @@ impl FromStr for KeyAlgorithm {
             "HS512" => Ok(KeyAlgorithm::HS512),
             "ES256" => Ok(KeyAlgorithm::ES256),
             "ES384" => Ok(KeyAlgorithm::ES384),
+            "ES512" => Ok(KeyAlgorithm::ES512),
             "RS256" => Ok(KeyAlgorithm::RS256),
             "RS384" => Ok(KeyAlgorithm::RS384),
             "PS256" => Ok(KeyAlgorithm::PS256),
@@ -553,6 +556,7 @@ impl Jwk {
                     Algorithm::HS512 => KeyAlgorithm::HS512,
                     Algorithm::ES256 => KeyAlgorithm::ES256,
                     Algorithm::ES384 => KeyAlgorithm::ES384,
+                    Algorithm::ES512 => KeyAlgorithm::ES512,
                     Algorithm::RS256 => KeyAlgorithm::RS256,
                     Algorithm::RS384 => KeyAlgorithm::RS384,
                     Algorithm::RS512 => KeyAlgorithm::RS512,
