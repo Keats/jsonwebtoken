@@ -25,7 +25,7 @@ impl AlgorithmFamily {
                 Algorithm::PS384,
                 Algorithm::PS512,
             ],
-            Self::Ec => &[Algorithm::ES256, Algorithm::ES384],
+            Self::Ec => &[Algorithm::ES256, Algorithm::ES384, Algorithm::ES512],
             Self::Ed => &[Algorithm::EdDSA],
         }
     }
@@ -47,6 +47,8 @@ pub enum Algorithm {
     ES256,
     /// ECDSA using SHA-384
     ES384,
+    /// ECDSA using SHA-512
+    ES512,
 
     /// RSASSA-PKCS1-v1_5 using SHA-256
     RS256,
@@ -75,6 +77,7 @@ impl FromStr for Algorithm {
             "HS512" => Ok(Algorithm::HS512),
             "ES256" => Ok(Algorithm::ES256),
             "ES384" => Ok(Algorithm::ES384),
+            "ES512" => Ok(Algorithm::ES512),
             "RS256" => Ok(Algorithm::RS256),
             "RS384" => Ok(Algorithm::RS384),
             "PS256" => Ok(Algorithm::PS256),
@@ -97,7 +100,7 @@ impl Algorithm {
             | Algorithm::PS256
             | Algorithm::PS384
             | Algorithm::PS512 => AlgorithmFamily::Rsa,
-            Algorithm::ES256 | Algorithm::ES384 => AlgorithmFamily::Ec,
+            Algorithm::ES256 | Algorithm::ES384 | Algorithm::ES512 => AlgorithmFamily::Ec,
             Algorithm::EdDSA => AlgorithmFamily::Ed,
         }
     }
