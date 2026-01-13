@@ -1,13 +1,15 @@
 # Changelog
 
+
 All notable changes to this project will be documented in this file.
 
-## unreleased
+## 10.3.0 (unreleased)
 
 - Update rsa to 0.9.10, aws-lc-rs to 1.15.2, p384 to 0.13.1,sha2 to 0.10.9,wasm-bindgen-test to 0.3.56 and ed25519-dalek
   to 2.2.0
 - Fix: When the prime number is equal to 1, there may be a panic in the RSA Crate
 - Update the component version in ci.yml
+- Export everything needed to define your own CryptoProvider
 
 ## 10.2.0 (2025-11-06)
 

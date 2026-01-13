@@ -3,9 +3,8 @@ use std::fmt::{Debug, Formatter};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::de::DeserializeOwned;
 
-use crate::Algorithm;
 use crate::algorithms::AlgorithmFamily;
-use crate::crypto::JwtVerifier;
+use crate::crypto::{CryptoProvider, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::header::Header;
 use crate::jwk::{AlgorithmParameters, Jwk};
@@ -13,27 +12,6 @@ use crate::jwk::{AlgorithmParameters, Jwk};
 use crate::pem::decoder::PemEncodedKey;
 use crate::serialization::{DecodedJwtPartClaims, b64_decode};
 use crate::validation::{Validation, validate};
-// Crypto
-#[cfg(feature = "aws_lc_rs")]
-use crate::crypto::aws_lc::{
-    ecdsa::{Es256Verifier, Es384Verifier},
-    eddsa::EdDSAVerifier,
-    hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
-    rsa::{
-        Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
-        RsaPss512Verifier,
-    },
-};
-#[cfg(feature = "rust_crypto")]
-use crate::crypto::rust_crypto::{
-    ecdsa::{Es256Verifier, Es384Verifier},
-    eddsa::EdDSAVerifier,
-    hmac::{Hs256Verifier, Hs384Verifier, Hs512Verifier},
-    rsa::{
-        Rsa256Verifier, Rsa384Verifier, Rsa512Verifier, RsaPss256Verifier, RsaPss384Verifier,
-        RsaPss512Verifier,
-    },
-};
 
 /// The return type of a successful call to [decode](fn.decode.html).
 #[derive(Debug)]
@@ -66,9 +44,17 @@ macro_rules! expect_two {
 }
 
 #[derive(Clone)]
-pub(crate) enum DecodingKeyKind {
+/// Different kinds of decoding keys.
+pub enum DecodingKeyKind {
+    /// A raw public key.
     SecretOrDer(Vec<u8>),
-    RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
+    /// RSA public key components.
+    RsaModulusExponent {
+        /// The modulus of the public key.
+        n: Vec<u8>,
+        /// The exponent of the public key.
+        e: Vec<u8>,
+    },
 }
 
 impl Debug for DecodingKeyKind {
@@ -88,14 +74,19 @@ impl Debug for DecodingKeyKind {
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
 #[derive(Clone, Debug)]
 pub struct DecodingKey {
-    pub(crate) family: AlgorithmFamily,
-    pub(crate) kind: DecodingKeyKind,
+    family: AlgorithmFamily,
+    kind: DecodingKeyKind,
 }
 
 impl DecodingKey {
     /// The algorithm family this key is for.
     pub fn family(&self) -> AlgorithmFamily {
         self.family
+    }
+
+    /// The kind of decoding key.
+    pub fn kind(&self) -> &DecodingKeyKind {
+        &self.kind
     }
 
     /// If you're using HMAC, use this.
@@ -235,14 +226,16 @@ impl DecodingKey {
         }
     }
 
-    pub(crate) fn as_bytes(&self) -> &[u8] {
+    /// Get the value of the key.
+    pub fn as_bytes(&self) -> &[u8] {
         match &self.kind {
             DecodingKeyKind::SecretOrDer(b) => b,
             DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
         }
     }
 
-    pub(crate) fn try_get_hmac_secret(&self) -> Result<&[u8]> {
+    /// Try to get the HMAC secret from a key.
+    pub fn try_get_hmac_secret(&self) -> Result<&[u8]> {
         if self.family == AlgorithmFamily::Hmac {
             Ok(self.as_bytes())
         } else {
@@ -289,7 +282,7 @@ pub fn decode<T: DeserializeOwned>(
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    let verifying_provider = jwt_verifier_factory(&header.alg, key)?;
+    let verifying_provider = (CryptoProvider::get_default().verifier_factory)(&header.alg, key)?;
 
     let (header, claims) = verify_signature(token, validation, verifying_provider)?;
 
@@ -313,29 +306,6 @@ pub fn insecure_decode<T: DeserializeOwned>(token: impl AsRef<[u8]>) -> Result<T
     let claims = DecodedJwtPartClaims::from_jwt_part_claims(payload)?.deserialize()?;
 
     Ok(TokenData { header, claims })
-}
-
-/// Return the correct [`JwtVerifier`] based on the `algorithm`.
-pub fn jwt_verifier_factory(
-    algorithm: &Algorithm,
-    key: &DecodingKey,
-) -> Result<Box<dyn JwtVerifier>> {
-    let jwt_encoder = match algorithm {
-        Algorithm::HS256 => Box::new(Hs256Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::HS384 => Box::new(Hs384Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::HS512 => Box::new(Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::ES256 => Box::new(Es256Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::ES384 => Box::new(Es384Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::RS256 => Box::new(Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::RS384 => Box::new(Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::RS512 => Box::new(Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::PS256 => Box::new(RsaPss256Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::PS384 => Box::new(RsaPss384Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::PS512 => Box::new(RsaPss512Verifier::new(key)?) as Box<dyn JwtVerifier>,
-        Algorithm::EdDSA => Box::new(EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
-    };
-
-    Ok(jwt_encoder)
 }
 
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
