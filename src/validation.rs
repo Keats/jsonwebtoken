@@ -200,7 +200,7 @@ pub(crate) struct ClaimsForValidation<'a> {
     aud: TryParse<Audience<'a>>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug, Default)]
 enum TryParse<T> {
     Parsed(T),
     FailedToParse,
