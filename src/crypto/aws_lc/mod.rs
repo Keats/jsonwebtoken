@@ -8,7 +8,7 @@ use aws_lc_rs::{
 
 use crate::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier},
+    crypto::{CryptoProvider, JwtSigner, JwtVerifier},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -18,7 +18,7 @@ mod eddsa;
 mod hmac;
 mod rsa;
 
-fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+fn rsa_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let key_pair = aws_sig::RsaKeyPair::from_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let public = key_pair.public_key();
@@ -26,7 +26,15 @@ fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<
     Ok((components.n, components.e))
 }
 
-fn extract_ec_public_key_coordinates(
+fn rsa_components_from_public_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+    let public = aws_lc_rs::rsa::PublicKey::from_der(key_content)
+        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+
+    let components = aws_sig::RsaPublicKeyComponents::<Vec<u8>>::from(&public);
+    Ok((components.n, components.e))
+}
+
+fn ec_components_from_private_key(
     key_content: &[u8],
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
@@ -102,9 +110,8 @@ fn new_verifier(
 pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     signer_factory: new_signer,
     verifier_factory: new_verifier,
-    jwk_utils: JwkUtils {
-        extract_rsa_public_key_components,
-        extract_ec_public_key_coordinates,
-        compute_digest,
-    },
+    rsa_pub_components_from_private_key: rsa_components_from_private_key,
+    rsa_pub_components_from_public_key: rsa_components_from_public_key,
+    ec_pub_components_from_private_key: ec_components_from_private_key,
+    compute_digest,
 };
