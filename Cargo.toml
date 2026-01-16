@@ -49,8 +49,8 @@ js-sys = "0.3"
 getrandom = "0.3"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.56"
-ed25519-dalek = { version = "2.2.0", features = ["pkcs8", "rand_core"] }
+wasm-bindgen-test = "0.3.1"
+ed25519-dalek = { version = "2.1.1", features = ["pkcs8", "rand_core"] }
 rand = { version = "0.8.5", features = ["std"], default-features = false }
 rand_core = "0.6.4"
 [target.'cfg(not(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi")))))'.dev-dependencies]
@@ -65,9 +65,9 @@ criterion = { version = "0.8", default-features = false }
 
 [features]
 default = ["use_pem"]
-use_pem = ["dep:pem", "dep:simple_asn1"]
-rust_crypto = ["dep:ed25519-dalek", "dep:hmac", "dep:p256", "dep:p384", "dep:rand", "dep:rsa", "dep:sha2"]
-aws_lc_rs = ["dep:aws-lc-rs"]
+use_pem = ["pem", "simple_asn1"]
+rust_crypto = ["ed25519-dalek", "hmac", "p256", "p384", "rand", "rsa", "sha2"]
+aws_lc_rs = ["aws-lc-rs"]
 
 [[bench]]
 name = "jwt"
