@@ -47,7 +47,7 @@ pub trait JwtVerifier: Verifier<Vec<u8>> {
 /// If you just want to encode a JWT, use `encode` instead.
 pub fn sign(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
     let provider = (CryptoProvider::get_default().signer_factory)(&algorithm, key)?;
-    Ok(b64_encode(provider.sign(message)))
+    Ok(b64_encode(provider.try_sign(message)?))
 }
 
 /// Compares the signature given with a re-computed signature for HMAC or using the public key

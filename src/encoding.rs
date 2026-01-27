@@ -168,7 +168,7 @@ pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> R
     let encoded_claims = b64_encode_part(claims)?;
     let message = [encoded_header, encoded_claims].join(".");
 
-    let signature = b64_encode(signing_provider.sign(message.as_bytes()));
+    let signature = b64_encode(signing_provider.try_sign(message.as_bytes())?);
 
     Ok([message, signature].join("."))
 }
