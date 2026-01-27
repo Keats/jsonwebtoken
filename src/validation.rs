@@ -274,6 +274,14 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     if options.validate_exp || options.validate_nbf {
         let now = get_current_timestamp();
 
+        // Reject malformed exp/nbf claim when validation is enabled
+        if options.validate_exp && matches!(claims.exp, TryParse::FailedToParse) {
+            return Err(new_error(ErrorKind::InvalidClaimFormat("exp".to_string())));
+        }
+        if options.validate_nbf && matches!(claims.nbf, TryParse::FailedToParse) {
+            return Err(new_error(ErrorKind::InvalidClaimFormat("nbf".to_string())));
+        }
+
         if matches!(claims.exp, TryParse::Parsed(exp) if exp < options.reject_tokens_expiring_in_less_than)
         {
             return Err(new_error(ErrorKind::InvalidToken));

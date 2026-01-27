@@ -1,8 +1,9 @@
 # Changelog
 
-## 10.3.0 (unreleased)
+## 10.3.0 (2026-01-27)
 
 - Export everything needed to define your own CryptoProvider
+- Fix type confusion with exp/nbf when not required
 
 ## 10.2.0 (2025-11-06)
 

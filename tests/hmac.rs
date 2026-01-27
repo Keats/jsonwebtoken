@@ -290,3 +290,59 @@ fn verify_hs256_rfc7517_appendix_a1() {
     let c = decode::<C>(token, &key, &validation).unwrap();
     assert_eq!(c.claims.iss, "joe");
 }
+
+// Regression tests for type confusion vulnerability where malformed claims
+// (eg nbf or exp as strings) were silently treated as "not present" when not required
+#[derive(Debug, Serialize)]
+struct ClaimsWithStringNbf {
+    sub: String,
+    nbf: String, // should be a number
+}
+
+#[derive(Debug, Serialize)]
+struct ClaimsWithStringExp {
+    sub: String,
+    exp: String, // should be a number
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn test_string_nbf_rejected_when_validate_nbf_enabled() {
+    // Create token with nbf as string (malformed)
+    let claims = ClaimsWithStringNbf {
+        sub: "test".to_string(),
+        nbf: "99999999999".to_string(), // Far future as string
+    };
+    let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret")).unwrap();
+
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.validate_nbf = true;
+    validation.required_spec_claims = std::collections::HashSet::new();
+
+    let result =
+        decode::<serde_json::Value>(&token, &DecodingKey::from_secret(b"secret"), &validation);
+
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().into_kind(), ErrorKind::InvalidClaimFormat("nbf".to_string()));
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn test_string_exp_rejected_when_validate_exp_enabled() {
+    // Create token with exp as string (malformed)
+    let claims = ClaimsWithStringExp {
+        sub: "test".to_string(),
+        exp: "99999999999".to_string(), // Far future as string
+    };
+    let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret")).unwrap();
+
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.validate_exp = true;
+    validation.required_spec_claims = std::collections::HashSet::new();
+
+    let result =
+        decode::<serde_json::Value>(&token, &DecodingKey::from_secret(b"secret"), &validation);
+
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().into_kind(), ErrorKind::InvalidClaimFormat("exp".to_string()));
+}

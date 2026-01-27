@@ -58,6 +58,8 @@ pub enum ErrorKind {
     // Validation errors
     /// When a claim required by the validation is not present
     MissingRequiredClaim(String),
+    /// When a claim has an invalid format (eg string instead of integer)
+    InvalidClaimFormat(String),
     /// When a token’s `exp` claim indicates that it has expired
     ExpiredSignature,
     /// When a token’s `iss` claim does not match the expected issuer
@@ -98,6 +100,7 @@ impl StdError for Error {
             ErrorKind::ExpiredSignature => None,
             ErrorKind::MissingAlgorithm => None,
             ErrorKind::MissingRequiredClaim(_) => None,
+            ErrorKind::InvalidClaimFormat(_) => None,
             ErrorKind::InvalidIssuer => None,
             ErrorKind::InvalidAudience => None,
             ErrorKind::InvalidSubject => None,
@@ -131,6 +134,7 @@ impl fmt::Display for Error {
             | ErrorKind::InvalidEddsaKey
             | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
             ErrorKind::MissingRequiredClaim(c) => write!(f, "Missing required claim: {}", c),
+            ErrorKind::InvalidClaimFormat(c) => write!(f, "Invalid format for claim: {}", c),
             ErrorKind::InvalidRsaKey(msg) => write!(f, "RSA key invalid: {}", msg),
             ErrorKind::Signing(msg) => write!(f, "Signing failed: {}", msg),
             ErrorKind::Json(err) => write!(f, "JSON error: {}", err),
