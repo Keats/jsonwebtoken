@@ -191,3 +191,73 @@ fn ec_jwk_from_key() {
         .unwrap()
     );
 }
+
+// ES512 Tests
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn es512_round_trip_sign_verification_pem() {
+    let privkey_pem = include_bytes!("private_es512_key.pem");
+    let pubkey_pem = include_bytes!("public_es512_key.pem");
+
+    let encrypted =
+        sign(b"hello world", &EncodingKey::from_ec_pem(privkey_pem).unwrap(), Algorithm::ES512)
+            .unwrap();
+    let is_valid = verify(
+        &encrypted,
+        b"hello world",
+        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+        Algorithm::ES512,
+    )
+    .unwrap();
+    assert!(is_valid);
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn es512_round_trip_claim() {
+    let privkey_pem = include_bytes!("private_es512_key.pem");
+    let pubkey_pem = include_bytes!("public_es512_key.pem");
+    let my_claims = Claims {
+        sub: "es512@example.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let token = encode(
+        &Header::new(Algorithm::ES512),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey_pem).unwrap(),
+    )
+    .unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+        &Validation::new(Algorithm::ES512),
+    )
+    .unwrap();
+    assert_eq!(my_claims, token_data.claims);
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn es512_sign_and_verify() {
+    let privkey_pem = include_bytes!("private_es512_key.pem");
+    let pubkey_pem = include_bytes!("public_es512_key.pem");
+    let message = b"test message for ES512";
+    
+    // Sign the message
+    let encrypted = sign(message, &EncodingKey::from_ec_pem(privkey_pem).unwrap(), Algorithm::ES512)
+        .unwrap();
+    
+    // Verify the signature
+    let is_valid = verify(
+        &encrypted,
+        message,
+        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+        Algorithm::ES512,
+    )
+    .unwrap();
+    assert!(is_valid);
+}
