@@ -10,10 +10,15 @@
 //! [`CryptoProvider`]: crate::crypto::CryptoProvider
 
 use crate::algorithms::Algorithm;
-use crate::errors::Result;
+use crate::errors::{self, ErrorKind, Result};
 use crate::jwk::{EllipticCurve, ThumbprintHash};
 use crate::{DecodingKey, EncodingKey};
 
+const NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR: &'static str = r###"
+Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features, or your CryptoProvider does not support JWKs.
+Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
+See the documentation of the CryptoProvider type for more information.
+"###;
 /// `aws_lc_rs` based CryptoProvider.
 #[cfg(feature = "aws_lc_rs")]
 pub mod aws_lc;
@@ -85,8 +90,19 @@ pub struct CryptoProvider {
     pub signer_factory: fn(&Algorithm, &EncodingKey) -> Result<Box<dyn JwtSigner>>,
     /// A function that produces a [`JwtVerifier`] for a given [`Algorithm`]
     pub verifier_factory: fn(&Algorithm, &DecodingKey) -> Result<Box<dyn JwtVerifier>>,
-    /// Struct with utility functions for JWK processing.
-    pub jwk_utils: JwkUtils,
+    /// Given a DER encoded private key, extract the RSA public key components (n, e)
+    #[allow(clippy::type_complexity)]
+    pub rsa_pub_components_from_private_key: fn(&[u8]) -> Result<(Vec<u8>, Vec<u8>)>,
+    /// Given a DER encoded public key, extract the RSA public key components (n, e)
+    #[allow(clippy::type_complexity)]
+    pub rsa_pub_components_from_public_key: fn(&[u8]) -> Result<(Vec<u8>, Vec<u8>)>,
+    /// Given a DER encoded private key and an algorithm, extract the associated curve
+    /// and the EC public key components (x, y)
+    #[allow(clippy::type_complexity)]
+    pub ec_pub_components_from_private_key:
+        fn(&[u8], Algorithm) -> Result<(EllipticCurve, Vec<u8>, Vec<u8>)>,
+    /// Given some data and a name of a hash function, compute hash_function(data)
+    pub compute_digest: fn(&[u8], ThumbprintHash) -> Vec<u8>,
 }
 
 impl CryptoProvider {
@@ -123,7 +139,16 @@ See the documentation of the CryptoProvider type for more information.
             static INSTANCE: CryptoProvider = CryptoProvider {
                 signer_factory: |_, _| panic!("{}", NOT_INSTALLED_ERROR),
                 verifier_factory: |_, _| panic!("{}", NOT_INSTALLED_ERROR),
-                jwk_utils: JwkUtils::new_unimplemented(),
+                rsa_pub_components_from_private_key: |_| {
+                    panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                },
+                rsa_pub_components_from_public_key: |_| {
+                    panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                },
+                ec_pub_components_from_private_key: |_, _| {
+                    panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                },
+                compute_digest: |_, _| panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR),
             };
 
             &INSTANCE
@@ -131,41 +156,21 @@ See the documentation of the CryptoProvider type for more information.
     }
 }
 
-/// Holds utility functions required for JWK processing.
-/// Use the [`JwkUtils::new_unimplemented`] function to initialize all values to dummies.
-#[derive(Clone, Debug)]
-pub struct JwkUtils {
-    /// Given a DER encoded private key, extract the RSA public key components (n, e)
-    #[allow(clippy::type_complexity)]
-    pub extract_rsa_public_key_components: fn(&[u8]) -> Result<(Vec<u8>, Vec<u8>)>,
-    /// Given a DER encoded private key and an algorithm, extract the associated curve
-    /// and the EC public key components (x, y)
-    #[allow(clippy::type_complexity)]
-    pub extract_ec_public_key_coordinates:
-        fn(&[u8], Algorithm) -> Result<(EllipticCurve, Vec<u8>, Vec<u8>)>,
-    /// Given some data and a name of a hash function, compute hash_function(data)
-    pub compute_digest: fn(&[u8], ThumbprintHash) -> Vec<u8>,
-}
+pub(crate) fn ec_components_from_public_key(
+    pub_bytes: &[u8],
+) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
+    let (curve, pub_elem_bytes) = match pub_bytes.len() {
+        65 => (EllipticCurve::P256, 32),
+        97 => (EllipticCurve::P384, 48),
+        _ => return Err(ErrorKind::InvalidEcdsaKey.into()),
+    };
 
-impl JwkUtils {
-    /// Initialises all values to dummies.
-    /// Will lead to a panic when JWKs are required, so only use it if you don't want to support JWKs.
-    pub const fn new_unimplemented() -> Self {
-        const NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR: &str = r###"
-Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features, or your CryptoProvider does not support JWKs.
-Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
-See the documentation of the CryptoProvider type for more information.
-"###;
-        Self {
-            extract_rsa_public_key_components: |_| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
-            },
-            extract_ec_public_key_coordinates: |_, _| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
-            },
-            compute_digest: |_, _| panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR),
-        }
+    if pub_bytes[0] != 4 {
+        return Err(ErrorKind::InvalidEcdsaKey.into());
     }
+
+    let (x, y) = pub_bytes[1..].split_at(pub_elem_bytes);
+    Ok((curve, x.to_vec(), y.to_vec()))
 }
 
 mod static_default {
