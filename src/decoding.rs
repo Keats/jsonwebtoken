@@ -2,6 +2,7 @@ use std::fmt::{Debug, Formatter};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::de::DeserializeOwned;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{CryptoProvider, JwtVerifier};
@@ -43,7 +44,7 @@ macro_rules! expect_two {
     }};
 }
 
-#[derive(Clone)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 /// Different kinds of decoding keys.
 pub enum DecodingKeyKind {
     /// A raw public key.
