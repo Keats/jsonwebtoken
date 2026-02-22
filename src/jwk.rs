@@ -531,7 +531,7 @@ impl Jwk {
                 }
                 EllipticCurve::Ed25519 => {
                     format!(
-                        r#"{{crv:{},"kty":{},"x":"{}"}}"#,
+                        r#"{{"crv":{},"kty":{},"x":"{}"}}"#,
                         serde_json::to_string(&a.curve).unwrap(),
                         serde_json::to_string(&a.key_type).unwrap(),
                         a.x,
