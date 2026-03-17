@@ -39,6 +39,7 @@ impl AlgorithmFamily {
 /// The algorithms supported for signing/verifying JWTs
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Default, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum Algorithm {
     /// HMAC using SHA-256
     #[default]
