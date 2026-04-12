@@ -19,7 +19,7 @@ macro_rules! define_hmac_signer {
         pub struct $name($hmac_type);
 
         impl $name {
-            pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+            pub(crate) fn new(encoding_key: &EncodingKey<'_>) -> Result<Self> {
                 let inner = <$hmac_type>::new_from_slice(encoding_key.try_get_hmac_secret()?)
                     .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
 
@@ -51,7 +51,7 @@ macro_rules! define_hmac_verifier {
         pub struct $name($hmac_type);
 
         impl $name {
-            pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+            pub(crate) fn new(decoding_key: &DecodingKey<'_>) -> Result<Self> {
                 let inner = <$hmac_type>::new_from_slice(decoding_key.try_get_hmac_secret()?)
                     .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Breaking: Add lifetimes to `EncodingKey` and `DecodingKey`/`DecodingKeyKind`
+
 ## 10.3.0 (2026-01-27)
 
 - Export everything needed to define your own CryptoProvider
@@ -72,7 +76,7 @@
 
 
 ## 8.0.0 (2022-02-02)
- 
+
 - Add EdDSA algorithm
 - `sign`/`verify` now takes a `&[u8]` instead of `&str` to be more flexible
 - `DecodingKey` now own its data
@@ -109,7 +113,7 @@
 - Add support for PS256, PS384 and PS512
 - Add support for verifying with modulus/exponent components for RSA
 - Update to 2018 edition
-- Changed aud field type in Validation to `Option<HashSet<String>>`.  Audience 
+- Changed aud field type in Validation to `Option<HashSet<String>>`.  Audience
   validation now tests for "any-of-these" audience membership.
 - Add support for keys in PEM format
 - Add EncodingKey/DecodingKey API to improve performance and UX

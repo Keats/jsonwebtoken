@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -45,9 +46,9 @@ macro_rules! expect_two {
 
 #[derive(Clone)]
 /// Different kinds of decoding keys.
-pub enum DecodingKeyKind {
+pub enum DecodingKeyKind<'a> {
     /// A raw public key.
-    SecretOrDer(Vec<u8>),
+    SecretOrDer(Cow<'a, [u8]>),
     /// RSA public key components.
     RsaModulusExponent {
         /// The modulus of the public key.
@@ -57,7 +58,7 @@ pub enum DecodingKeyKind {
     },
 }
 
-impl Debug for DecodingKeyKind {
+impl Debug for DecodingKeyKind<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::SecretOrDer(_) => f.debug_tuple("SecretOrDer").field(&"[redacted]").finish(),
@@ -73,50 +74,45 @@ impl Debug for DecodingKeyKind {
 /// All the different kind of keys we can use to decode a JWT.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
 #[derive(Clone, Debug)]
-pub struct DecodingKey {
+pub struct DecodingKey<'a> {
     family: AlgorithmFamily,
-    kind: DecodingKeyKind,
+    kind: DecodingKeyKind<'a>,
 }
 
-impl DecodingKey {
+impl DecodingKey<'_> {
     /// The algorithm family this key is for.
     pub fn family(&self) -> AlgorithmFamily {
         self.family
     }
 
     /// The kind of decoding key.
-    pub fn kind(&self) -> &DecodingKeyKind {
+    pub fn kind(&self) -> &DecodingKeyKind<'_> {
         &self.kind
     }
 
-    /// If you're using HMAC, use this.
-    pub fn from_secret(secret: &[u8]) -> Self {
-        DecodingKey {
-            family: AlgorithmFamily::Hmac,
-            kind: DecodingKeyKind::SecretOrDer(secret.to_vec()),
-        }
-    }
-
     /// If you're using HMAC with a base64 encoded secret, use this.
-    pub fn from_base64_secret(secret: &str) -> Result<Self> {
+    pub fn from_base64_secret(secret: &str) -> Result<DecodingKey<'static>> {
         let out = STANDARD.decode(secret)?;
-        Ok(DecodingKey { family: AlgorithmFamily::Hmac, kind: DecodingKeyKind::SecretOrDer(out) })
+        Ok(DecodingKey {
+            family: AlgorithmFamily::Hmac,
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(out)),
+        })
     }
 
     /// If you are loading a public RSA key in a PEM format, use this.
     /// Only exists if the feature `use_pem` is enabled.
     #[cfg(feature = "use_pem")]
-    pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
+    pub fn from_rsa_pem(key: &[u8]) -> Result<DecodingKey<'static>> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
         Ok(DecodingKey {
             family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())),
         })
     }
 
     /// If you have (n, e) RSA public key components as strings, use this.
-    pub fn from_rsa_components(modulus: &str, exponent: &str) -> Result<Self> {
+    pub fn from_rsa_components(modulus: &str, exponent: &str) -> Result<DecodingKey<'static>> {
         let n = b64_decode(modulus)?;
         let e = b64_decode(exponent)?;
         Ok(DecodingKey {
@@ -126,7 +122,7 @@ impl DecodingKey {
     }
 
     /// If you have (n, e) RSA public key components already decoded, use this.
-    pub fn from_rsa_raw_components(modulus: &[u8], exponent: &[u8]) -> Self {
+    pub fn from_rsa_raw_components(modulus: &[u8], exponent: &[u8]) -> DecodingKey<'static> {
         DecodingKey {
             family: AlgorithmFamily::Rsa,
             kind: DecodingKeyKind::RsaModulusExponent { n: modulus.to_vec(), e: exponent.to_vec() },
@@ -136,17 +132,17 @@ impl DecodingKey {
     /// If you have a ECDSA public key in PEM format, use this.
     /// Only exists if the feature `use_pem` is enabled.
     #[cfg(feature = "use_pem")]
-    pub fn from_ec_pem(key: &[u8]) -> Result<Self> {
+    pub fn from_ec_pem(key: &[u8]) -> Result<DecodingKey<'static>> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ec_public_key()?;
         Ok(DecodingKey {
             family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())),
         })
     }
 
     /// If you have (x,y) ECDSA key components
-    pub fn from_ec_components(x: &str, y: &str) -> Result<Self> {
+    pub fn from_ec_components(x: &str, y: &str) -> Result<DecodingKey<'static>> {
         let x_cmp = b64_decode(x)?;
         let y_cmp = b64_decode(y)?;
 
@@ -157,57 +153,33 @@ impl DecodingKey {
 
         Ok(DecodingKey {
             family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(public_key),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(public_key)),
         })
     }
 
     /// If you have a EdDSA public key in PEM format, use this.
     /// Only exists if the feature `use_pem` is enabled.
     #[cfg(feature = "use_pem")]
-    pub fn from_ed_pem(key: &[u8]) -> Result<Self> {
+    pub fn from_ed_pem(key: &[u8]) -> Result<DecodingKey<'static>> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ed_public_key()?;
         Ok(DecodingKey {
             family: AlgorithmFamily::Ed,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(content.to_vec())),
         })
     }
 
-    /// If you know what you're doing and have a RSA DER encoded public key, use this.
-    pub fn from_rsa_der(der: &[u8]) -> Self {
-        DecodingKey {
-            family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
-        }
-    }
-
-    /// If you know what you're doing and have a RSA EC encoded public key, use this.
-    pub fn from_ec_der(der: &[u8]) -> Self {
-        DecodingKey {
-            family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
-        }
-    }
-
-    /// If you know what you're doing and have a Ed DER encoded public key, use this.
-    pub fn from_ed_der(der: &[u8]) -> Self {
-        DecodingKey {
-            family: AlgorithmFamily::Ed,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
-        }
-    }
-
     /// From x part (base64 encoded) of the JWK encoding
-    pub fn from_ed_components(x: &str) -> Result<Self> {
+    pub fn from_ed_components(x: &str) -> Result<DecodingKey<'static>> {
         let x_decoded = b64_decode(x)?;
         Ok(DecodingKey {
             family: AlgorithmFamily::Ed,
-            kind: DecodingKeyKind::SecretOrDer(x_decoded),
+            kind: DecodingKeyKind::SecretOrDer(Cow::Owned(x_decoded)),
         })
     }
 
     /// If you have a key in Jwk format
-    pub fn from_jwk(jwk: &Jwk) -> Result<Self> {
+    pub fn from_jwk(jwk: &Jwk) -> Result<DecodingKey<'static>> {
         match &jwk.algorithm {
             AlgorithmParameters::RSA(params) => {
                 DecodingKey::from_rsa_components(&params.n, &params.e)
@@ -220,7 +192,7 @@ impl DecodingKey {
                 let out = b64_decode(&params.value)?;
                 Ok(DecodingKey {
                     family: AlgorithmFamily::Hmac,
-                    kind: DecodingKeyKind::SecretOrDer(out),
+                    kind: DecodingKeyKind::SecretOrDer(Cow::Owned(out)),
                 })
             }
         }
@@ -244,7 +216,41 @@ impl DecodingKey {
     }
 }
 
-impl TryFrom<&Jwk> for DecodingKey {
+impl<'a> DecodingKey<'a> {
+    /// If you're using HMAC, use this.
+    pub fn from_secret(secret: &'a [u8]) -> Self {
+        DecodingKey {
+            family: AlgorithmFamily::Hmac,
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(secret)),
+        }
+    }
+
+    /// If you know what you're doing and have a RSA DER encoded public key, use this.
+    pub fn from_rsa_der(der: &'a [u8]) -> Self {
+        DecodingKey {
+            family: AlgorithmFamily::Rsa,
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
+        }
+    }
+
+    /// If you know what you're doing and have a RSA EC encoded public key, use this.
+    pub fn from_ec_der(der: &'a [u8]) -> Self {
+        DecodingKey {
+            family: AlgorithmFamily::Ec,
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
+        }
+    }
+
+    /// If you know what you're doing and have a Ed DER encoded public key, use this.
+    pub fn from_ed_der(der: &'a [u8]) -> Self {
+        DecodingKey {
+            family: AlgorithmFamily::Ed,
+            kind: DecodingKeyKind::SecretOrDer(Cow::Borrowed(der)),
+        }
+    }
+}
+
+impl TryFrom<&Jwk> for DecodingKey<'static> {
     type Error = crate::errors::Error;
 
     fn try_from(jwk: &Jwk) -> Result<Self> {
@@ -272,7 +278,7 @@ impl TryFrom<&Jwk> for DecodingKey {
 /// ```
 pub fn decode<T: DeserializeOwned>(
     token: impl AsRef<[u8]>,
-    key: &DecodingKey,
+    key: &DecodingKey<'_>,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
     let token = token.as_ref();

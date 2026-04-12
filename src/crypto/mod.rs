@@ -45,7 +45,7 @@ pub trait JwtVerifier: Verifier<Vec<u8>> {
 /// the base64 url safe encoded of the result.
 ///
 /// If you just want to encode a JWT, use `encode` instead.
-pub fn sign(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<String> {
+pub fn sign(message: &[u8], key: &EncodingKey<'_>, algorithm: Algorithm) -> Result<String> {
     let provider = (CryptoProvider::get_default().signer_factory)(&algorithm, key)?;
     Ok(b64_encode(provider.try_sign(message)?))
 }
@@ -61,7 +61,7 @@ pub fn sign(message: &[u8], key: &EncodingKey, algorithm: Algorithm) -> Result<S
 pub fn verify(
     signature: &str,
     message: &[u8],
-    key: &DecodingKey,
+    key: &DecodingKey<'_>,
     algorithm: Algorithm,
 ) -> Result<bool> {
     let provider = (CryptoProvider::get_default().verifier_factory)(&algorithm, key)?;

@@ -37,7 +37,7 @@ pub struct Jws<C> {
 pub fn encode<T: Serialize>(
     header: &Header,
     claims: Option<&T>,
-    key: &EncodingKey,
+    key: &EncodingKey<'_>,
 ) -> Result<Jws<T>> {
     if key.family() != header.alg.family() {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
@@ -61,7 +61,7 @@ pub fn encode<T: Serialize>(
 /// Validate a received JWS and decode into the header and claims.
 pub fn decode<T: DeserializeOwned>(
     jws: &Jws<T>,
-    key: &DecodingKey,
+    key: &DecodingKey<'_>,
     validation: &Validation,
 ) -> Result<TokenData<T>> {
     let header = Header::from_encoded(&jws.protected)?;

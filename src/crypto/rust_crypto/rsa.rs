@@ -20,7 +20,7 @@ use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 
 fn try_sign_rsa<H>(
-    encoding_key: &EncodingKey,
+    encoding_key: &EncodingKey<'_>,
     msg: &[u8],
     pss: bool,
 ) -> std::result::Result<Vec<u8>, signature::Error>
@@ -43,7 +43,7 @@ where
 
 fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
     scheme: S,
-    decoding_key: &DecodingKey,
+    decoding_key: &DecodingKey<'_>,
     msg: &[u8],
     signature: &[u8],
 ) -> std::result::Result<(), signature::Error> {
@@ -71,7 +71,7 @@ macro_rules! define_rsa_signer {
         pub struct $name(EncodingKey);
 
         impl $name {
-            pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+            pub(crate) fn new(encoding_key: &EncodingKey<'_>) -> Result<Self> {
                 if encoding_key.family() != AlgorithmFamily::Rsa {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
@@ -99,7 +99,7 @@ macro_rules! define_rsa_verifier {
         pub struct $name(DecodingKey);
 
         impl $name {
-            pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+            pub(crate) fn new(decoding_key: &DecodingKey<'_>) -> Result<Self> {
                 if decoding_key.family() != AlgorithmFamily::Rsa {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }

@@ -13,7 +13,7 @@ macro_rules! define_hmac_signer {
         pub struct $name(hmac::Key);
 
         impl $name {
-            pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+            pub(crate) fn new(encoding_key: &EncodingKey<'_>) -> Result<Self> {
                 Ok(Self(hmac::Key::new($hmac_alg, encoding_key.try_get_hmac_secret()?)))
             }
         }
@@ -37,7 +37,7 @@ macro_rules! define_hmac_verifier {
         pub struct $name(hmac::Key);
 
         impl $name {
-            pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+            pub(crate) fn new(decoding_key: &DecodingKey<'_>) -> Result<Self> {
                 Ok(Self(hmac::Key::new($hmac_alg, decoding_key.try_get_hmac_secret()?)))
             }
         }

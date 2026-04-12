@@ -63,7 +63,7 @@ fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
     }
 }
 
-fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSigner>, Error> {
+fn new_signer(algorithm: &Algorithm, key: &EncodingKey<'_>) -> Result<Box<dyn JwtSigner>, Error> {
     let jwt_signer = match algorithm {
         Algorithm::HS256 => Box::new(hmac::Hs256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::HS384 => Box::new(hmac::Hs384Signer::new(key)?) as Box<dyn JwtSigner>,
@@ -84,7 +84,7 @@ fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSig
 
 fn new_verifier(
     algorithm: &Algorithm,
-    key: &DecodingKey,
+    key: &DecodingKey<'_>,
 ) -> Result<Box<dyn super::JwtVerifier>, Error> {
     let jwt_verifier = match algorithm {
         Algorithm::HS256 => Box::new(hmac::Hs256Verifier::new(key)?) as Box<dyn JwtVerifier>,

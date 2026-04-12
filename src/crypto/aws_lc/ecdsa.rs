@@ -17,7 +17,7 @@ macro_rules! define_ecdsa_signer {
         pub struct $name(EcdsaKeyPair);
 
         impl $name {
-            pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+            pub(crate) fn new(encoding_key: &EncodingKey<'_>) -> Result<Self> {
                 if encoding_key.family() != AlgorithmFamily::Ec {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
@@ -50,7 +50,7 @@ macro_rules! define_ecdsa_verifier {
         pub struct $name(DecodingKey);
 
         impl $name {
-            pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+            pub(crate) fn new(decoding_key: &DecodingKey<'_>) -> Result<Self> {
                 if decoding_key.family() != AlgorithmFamily::Ec {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }

@@ -11,7 +11,7 @@ use signature::{Error, Signer, Verifier};
 pub struct EdDSASigner(SigningKey);
 
 impl EdDSASigner {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
+    pub(crate) fn new(encoding_key: &EncodingKey<'_>) -> Result<Self> {
         if encoding_key.family() != AlgorithmFamily::Ed {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
@@ -38,7 +38,7 @@ impl JwtSigner for EdDSASigner {
 pub struct EdDSAVerifier(VerifyingKey);
 
 impl EdDSAVerifier {
-    pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
+    pub(crate) fn new(decoding_key: &DecodingKey<'_>) -> Result<Self> {
         if decoding_key.family() != AlgorithmFamily::Ed {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }

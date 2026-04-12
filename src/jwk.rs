@@ -435,7 +435,7 @@ impl Jwk {
             _ => false,
         }
     }
-    pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> crate::errors::Result<Self> {
+    pub fn from_encoding_key(key: &EncodingKey<'_>, alg: Algorithm) -> crate::errors::Result<Self> {
         Ok(Self {
             common: CommonParameters {
                 key_algorithm: Some(match alg {
