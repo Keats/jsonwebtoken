@@ -181,7 +181,7 @@ impl DecodingKey {
         }
     }
 
-    /// If you know what you're doing and have a RSA EC encoded public key, use this.
+    /// If you know what you're doing and have a EC DER encoded public key, use this.
     pub fn from_ec_der(der: &[u8]) -> Self {
         DecodingKey {
             family: AlgorithmFamily::Ec,
