@@ -496,7 +496,7 @@ impl Jwk {
     /// Compute the thumbprint of the JWK.
     ///
     /// Per [RFC-7638](https://datatracker.ietf.org/doc/html/rfc7638)
-    pub fn thumbprint(&self, hash_function: ThumbprintHash) -> String {
+    pub fn thumbprint(&self, hash_function: ThumbprintHash) -> crate::errors::Result<String> {
         let pre = match &self.algorithm {
             AlgorithmParameters::EllipticCurve(a) => match a.curve {
                 EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
@@ -540,10 +540,10 @@ impl Jwk {
             },
         };
 
-        b64_encode((CryptoProvider::get_default().jwk_utils.compute_digest)(
+        Ok(b64_encode((CryptoProvider::get_default().jwk_utils.compute_digest)(
             pre.as_bytes(),
             hash_function,
-        ))
+        )?))
     }
 }
 
@@ -624,7 +624,9 @@ mod tests {
                 e: "AQAB".to_string(),
             }),
         }
-            .thumbprint(ThumbprintHash::SHA256);
+        .thumbprint(ThumbprintHash::SHA256)
+        .unwrap();
+
         assert_eq!(tp.as_str(), "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
     }
 }

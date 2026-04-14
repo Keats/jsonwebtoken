@@ -55,12 +55,12 @@ fn extract_ec_public_key_coordinates(
     }
 }
 
-fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
-    match hash_function {
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
+    Ok(match hash_function {
         ThumbprintHash::SHA256 => Sha256::digest(data).to_vec(),
         ThumbprintHash::SHA384 => Sha384::digest(data).to_vec(),
         ThumbprintHash::SHA512 => Sha512::digest(data).to_vec(),
-    }
+    })
 }
 
 fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSigner>, Error> {

@@ -144,7 +144,7 @@ pub struct JwkUtils {
     pub extract_ec_public_key_coordinates:
         fn(&[u8], Algorithm) -> Result<(EllipticCurve, Vec<u8>, Vec<u8>)>,
     /// Given some data and a name of a hash function, compute hash_function(data)
-    pub compute_digest: fn(&[u8], ThumbprintHash) -> Vec<u8>,
+    pub compute_digest: fn(&[u8], ThumbprintHash) -> Result<Vec<u8>>,
 }
 
 impl JwkUtils {
