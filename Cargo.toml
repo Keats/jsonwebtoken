@@ -31,6 +31,7 @@ signature = { version = "2.2.0", features = ["std"] }
 # For PEM decoding
 pem = { version = "3", optional = true }
 simple_asn1 = { version = "0.6", optional = true }
+pkcs8 = { version = "0.10", optional = true, features = ["alloc"] }
 
 # "aws_lc_rs" feature
 aws-lc-rs = { version = "1.15.0", optional = true }
@@ -38,8 +39,9 @@ aws-lc-rs = { version = "1.15.0", optional = true }
 # "rust_crypto" feature
 ed25519-dalek = { version = "2.1.1", optional = true, features = ["pkcs8"] }
 hmac = { version = "0.12.1", optional = true }
-p256 = { version = "0.13.2", optional = true, features = ["ecdsa"] }
-p384 = { version = "0.13.0", optional = true, features = ["ecdsa"] }
+p256 = { version = "0.13.2", optional = true, features = ["ecdsa", "pkcs8"] }
+p384 = { version = "0.13.0", optional = true, features = ["ecdsa", "pkcs8"] }
+p521 = { version = "0.13.0", optional = true, features = ["ecdsa", "pkcs8"] }
 rand = { version = "0.8.5", optional = true, features = ["std"], default-features = false }
 rsa = { version = "0.9.6", optional = true }
 sha2 = { version = "0.10.7", optional = true, features = ["oid"] }
@@ -65,8 +67,8 @@ criterion = { version = "0.8", default-features = false }
 
 [features]
 default = ["use_pem"]
-use_pem = ["pem", "simple_asn1"]
-rust_crypto = ["ed25519-dalek", "hmac", "p256", "p384", "rand", "rsa", "sha2"]
+use_pem = ["pem", "simple_asn1", "pkcs8"]
+rust_crypto = ["ed25519-dalek", "hmac", "p256", "p384", "p521", "rand", "rsa", "sha2", "pkcs8", "simple_asn1"]
 aws_lc_rs = ["aws-lc-rs"]
 
 [[bench]]

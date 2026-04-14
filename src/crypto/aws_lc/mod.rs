@@ -2,7 +2,7 @@ use aws_lc_rs::{
     digest,
     signature::{
         self as aws_sig, ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED_SIGNING,
-        EcdsaKeyPair, KeyPair,
+        ECDSA_P521_SHA512_FIXED_SIGNING, EcdsaKeyPair, KeyPair,
     },
 };
 
@@ -33,6 +33,7 @@ fn extract_ec_public_key_coordinates(
     let (signing_alg, curve, pub_elem_bytes) = match alg {
         Algorithm::ES256 => (&ECDSA_P256_SHA256_FIXED_SIGNING, EllipticCurve::P256, 32),
         Algorithm::ES384 => (&ECDSA_P384_SHA384_FIXED_SIGNING, EllipticCurve::P384, 48),
+        Algorithm::ES512 => (&ECDSA_P521_SHA512_FIXED_SIGNING, EllipticCurve::P521, 66),
         _ => return Err(ErrorKind::InvalidEcdsaKey.into()),
     };
 
@@ -64,6 +65,7 @@ fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSig
         Algorithm::HS512 => Box::new(hmac::Hs512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES256 => Box::new(ecdsa::Es256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES384 => Box::new(ecdsa::Es384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::ES512 => Box::new(ecdsa::Es512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS256 => Box::new(rsa::Rsa256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS384 => Box::new(rsa::Rsa384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS512 => Box::new(rsa::Rsa512Signer::new(key)?) as Box<dyn JwtSigner>,
@@ -86,6 +88,7 @@ fn new_verifier(
         Algorithm::HS512 => Box::new(hmac::Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES256 => Box::new(ecdsa::Es256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES384 => Box::new(ecdsa::Es384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::ES512 => Box::new(ecdsa::Es512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS256 => Box::new(rsa::Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS384 => Box::new(rsa::Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS512 => Box::new(rsa::Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,
