@@ -17,7 +17,7 @@ include = [
     "README.md",
     "CHANGELOG.md",
 ]
-rust-version = "1.85.0"
+rust-version = "1.88.0"
 
 [package.metadata.docs.rs]
 features = ["rust_crypto"]

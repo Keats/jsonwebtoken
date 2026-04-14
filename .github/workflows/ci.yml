@@ -29,7 +29,7 @@ jobs:
             -   uses: dtolnay/rust-toolchain@stable
                 with:
                     components: clippy
-            -   run: cargo clippy --all-targets --features ${{ matrix.backend }}
+            -   run: cargo clippy --all-targets --features ${{ matrix.backend }} -- -D warnings
 
     tests:
         name: Tests
@@ -41,7 +41,7 @@ jobs:
                 include:
                     -   build: pinned
                         os: ubuntu-24.04
-                        rust: 1.86.0
+                        rust: 1.88.0
                     -   build: stable
                         os: ubuntu-latest
                         rust: stable

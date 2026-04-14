@@ -288,7 +288,7 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
 
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp
-            && exp - options.reject_tokens_expiring_in_less_than < now - options.leeway )
+            && exp - options.reject_tokens_expiring_in_less_than < now - options.leeway)
         {
             return Err(new_error(ErrorKind::ExpiredSignature));
         }
@@ -299,10 +299,10 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
     }
 
-    if let (TryParse::Parsed(sub), Some(correct_sub)) = (claims.sub, options.sub.as_deref()) {
-        if sub != correct_sub {
-            return Err(new_error(ErrorKind::InvalidSubject));
-        }
+    if let (TryParse::Parsed(sub), Some(correct_sub)) = (claims.sub, options.sub.as_deref())
+        && sub != correct_sub
+    {
+        return Err(new_error(ErrorKind::InvalidSubject));
     }
 
     match (claims.iss, options.iss.as_ref()) {
