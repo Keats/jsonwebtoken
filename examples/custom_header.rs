@@ -17,7 +17,7 @@ fn main() {
     let key = b"secret";
 
     let mut extras = HashMap::with_capacity(1);
-    extras.insert("custom".to_string(), "header".to_string());
+    extras.insert("custom".to_string(), serde_json::Value::String("header".to_string()));
 
     let header = Header {
         kid: Some("signing_key".to_owned()),
