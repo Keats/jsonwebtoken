@@ -1,6 +1,8 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
 //! RSA family of algorithms using RustCrypto.
 
+// Use the hash types re-exported by `rsa` so this backend stays in the same
+// digest ecosystem as the 0.10 RC line without a crate-wide sha2 migration.
 use rsa::{
     BoxedUint, Pkcs1v15Sign, Pss, RsaPrivateKey, RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
