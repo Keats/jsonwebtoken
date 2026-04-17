@@ -315,15 +315,15 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
     }
 
     match (claims.iss, options.iss.as_ref()) {
-        (TryParse::Parsed(Issuer::Single(iss)), Some(correct_iss)) => {
-            if !correct_iss.contains(&*iss) {
-                return Err(new_error(ErrorKind::InvalidIssuer));
-            }
+        (TryParse::Parsed(Issuer::Single(iss)), Some(correct_iss))
+            if !correct_iss.contains(&*iss) =>
+        {
+            return Err(new_error(ErrorKind::InvalidIssuer));
         }
-        (TryParse::Parsed(Issuer::Multiple(iss)), Some(correct_iss)) => {
-            if !is_subset(correct_iss, &iss) {
-                return Err(new_error(ErrorKind::InvalidIssuer));
-            }
+        (TryParse::Parsed(Issuer::Multiple(iss)), Some(correct_iss))
+            if !is_subset(correct_iss, &iss) =>
+        {
+            return Err(new_error(ErrorKind::InvalidIssuer));
         }
         _ => {}
     }
@@ -337,23 +337,21 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         // processing the claim does not identify itself with a value in the
         // "aud" claim when this claim is present, then the JWT MUST be
         //  rejected.
-        (TryParse::Parsed(Audience::Multiple(aud)), None) => {
-            if !aud.is_empty() {
-                return Err(new_error(ErrorKind::InvalidAudience));
-            }
+        (TryParse::Parsed(Audience::Multiple(aud)), None) if !aud.is_empty() => {
+            return Err(new_error(ErrorKind::InvalidAudience));
         }
         (TryParse::Parsed(_), None) => {
             return Err(new_error(ErrorKind::InvalidAudience));
         }
-        (TryParse::Parsed(Audience::Single(aud)), Some(correct_aud)) => {
-            if !correct_aud.contains(&*aud) {
-                return Err(new_error(ErrorKind::InvalidAudience));
-            }
+        (TryParse::Parsed(Audience::Single(aud)), Some(correct_aud))
+            if !correct_aud.contains(&*aud) =>
+        {
+            return Err(new_error(ErrorKind::InvalidAudience));
         }
-        (TryParse::Parsed(Audience::Multiple(aud)), Some(correct_aud)) => {
-            if !is_subset(correct_aud, &aud) {
-                return Err(new_error(ErrorKind::InvalidAudience));
-            }
+        (TryParse::Parsed(Audience::Multiple(aud)), Some(correct_aud))
+            if !is_subset(correct_aud, &aud) =>
+        {
+            return Err(new_error(ErrorKind::InvalidAudience));
         }
         _ => {}
     }
