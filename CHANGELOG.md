@@ -1,5 +1,11 @@
 # Changelog
 
+## 10.4.0 (unreleased)
+
+- Fix incorrect encoding for Ed25519 JWK thumbprints
+- Make `Algorithm.family` public and add `Validation.new_for_family`
+- `EncodingKey` and `DecodingKey` are now partially zeroized on drop (the intermediate `PemEncodedKey` isn't so far)
+
 ## 10.3.0 (2026-01-27)
 
 - Export everything needed to define your own CryptoProvider
