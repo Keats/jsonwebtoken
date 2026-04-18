@@ -175,6 +175,7 @@ const TAG_SEQUENCE: u8 = 0x30;
 fn extract_first_bitstring_der(bytes: &[u8]) -> Option<&[u8]> {
     let mut stack = vec![bytes];
 
+    // Depth-first search in the DER tree for the first bitstring or octet string
     while let Some(bytes) = stack.pop() {
         let Some((tag, value, rest)) = read_tlv(bytes) else {
             continue; // Skip invalid TLV
@@ -185,11 +186,20 @@ fn extract_first_bitstring_der(bytes: &[u8]) -> Option<&[u8]> {
         }
 
         match tag {
+            // See [ITU-T X.690] §8.6 for the encoding of a bit string.
+            //
+            // [ITU-T X.690]: https://www.itu.int/rec/T-REC-X.690
             TAG_BIT_STRING => {
                 if value.is_empty() {
-                    return None; // Missing padding length
+                    return None; // Missing the length of the unused bits in the last byte
                 } else if value[0] != 0 {
-                    return None; // Padding length must be zero for cryptographic keys
+                    // The content wrapped in a bit string is byte aligned
+                    //
+                    // See
+                    // * DER-encoded SEQUENCE for RSA keys (https://www.rfc-editor.org/rfc/rfc8017)
+                    // * EC point (https://www.rfc-editor.org/rfc/rfc5480#section-2.2)
+                    // * raw 32-byte key for Ed25519 (https://www.rfc-editor.org/rfc/rfc8032)
+                    return None;
                 }
                 return Some(&value[1..]);
             }
@@ -212,6 +222,7 @@ fn classify_der(bytes: &[u8]) -> Option<Classification> {
 
     let mut stack = vec![bytes];
 
+    // Depth-first search in the DER tree for one of the above OIDs
     while let Some(bytes) = stack.pop() {
         let Some((tag, value, rest)) = read_tlv(bytes) else {
             continue; // Skip invalid TLV
@@ -237,21 +248,45 @@ fn classify_der(bytes: &[u8]) -> Option<Classification> {
 }
 
 /// Returns `Some((tag, value, rest))` or `None` if the TLV is invalid.
+///
+/// See <https://en.wikipedia.org/wiki/X.690> or [ITU-T X.690] §8.1 for the BER/DER TLV encoding.
+///
+/// [ITU-T X.690]: https://www.itu.int/rec/T-REC-X.690
 fn read_tlv(mut bytes: &[u8]) -> Option<(u8, &[u8], &[u8])> {
-    if bytes.len() < 2 {
+    if bytes.is_empty() {
         return None;
     }
 
-    let tag = bytes[0];
-    let len = bytes[1];
-    bytes = &bytes[2..];
+    // See <https://en.wikipedia.org/wiki/X.690#Encoding> for tag encoding
+    let first = bytes[0];
+    bytes = &bytes[1..];
+    let tag = if first & 0x1f == 0x1f {
+        // Long form multi-byte tag
+        // Skip subsequent tag bytes (high bit = continuation)
+        while !bytes.is_empty() && bytes[0] & 0x80 != 0 {
+            bytes = &bytes[1..]; // Skip bytes as long as the MSB is set
+        }
+        if bytes.is_empty() {
+            return None;
+        }
+        bytes = &bytes[1..]; // final tag byte (high bit clear)
+        0xFF // Sentinel value for any long-form tag
+    } else {
+        // Short form single-byte tag
+        first
+    };
 
+    // See <https://en.wikipedia.org/wiki/X.690#Length_octets> for length encoding
+    let len = bytes[0];
+    bytes = &bytes[1..];
     let len = if len < 0x80 {
+        // 0-127: short form
         len as usize
     } else {
+        // 128-255: long form => number of bytes without high bit set
         let len_len = (len & 0x7f) as usize;
         if len_len == 0 {
-            return None; // Indefinite length
+            return None; // Indefinite length; forbidden in DER
         } else if size_of::<usize>() < len_len {
             return None; // Too long; prevents usize overflow
         } else if bytes.len() < len_len {
@@ -259,6 +294,7 @@ fn read_tlv(mut bytes: &[u8]) -> Option<(u8, &[u8], &[u8])> {
         }
         let (len_bytes, rest) = bytes.split_at(len_len);
         bytes = rest;
+        // Big-endian base 256 encoding
         len_bytes.iter().fold(0, |acc, &x| acc * 256 + x as usize)
     };
 
