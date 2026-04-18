@@ -84,3 +84,25 @@ jobs:
 
             -   name: Run tests no features
                 run: wasm-pack test --node --no-default-features --features rust_crypto,getrandom/js
+
+    fuzz:
+        name: Run fuzzer
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                include:
+                - fuzz_target: decoding_key_ec
+                - fuzz_target: decoding_key_ed
+                - fuzz_target: decoding_key_rsa
+                - fuzz_target: encoding_key_ec
+                - fuzz_target: encoding_key_ed
+                - fuzz_target: encoding_key_rsa
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Install Rust
+                uses: dtolnay/rust-toolchain@master
+                with:
+                    toolchain: nightly
+            -   name: Install cargo-fuzz
+                run: cargo install cargo-fuzz
+            -   run: cargo fuzz run ${{ matrix.fuzz_target }} -- -max_total_time=300
