@@ -1,0 +1,56 @@
+[package]
+name = "jsonwebtoken-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.jsonwebtoken]
+path = ".."
+
+[[bin]]
+name = "encoding_key_ec"
+path = "fuzz_targets/encoding_key_ec.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "encoding_key_ed"
+path = "fuzz_targets/encoding_key_ed.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "encoding_key_rsa"
+path = "fuzz_targets/encoding_key_rsa.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "decoding_key_ec"
+path = "fuzz_targets/decoding_key_ec.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "decoding_key_ed"
+path = "fuzz_targets/decoding_key_ed.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "decoding_key_rsa"
+path = "fuzz_targets/decoding_key_rsa.rs"
+test = false
+doc = false
+bench = false
