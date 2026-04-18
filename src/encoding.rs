@@ -5,6 +5,7 @@ use base64::{
     engine::general_purpose::{STANDARD, URL_SAFE},
 };
 use serde::ser::Serialize;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::CryptoProvider;
@@ -16,8 +17,9 @@ use crate::serialization::{b64_encode, b64_encode_part};
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
-#[derive(Clone)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EncodingKey {
+    #[zeroize(skip)]
     family: AlgorithmFamily,
     content: Vec<u8>,
 }
