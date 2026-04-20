@@ -187,7 +187,7 @@ pub struct Header {
     /// Once serialized, all keys will be converted to fields at the root level of the header payload
     /// Ex: Dict("custom" -> "header") will be converted to "{"typ": "JWT", ..., "custom": "header"}"
     #[serde(flatten)]
-    pub extras: HashMap<String, String>,
+    pub extras: HashMap<String, serde_json::Value>,
 }
 
 impl Header {

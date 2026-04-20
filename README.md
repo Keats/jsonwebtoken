@@ -87,7 +87,7 @@ let mut header = Header::new(Algorithm::HS512);
 header.kid = Some("blabla".to_owned());
 
 let mut extras = HashMap::with_capacity(1);
-extras.insert("custom".to_string(), "header".to_string());
+extras.insert("custom".to_string(), serde_json::Value::String("header".to_string()));
 header.extras = Some(extras);
 
 let token = encode(&header, &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
