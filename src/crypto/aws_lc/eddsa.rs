@@ -4,7 +4,7 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
-use aws_lc_rs::signature::{ED25519, Ed25519KeyPair, VerificationAlgorithm};
+use aws_lc_rs::signature::{ED25519, Ed25519KeyPair, KeyPair, VerificationAlgorithm};
 use signature::{Error, Signer, Verifier};
 
 pub struct EdDSASigner(Ed25519KeyPair);
@@ -43,6 +43,23 @@ impl EdDSAVerifier {
         }
 
         Ok(Self(decoding_key.clone()))
+    }
+
+    pub(crate) fn from_encoding_key(encoding_key: &EncodingKey) -> Result<Self> {
+        if encoding_key.family() != AlgorithmFamily::Ed {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        Ok(Self(DecodingKey::from_ed_der(
+            Ed25519KeyPair::from_pkcs8(encoding_key.inner())
+                .map_err(|_| ErrorKind::InvalidEddsaKey)?
+                .public_key()
+                .as_ref(),
+        )))
+    }
+
+    pub(crate) fn get_pub_key_bytes(&self) -> Vec<u8> {
+        self.0.as_bytes().to_vec()
     }
 }
 

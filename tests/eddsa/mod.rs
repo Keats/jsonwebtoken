@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 #[cfg(feature = "use_pem")]
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
@@ -8,7 +9,7 @@ use jsonwebtoken::{
     crypto::{sign, verify},
 };
 #[cfg(feature = "use_pem")]
-use jsonwebtoken::{Header, Validation, decode, encode};
+use jsonwebtoken::{Header, Validation, decode, encode, jwk::Jwk};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -137,4 +138,25 @@ fn ed_jwk() {
         &Validation::new(Algorithm::EdDSA),
     );
     assert!(res.is_ok());
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn ed_jwk_from_key() {
+    let privkey_pem = include_bytes!("private_ed25519_key.pem");
+    let encoding_key = EncodingKey::from_ed_pem(privkey_pem).unwrap();
+
+    let jwk = Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap();
+
+    assert_eq!(
+        jwk,
+        serde_json::from_value(json!({
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "x": "2-Jj2UvNCvQiUPNYRgSi0cJSPiJI6Rs6D0UTeEpQVj8",
+            "alg": "EdDSA",
+        }))
+        .unwrap()
+    );
 }

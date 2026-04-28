@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256, Sha384, Sha512};
 
 use crate::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier},
+    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier, rust_crypto::eddsa::EdDSAVerifier},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -53,6 +53,12 @@ fn extract_ec_public_key_coordinates(
         }
         _ => Err(ErrorKind::InvalidEcdsaKey.into()),
     }
+}
+
+fn extract_ed_public_key_parameters(encoding_key: &[u8]) -> errors::Result<Vec<u8>> {
+    Ok(EdDSAVerifier::from_encoding_key(&EncodingKey::from_ed_der(encoding_key))
+        .map_err(|_| ErrorKind::InvalidEddsaKey)?
+        .get_pub_key_bytes())
 }
 
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
@@ -111,6 +117,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     jwk_utils: JwkUtils {
         extract_rsa_public_key_components,
         extract_ec_public_key_coordinates,
+        extract_ed_public_key_parameters,
         compute_digest,
     },
 };

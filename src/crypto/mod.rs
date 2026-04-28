@@ -143,6 +143,9 @@ pub struct JwkUtils {
     #[allow(clippy::type_complexity)]
     pub extract_ec_public_key_coordinates:
         fn(&[u8], Algorithm) -> Result<(EllipticCurve, Vec<u8>, Vec<u8>)>,
+    /// Given a DER encoded private key, extract the ED public key component (x)
+    #[allow(clippy::type_complexity)]
+    pub extract_ed_public_key_parameters: fn(&[u8]) -> Result<Vec<u8>>,
     /// Given some data and a name of a hash function, compute hash_function(data)
     pub compute_digest: fn(&[u8], ThumbprintHash) -> Vec<u8>,
 }
@@ -161,6 +164,9 @@ See the documentation of the CryptoProvider type for more information.
                 panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
             },
             extract_ec_public_key_coordinates: |_, _| {
+                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+            },
+            extract_ed_public_key_parameters: |_| {
                 panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
             },
             compute_digest: |_, _| panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR),

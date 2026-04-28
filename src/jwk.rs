@@ -487,7 +487,15 @@ impl Jwk {
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Ed => {
-                    unimplemented!();
+                    let public_key_bytes =
+                        (CryptoProvider::get_default().jwk_utils.extract_ed_public_key_parameters)(
+                            key.inner(),
+                        )?;
+                    AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                        key_type: OctetKeyPairType::OctetKeyPair,
+                        curve: EllipticCurve::Ed25519,
+                        x: b64_encode(public_key_bytes),
+                    })
                 }
             },
         })

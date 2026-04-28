@@ -8,7 +8,7 @@ use aws_lc_rs::{
 
 use crate::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier},
+    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier, aws_lc::eddsa::EdDSAVerifier},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -46,6 +46,12 @@ fn extract_ec_public_key_coordinates(
 
     let (x, y) = pub_bytes[1..].split_at(pub_elem_bytes);
     Ok((curve, x.to_vec(), y.to_vec()))
+}
+
+fn extract_ed_public_key_parameters(encoding_key: &[u8]) -> errors::Result<Vec<u8>> {
+    Ok(EdDSAVerifier::from_encoding_key(&EncodingKey::from_ed_der(encoding_key))
+        .map_err(|_| ErrorKind::InvalidEddsaKey)?
+        .get_pub_key_bytes())
 }
 
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
@@ -105,6 +111,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     jwk_utils: JwkUtils {
         extract_rsa_public_key_components,
         extract_ec_public_key_coordinates,
+        extract_ed_public_key_parameters,
         compute_digest,
     },
 };
