@@ -48,10 +48,19 @@ fn extract_ec_public_key_coordinates(
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 
-fn extract_ed_public_key_parameters(encoding_key: &[u8]) -> errors::Result<Vec<u8>> {
-    Ok(EdDSAVerifier::from_encoding_key(&EncodingKey::from_ed_der(encoding_key))
-        .map_err(|_| ErrorKind::InvalidEddsaKey)?
-        .get_pub_key_bytes())
+fn extract_ed_public_key_parameters(
+    encoding_key: &[u8],
+    curve_type: &EllipticCurve,
+) -> errors::Result<Vec<u8>> {
+    match curve_type {
+        EllipticCurve::Ed25519 => {
+            Ok(EdDSAVerifier::from_ed25519_encoding_key(&EncodingKey::from_ed_der(encoding_key))
+                .map_err(|_| ErrorKind::InvalidEddsaKey)?
+                .get_pub_key_bytes())
+        }
+        EllipticCurve::Ed448 => unimplemented!("Ed448 curves are not yet implemented"),
+        _ => Err(ErrorKind::InvalidAlgorithm.into()),
+    }
 }
 
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {

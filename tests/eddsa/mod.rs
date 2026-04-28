@@ -143,7 +143,7 @@ fn ed_jwk() {
 #[cfg(feature = "use_pem")]
 #[test]
 #[wasm_bindgen_test]
-fn ed_jwk_from_key() {
+fn ed_jwk_from_ed25519_key() {
     let privkey_pem = include_bytes!("private_ed25519_key.pem");
     let encoding_key = EncodingKey::from_ed_pem(privkey_pem).unwrap();
 
@@ -159,4 +159,36 @@ fn ed_jwk_from_key() {
         }))
         .unwrap()
     );
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn ed_jwk_from_ed25519_der_key() {
+    let privkey_der = include_bytes!("private_ed25519_der_key.bin");
+    let encoding_key = EncodingKey::from_ed_der(privkey_der);
+
+    let jwk = Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap();
+
+    assert_eq!(
+        jwk,
+        serde_json::from_value(json!({
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "x": "2-Jj2UvNCvQiUPNYRgSi0cJSPiJI6Rs6D0UTeEpQVj8",
+            "alg": "EdDSA",
+        }))
+        .unwrap()
+    );
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+#[should_panic]
+fn ed_jwk_from_ed448_key() {
+    let privkey_pem = include_bytes!("private_ed448_key.pem");
+    let encoding_key = EncodingKey::from_ed_pem(privkey_pem).unwrap();
+
+    // Unimplemented so should panic
+    Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap();
 }

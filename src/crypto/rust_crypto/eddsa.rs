@@ -52,9 +52,13 @@ impl EdDSAVerifier {
         ))
     }
 
-    pub(crate) fn from_encoding_key(encoding_key: &EncodingKey) -> Result<Self> {
+    pub(crate) fn from_ed25519_encoding_key(encoding_key: &EncodingKey) -> Result<Self> {
         if encoding_key.family() != AlgorithmFamily::Ed {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        if encoding_key.inner().len() == 57 {
+            unimplemented!("Ed448 keys are currently not implemented")
         }
 
         Ok(Self(
