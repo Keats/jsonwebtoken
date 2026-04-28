@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 #[cfg(feature = "use_pem")]
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
@@ -9,7 +8,7 @@ use jsonwebtoken::{
     crypto::{sign, verify},
 };
 #[cfg(feature = "use_pem")]
-use jsonwebtoken::{Header, Validation, decode, encode, jwk::Jwk};
+use jsonwebtoken::{Header, Validation, decode, encode};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -144,6 +143,9 @@ fn ed_jwk() {
 #[test]
 #[wasm_bindgen_test]
 fn ed_jwk_from_ed25519_key() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
     let privkey_pem = include_bytes!("private_ed25519_key.pem");
     let encoding_key = EncodingKey::from_ed_pem(privkey_pem).unwrap();
 
@@ -164,6 +166,9 @@ fn ed_jwk_from_ed25519_key() {
 #[test]
 #[wasm_bindgen_test]
 fn ed_jwk_from_ed25519_der_key() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
     let privkey_der = include_bytes!("private_ed25519_der_key.bin");
     let encoding_key = EncodingKey::from_ed_der(privkey_der);
 
@@ -186,6 +191,8 @@ fn ed_jwk_from_ed25519_der_key() {
 #[wasm_bindgen_test]
 #[should_panic]
 fn ed_jwk_from_ed448_key() {
+    use jsonwebtoken::jwk::Jwk;
+
     let privkey_pem = include_bytes!("private_ed448_key.pem");
     let encoding_key = EncodingKey::from_ed_pem(privkey_pem).unwrap();
 
