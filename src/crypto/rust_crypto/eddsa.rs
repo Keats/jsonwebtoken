@@ -35,7 +35,7 @@ impl JwtSigner for EdDSASigner {
     }
 }
 
-pub struct EdDSAVerifier(VerifyingKey);
+pub struct EdDSAVerifier(pub VerifyingKey);
 
 impl EdDSAVerifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
@@ -50,6 +50,26 @@ impl EdDSAVerifier {
             )
             .map_err(|_| ErrorKind::InvalidEddsaKey)?,
         ))
+    }
+
+    pub(crate) fn from_ed25519_encoding_key(encoding_key: &EncodingKey) -> Result<Self> {
+        if encoding_key.family() != AlgorithmFamily::Ed {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+
+        if encoding_key.inner().len() == 57 {
+            unimplemented!("Ed448 keys are currently not implemented")
+        }
+
+        Ok(Self(
+            SigningKey::from_pkcs8_der(encoding_key.inner())
+                .map_err(|_| ErrorKind::InvalidEddsaKey)?
+                .verifying_key(),
+        ))
+    }
+
+    pub(crate) fn get_pub_key_bytes(&self) -> Vec<u8> {
+        self.0.as_bytes().to_vec()
     }
 }
 

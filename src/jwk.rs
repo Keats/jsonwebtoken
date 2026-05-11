@@ -310,6 +310,9 @@ pub enum EllipticCurve {
     /// Ed25519 curve
     #[serde(rename = "Ed25519")]
     Ed25519,
+    /// Ed448 curve
+    #[serde(rename = "Ed448")]
+    Ed448,
 }
 
 /// Parameters for an Elliptic Curve Key
@@ -435,6 +438,7 @@ impl Jwk {
             _ => false,
         }
     }
+
     pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> crate::errors::Result<Self> {
         Ok(Self {
             common: CommonParameters {
@@ -487,7 +491,25 @@ impl Jwk {
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Ed => {
-                    unimplemented!();
+                    // Get the curve type based off the encoding key length
+                    let curve_type: EllipticCurve = match key.inner().len() {
+                        48 => Ok(EllipticCurve::Ed25519),
+                        73 => Ok(EllipticCurve::Ed448),
+                        _ => Err(Error::from(ErrorKind::InvalidEddsaKey)),
+                    }?;
+
+                    // Extract the public key from the encoding key
+                    let public_key_bytes = (CryptoProvider::get_default()
+                        .jwk_utils
+                        .extract_ed_public_key_parameters)(
+                        key.inner(), &curve_type
+                    )?;
+
+                    AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                        key_type: OctetKeyPairType::OctetKeyPair,
+                        curve: curve_type,
+                        x: b64_encode(public_key_bytes),
+                    })
                 }
             },
         })
@@ -508,7 +530,9 @@ impl Jwk {
                         a.y,
                     )
                 }
-                EllipticCurve::Ed25519 => panic!("EllipticCurve can't contain this curve type"),
+                EllipticCurve::Ed25519 | EllipticCurve::Ed448 => {
+                    panic!("EllipticCurve can't contain this curve type")
+                }
             },
             AlgorithmParameters::RSA(a) => {
                 format!(
@@ -529,7 +553,7 @@ impl Jwk {
                 EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
                     panic!("OctetKeyPair can't contain this curve type")
                 }
-                EllipticCurve::Ed25519 => {
+                EllipticCurve::Ed25519 | EllipticCurve::Ed448 => {
                     format!(
                         r#"{{"crv":{},"kty":{},"x":"{}"}}"#,
                         serde_json::to_string(&a.curve).unwrap(),
