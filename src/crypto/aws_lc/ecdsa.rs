@@ -8,7 +8,8 @@ use crate::{Algorithm, DecodingKey, EncodingKey};
 use aws_lc_rs::rand::SystemRandom;
 use aws_lc_rs::signature::{
     ECDSA_P256_SHA256_FIXED, ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED,
-    ECDSA_P384_SHA384_FIXED_SIGNING, EcdsaKeyPair, VerificationAlgorithm,
+    ECDSA_P384_SHA384_FIXED_SIGNING, ECDSA_P521_SHA512_FIXED, ECDSA_P521_SHA512_FIXED_SIGNING,
+    EcdsaKeyPair, VerificationAlgorithm,
 };
 use signature::{Error, Signer, Verifier};
 
@@ -81,3 +82,6 @@ define_ecdsa_verifier!(Es256Verifier, Algorithm::ES256, ECDSA_P256_SHA256_FIXED)
 
 define_ecdsa_signer!(Es384Signer, Algorithm::ES384, &ECDSA_P384_SHA384_FIXED_SIGNING);
 define_ecdsa_verifier!(Es384Verifier, Algorithm::ES384, ECDSA_P384_SHA384_FIXED);
+
+define_ecdsa_signer!(Es512Signer, Algorithm::ES512, &ECDSA_P521_SHA512_FIXED_SIGNING);
+define_ecdsa_verifier!(Es512Verifier, Algorithm::ES512, ECDSA_P521_SHA512_FIXED);

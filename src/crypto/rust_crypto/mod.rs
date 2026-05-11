@@ -1,6 +1,8 @@
 use ::rsa::{RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts};
-use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
+use p256::ecdsa::SigningKey as P256SigningKey;
 use p384::ecdsa::SigningKey as P384SigningKey;
+use p521::ecdsa::SigningKey as P521SigningKey;
+use pkcs8::DecodePrivateKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
 use crate::{
@@ -51,6 +53,46 @@ fn extract_ec_public_key_coordinates(
                 _ => Err(ErrorKind::InvalidEcdsaKey.into()),
             }
         }
+        Algorithm::ES512 => {
+            // Use pkcs8 to parse the PKCS8 wrapper
+            let private_key_info = pkcs8::PrivateKeyInfo::try_from(key_content)
+                .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+
+            // The private_key field contains the DER-encoded ECPrivateKey
+            let ec_private_key_der = private_key_info.private_key;
+
+            // Use simple_asn1 to parse the ECPrivateKey structure
+            use simple_asn1::ASN1Block;
+            let asn1_blocks = simple_asn1::from_der(ec_private_key_der)
+                .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+
+            // Find the OCTET STRING containing the 66-byte private key
+            for block in asn1_blocks {
+                if let ASN1Block::Sequence(_, entries) = block {
+                    if entries.len() >= 2 {
+                        if let ASN1Block::OctetString(_, key_bytes) = &entries[1] {
+                            if key_bytes.len() == 66 {
+                                let mut field_bytes = p521::FieldBytes::default();
+                                field_bytes.copy_from_slice(key_bytes);
+                                let signing_key = P521SigningKey::from_bytes(&field_bytes)
+                                    .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+                                let public_key = p521::ecdsa::VerifyingKey::from(&signing_key);
+                                let encoded = public_key.to_encoded_point(false);
+                                return match encoded.coordinates() {
+                                    p521::elliptic_curve::sec1::Coordinates::Uncompressed {
+                                        x,
+                                        y,
+                                    } => Ok((EllipticCurve::P521, x.to_vec(), y.to_vec())),
+                                    _ => Err(ErrorKind::InvalidEcdsaKey.into()),
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+
+            Err(ErrorKind::InvalidEcdsaKey.into())
+        }
         _ => Err(ErrorKind::InvalidEcdsaKey.into()),
     }
 }
@@ -70,6 +112,7 @@ fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSig
         Algorithm::HS512 => Box::new(hmac::Hs512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES256 => Box::new(ecdsa::Es256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::ES384 => Box::new(ecdsa::Es384Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::ES512 => Box::new(ecdsa::Es512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS256 => Box::new(rsa::Rsa256Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS384 => Box::new(rsa::Rsa384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::RS512 => Box::new(rsa::Rsa512Signer::new(key)?) as Box<dyn JwtSigner>,
@@ -92,6 +135,7 @@ fn new_verifier(
         Algorithm::HS512 => Box::new(hmac::Hs512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES256 => Box::new(ecdsa::Es256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::ES384 => Box::new(ecdsa::Es384Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::ES512 => Box::new(ecdsa::Es512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS256 => Box::new(rsa::Rsa256Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS384 => Box::new(rsa::Rsa384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::RS512 => Box::new(rsa::Rsa512Verifier::new(key)?) as Box<dyn JwtVerifier>,
