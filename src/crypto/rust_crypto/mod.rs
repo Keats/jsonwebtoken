@@ -15,11 +15,21 @@ mod eddsa;
 mod hmac;
 mod rsa;
 
+fn trim_leading_zeroes(bytes: &[u8]) -> Vec<u8> {
+    match bytes.iter().position(|byte| *byte != 0) {
+        Some(first_non_zero) => bytes[first_non_zero..].to_vec(),
+        None => vec![0],
+    }
+}
+
 fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let private_key = RsaPrivateKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let public_key = private_key.to_public_key();
-    Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
+    Ok((
+        trim_leading_zeroes(public_key.n().to_be_bytes().as_ref()),
+        trim_leading_zeroes(public_key.e().to_be_bytes().as_ref()),
+    ))
 }
 
 fn extract_ec_public_key_coordinates(

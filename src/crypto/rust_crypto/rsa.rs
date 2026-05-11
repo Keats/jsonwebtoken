@@ -1,23 +1,31 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
 //! RSA family of algorithms using RustCrypto.
 
-use hmac::digest::FixedOutputReset;
+// Use the hash types re-exported by `rsa` so this backend stays in the same
+// digest ecosystem as the 0.10 RC line without a crate-wide sha2 migration.
 use rsa::{
-    BigUint, Pkcs1v15Sign, Pss, RsaPublicKey,
+    BoxedUint, Pkcs1v15Sign, Pss, RsaPrivateKey, RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
-    pkcs1v15::SigningKey,
     pkcs8::AssociatedOid,
-    pss::BlindedSigningKey,
+    sha2::{
+        Sha256, Sha384, Sha512,
+        digest::{Digest, FixedOutputReset},
+    },
     traits::SignatureScheme,
 };
-use sha2::{Digest, Sha256, Sha384, Sha512};
-use signature::{RandomizedSigner, SignatureEncoding, Signer, Verifier};
+use signature::{Signer, Verifier};
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::decoding::DecodingKeyKind;
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
+
+fn to_boxed_uint(bytes: &[u8]) -> std::result::Result<BoxedUint, signature::Error> {
+    let bits_precision =
+        u32::try_from(bytes.len().saturating_mul(8)).map_err(signature::Error::from_source)?;
+    BoxedUint::from_be_slice(bytes, bits_precision).map_err(signature::Error::from_source)
+}
 
 fn try_sign_rsa<H>(
     encoding_key: &EncodingKey,
@@ -27,21 +35,22 @@ fn try_sign_rsa<H>(
 where
     H: Digest + AssociatedOid + FixedOutputReset,
 {
-    let mut rng = rand::thread_rng();
-    if pss {
-        let private_key = rsa::RsaPrivateKey::from_pkcs1_der(encoding_key.inner())
-            .map_err(signature::Error::from_source)?;
-        let signing_key = BlindedSigningKey::<H>::new(private_key);
-        Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
+    let mut rng = rand10::rng();
+    let private_key = RsaPrivateKey::from_pkcs1_der(encoding_key.inner())
+        .map_err(signature::Error::from_source)?;
+    let digest = H::digest(msg);
+
+    let signature = if pss {
+        private_key.sign_with_rng(&mut rng, Pss::<H>::new(), digest.as_ref())
     } else {
-        let private_key = rsa::RsaPrivateKey::from_pkcs1_der(encoding_key.inner())
-            .map_err(signature::Error::from_source)?;
-        let signing_key = SigningKey::<H>::new(private_key);
-        Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
+        private_key.sign_with_rng(&mut rng, Pkcs1v15Sign::new::<H>(), digest.as_ref())
     }
+    .map_err(signature::Error::from_source)?;
+
+    Ok(signature)
 }
 
-fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
+fn verify_rsa<S: SignatureScheme, H: Digest>(
     scheme: S,
     decoding_key: &DecodingKey,
     msg: &[u8],
@@ -53,12 +62,13 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
         DecodingKeyKind::SecretOrDer(bytes) => {
             RsaPublicKey::from_pkcs1_der(bytes)
                 .map_err(signature::Error::from_source)?
-                .verify(scheme, &digest, signature)
+                .verify(scheme, digest.as_ref(), signature)
                 .map_err(signature::Error::from_source)?;
         }
         DecodingKeyKind::RsaModulusExponent { n, e } => {
-            RsaPublicKey::new(BigUint::from_bytes_be(n), BigUint::from_bytes_be(e))?
-                .verify(scheme, &digest, signature)
+            RsaPublicKey::new(to_boxed_uint(n)?, to_boxed_uint(e)?)
+                .map_err(signature::Error::from_source)?
+                .verify(scheme, digest.as_ref(), signature)
                 .map_err(signature::Error::from_source)?;
         }
     };
@@ -115,7 +125,7 @@ macro_rules! define_rsa_verifier {
                 signature: &Vec<u8>,
             ) -> std::result::Result<(), signature::Error> {
                 if $pss {
-                    verify_rsa::<Pss, $hash>(Pss::new::<$hash>(), &self.0, msg, signature)
+                    verify_rsa::<_, $hash>(Pss::<$hash>::new(), &self.0, msg, signature)
                 } else {
                     verify_rsa::<_, $hash>(Pkcs1v15Sign::new::<$hash>(), &self.0, msg, signature)
                 }
