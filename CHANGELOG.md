@@ -1,6 +1,6 @@
 # Changelog
 
-## 10.4.0 (unreleased)
+## 10.4.0 (2026-05-11)
 
 - Fix incorrect encoding for Ed25519 JWK thumbprints
 - Make `Algorithm.family` public and add `Validation.new_for_family`

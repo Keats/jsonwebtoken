@@ -11,9 +11,9 @@ pub enum AlgorithmFamily {
     Hmac,
     /// RSA-based public key family.
     Rsa,
-    /// Edwards curve public key family.
-    Ec,
     /// Elliptic curve public key family.
+    Ec,
+    /// Edwards curve public key family.
     Ed,
 }
 
