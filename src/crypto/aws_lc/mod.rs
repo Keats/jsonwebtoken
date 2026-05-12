@@ -48,13 +48,13 @@ fn extract_ec_public_key_coordinates(
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 
-fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
     let algorithm = match hash_function {
         ThumbprintHash::SHA256 => &digest::SHA256,
         ThumbprintHash::SHA384 => &digest::SHA384,
         ThumbprintHash::SHA512 => &digest::SHA512,
     };
-    digest::digest(algorithm, data).as_ref().to_vec()
+    Ok(digest::digest(algorithm, data).as_ref().to_vec())
 }
 
 fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSigner>, Error> {
