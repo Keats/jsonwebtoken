@@ -291,7 +291,69 @@ fn verify_hs256_rfc7517_appendix_a1() {
     assert_eq!(c.claims.iss, "joe");
 }
 
-// Regression tests for type confusion vulnerability where malformed claims
+#[test]
+#[wasm_bindgen_test]
+fn encode_with_oiat_header() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let original_iat: u64 = 1_700_000_000;
+    let header = Header { oiat: Some(original_iat), ..Default::default() };
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
+    assert_eq!(my_claims, token_data.claims);
+    assert_eq!(Some(original_iat), token_data.header.oiat);
+    // oiat must NOT appear in extras (it is a first-class typed field)
+    assert!(token_data.header.extras.get("oiat").is_none());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn oiat_serialized_as_number_not_string() {
+    // oiat must be serialized as a JSON integer, not as a quoted string,
+    // so that consumers can compare it numerically.
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let original_iat: u64 = 1_700_000_000;
+    let header = Header { oiat: Some(original_iat), ..Default::default() };
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+
+    // Verify by inspecting the raw header JSON
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+    let header_b64 = token.split('.').next().unwrap();
+    let header_json = String::from_utf8(URL_SAFE_NO_PAD.decode(header_b64).unwrap()).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&header_json).unwrap();
+    assert!(parsed["oiat"].is_number(), "oiat must be a JSON number, got: {}", parsed["oiat"]);
+    assert_eq!(parsed["oiat"].as_u64().unwrap(), original_iat);
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn header_without_oiat_is_none() {
+    let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
+    let header = decode_header(token).unwrap();
+    assert!(header.oiat.is_none());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn header_with_oiat_is_none() {
+    let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsIm9pYXQiOjE3Nzg3NTE3NTN9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.zbcjDdEH3u2fAXj_OgjEr-9l4W87NFAWSgoomYHJswo";
+    let header = decode_header(token).unwrap();
+    assert_eq!(header.oiat.unwrap(), 1778751753);
+}
+
 // (eg nbf or exp as strings) were silently treated as "not present" when not required
 #[derive(Debug, Serialize)]
 struct ClaimsWithStringNbf {

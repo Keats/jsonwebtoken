@@ -183,6 +183,14 @@ pub struct Header {
     /// Defined in [RFC8555#6.5.2](https://datatracker.ietf.org/doc/html/rfc8555#section-6.5.2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
+    /// Original Issued At — Unix timestamp (seconds) of the original token issuance,
+    /// before any refresh or re-issuance. Carried in the JWS header so it is
+    /// covered by the signature and cannot be altered without invalidating the token.
+    ///
+    /// This is a non-standard extension used by some providers (e.g. Clerk).
+    /// It is serialized as a JSON integer (`u64`), not a string.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oiat: Option<u64>,
     /// Any additional non-standard headers not defined in [RFC7515#4.1](https://datatracker.ietf.org/doc/html/rfc7515#section-4.1).
     /// Once serialized, all keys will be converted to fields at the root level of the header payload
     /// Ex: Dict("custom" -> "header") will be converted to "{"typ": "JWT", ..., "custom": "header"}"
@@ -209,6 +217,7 @@ impl Header {
             zip: None,
             url: None,
             nonce: None,
+            oiat: None,
             extras: Default::default(),
         }
     }
