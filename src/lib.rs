@@ -8,7 +8,7 @@
 pub use algorithms::{Algorithm, AlgorithmFamily};
 pub use decoding::{DecodingKey, DecodingKeyKind, TokenData, decode, decode_header};
 pub use encoding::{EncodingKey, encode};
-pub use header::Header;
+pub use header::{Extras, Header};
 pub use signature;
 pub use validation::{Validation, get_current_timestamp};
 
