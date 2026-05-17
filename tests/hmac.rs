@@ -1,6 +1,6 @@
 #![allow(deprecated)]
+use jsonwebtoken::Extras;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -56,7 +56,7 @@ fn encode_with_custom_header() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
-    assert!(token_data.header.extras.is_empty());
+    assert!(token_data.header.extras.inner().is_empty());
 }
 
 #[test]
@@ -67,8 +67,8 @@ fn encode_with_extra_custom_header() {
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
-    let mut extras = HashMap::with_capacity(1);
-    extras.insert("custom".to_string(), "header".to_string());
+    let mut extras = Extras::default();
+    extras.insert("custom", "header");
     let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
     let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
     let token_data = decode::<Claims>(
@@ -79,7 +79,7 @@ fn encode_with_extra_custom_header() {
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
-    assert_eq!("header", token_data.header.extras.get("custom").unwrap().as_str());
+    assert_eq!(Some("header".to_string()), token_data.header.extras.get("custom").unwrap());
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn encode_with_multiple_extra_custom_headers() {
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
-    let mut extras = HashMap::with_capacity(2);
+    let mut extras = Extras::default();
     extras.insert("custom1".to_string(), "header1".to_string());
     extras.insert("custom2".to_string(), "header2".to_string());
     let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
@@ -104,8 +104,42 @@ fn encode_with_multiple_extra_custom_headers() {
     assert_eq!(my_claims, token_data.claims);
     assert_eq!("kid", token_data.header.kid.unwrap());
     let extras = token_data.header.extras;
-    assert_eq!("header1", extras.get("custom1").unwrap().as_str());
-    assert_eq!("header2", extras.get("custom2").unwrap().as_str());
+    assert_eq!(Some("header1".to_string()), extras.get("custom1").unwrap());
+    assert_eq!(Some("header2".to_string()), extras.get("custom2").unwrap());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn encode_with_extra_non_string_header() {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let foo: u32 = 1;
+    let bar: i32 = -2345;
+    let mut extras = Extras::default();
+    extras.insert("foo", foo);
+    extras.insert("bar", bar);
+    let header = Header { extras, ..Default::default() };
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    )
+    .unwrap();
+    let extras = token_data.header.extras;
+    assert_eq!(extras.inner().len(), 2);
+    assert_eq!(extras.get("foo").unwrap(), Some(foo));
+    assert_eq!(extras.get("bar").unwrap(), Some(bar));
+    assert!(extras.get::<bool>("baz").unwrap().is_none());
+    assert!(extras.get::<u32>("bar").is_err_and(|e| {
+        match e.into_kind() {
+            ErrorKind::Json(error) => error.is_data(),
+            _ => false,
+        }
+    }));
 }
 
 #[test]
@@ -156,8 +190,8 @@ fn decode_token_custom_headers() {
     assert_eq!(my_claims, claims.claims);
     assert_eq!("kid", claims.header.kid.unwrap());
     let extras = claims.header.extras;
-    assert_eq!("header1", extras.get("custom1").unwrap().as_str());
-    assert_eq!("header2", extras.get("custom2").unwrap().as_str());
+    assert_eq!(Some("header1".to_string()), extras.get("custom1").unwrap());
+    assert_eq!(Some("header2".to_string()), extras.get("custom2").unwrap());
 }
 
 #[test]
