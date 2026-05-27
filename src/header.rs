@@ -248,7 +248,7 @@ impl Header {
             zip: None,
             url: None,
             nonce: None,
-            extras: Default::default(),
+            extras: Extras::default(),
         }
     }
 

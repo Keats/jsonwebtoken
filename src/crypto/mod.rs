@@ -114,11 +114,11 @@ impl CryptoProvider {
 
         #[allow(unreachable_code)]
         {
-            const NOT_INSTALLED_ERROR: &str = r###"
+            const NOT_INSTALLED_ERROR: &str = r"
 Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features.
 Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
 See the documentation of the CryptoProvider type for more information.
-"###;
+";
 
             static INSTANCE: CryptoProvider = CryptoProvider {
                 signer_factory: |_, _| panic!("{}", NOT_INSTALLED_ERROR),
@@ -151,11 +151,11 @@ impl JwkUtils {
     /// Initialises all values to dummies.
     /// Will lead to a panic when JWKs are required, so only use it if you don't want to support JWKs.
     pub const fn new_unimplemented() -> Self {
-        const NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR: &str = r###"
+        const NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR: &str = r"
 Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features, or your CryptoProvider does not support JWKs.
 Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
 See the documentation of the CryptoProvider type for more information.
-"###;
+";
         Self {
             extract_rsa_public_key_components: |_| {
                 panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)

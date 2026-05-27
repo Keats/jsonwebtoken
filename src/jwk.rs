@@ -242,8 +242,8 @@ pub struct CommonParameters {
     #[serde(rename = "use", skip_serializing_if = "Option::is_none", default)]
     pub public_key_use: Option<PublicKeyUse>,
 
-    /// The "key_ops" (key operations) parameter identifies the operation(s)
-    /// for which the key is intended to be used.  The "key_ops" parameter is
+    /// The `key_ops` (key operations) parameter identifies the operation(s)
+    /// for which the key is intended to be used.  The `key_ops` parameter is
     /// intended for use cases in which public, private, or symmetric keys
     /// may be present.
     /// Should not be specified with `public_key_use`.

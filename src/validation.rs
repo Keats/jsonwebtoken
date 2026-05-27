@@ -144,13 +144,13 @@ impl Validation {
     /// `aud` is a collection of one or more acceptable audience members
     /// The simple usage is `set_audience(&["some aud name"])`
     pub fn set_audience<T: ToString>(&mut self, items: &[T]) {
-        self.aud = Some(items.iter().map(|x| x.to_string()).collect())
+        self.aud = Some(items.iter().map(|x| x.to_string()).collect());
     }
 
     /// `iss` is a collection of one or more acceptable issuers members
     /// The simple usage is `set_issuer(&["some iss name"])`
     pub fn set_issuer<T: ToString>(&mut self, items: &[T]) {
-        self.iss = Some(items.iter().map(|x| x.to_string()).collect())
+        self.iss = Some(items.iter().map(|x| x.to_string()).collect());
     }
 
     /// Which claims are required to be present for this JWT to be considered valid.
