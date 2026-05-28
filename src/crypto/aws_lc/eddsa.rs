@@ -48,7 +48,9 @@ impl EdDSAVerifier {
 
 impl Verifier<Vec<u8>> for EdDSAVerifier {
     fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
-        ED25519.verify_sig(self.0.as_bytes(), msg, signature).map_err(Error::from_source)?;
+        ED25519
+            .verify_sig(self.0.try_get_as_bytes().map_err(Error::from_source)?, msg, signature)
+            .map_err(Error::from_source)?;
         Ok(())
     }
 }

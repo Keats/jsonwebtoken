@@ -110,17 +110,10 @@ impl EncodingKey {
     }
 
     /// Get the value of the key.
+    ///
+    /// To be used for defining your own `CryptoProvider`.
     pub fn inner(&self) -> &[u8] {
         &self.content
-    }
-
-    /// Try to get the HMAC secret from a key.
-    pub fn try_get_hmac_secret(&self) -> Result<&[u8]> {
-        if self.family == AlgorithmFamily::Hmac {
-            Ok(self.inner())
-        } else {
-            Err(new_error(ErrorKind::InvalidKeyFormat))
-        }
     }
 }
 
