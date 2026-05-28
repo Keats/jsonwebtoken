@@ -5,8 +5,8 @@ use aws_lc_rs::hmac;
 use signature::{Signer, Verifier};
 
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::errors::Result;
-use crate::{Algorithm, DecodingKey, EncodingKey};
+use crate::errors::{ErrorKind, Result, new_error};
+use crate::{Algorithm, AlgorithmFamily, DecodingKey, EncodingKey};
 
 macro_rules! define_hmac_signer {
     ($name:ident, $alg:expr, $hmac_alg:expr) => {
@@ -14,7 +14,11 @@ macro_rules! define_hmac_signer {
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-                Ok(Self(hmac::Key::new($hmac_alg, encoding_key.try_get_hmac_secret()?)))
+                if encoding_key.family() != AlgorithmFamily::Hmac {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
+
+                Ok(Self(hmac::Key::new($hmac_alg, encoding_key.as_bytes())))
             }
         }
 
@@ -38,7 +42,11 @@ macro_rules! define_hmac_verifier {
 
         impl $name {
             pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-                Ok(Self(hmac::Key::new($hmac_alg, decoding_key.try_get_hmac_secret()?)))
+                if decoding_key.family() != AlgorithmFamily::Hmac {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
+
+                Ok(Self(hmac::Key::new($hmac_alg, decoding_key.try_get_as_bytes()?)))
             }
         }
 

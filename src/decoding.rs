@@ -229,20 +229,13 @@ impl DecodingKey {
         }
     }
 
-    /// Get the value of the key.
-    pub fn as_bytes(&self) -> &[u8] {
+    /// Try to get the key in raw byte format.
+    ///
+    /// To be used for defining your own `CryptoProvider`.
+    pub fn try_get_as_bytes(&self) -> Result<&[u8]> {
         match &self.kind {
-            DecodingKeyKind::SecretOrDer(b) => b,
-            DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
-        }
-    }
-
-    /// Try to get the HMAC secret from a key.
-    pub fn try_get_hmac_secret(&self) -> Result<&[u8]> {
-        if self.family == AlgorithmFamily::Hmac {
-            Ok(self.as_bytes())
-        } else {
-            Err(new_error(ErrorKind::InvalidKeyFormat))
+            DecodingKeyKind::SecretOrDer(b) => Ok(b),
+            DecodingKeyKind::RsaModulusExponent { .. } => Err(ErrorKind::InvalidKeyFormat.into()),
         }
     }
 }

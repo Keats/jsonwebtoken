@@ -28,14 +28,12 @@ where
     H: Digest + AssociatedOid + FixedOutputReset,
 {
     let mut rng = rand::thread_rng();
+    let private_key = rsa::RsaPrivateKey::from_pkcs1_der(encoding_key.as_bytes())
+        .map_err(signature::Error::from_source)?;
     if pss {
-        let private_key = rsa::RsaPrivateKey::from_pkcs1_der(encoding_key.inner())
-            .map_err(signature::Error::from_source)?;
         let signing_key = BlindedSigningKey::<H>::new(private_key);
         Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
     } else {
-        let private_key = rsa::RsaPrivateKey::from_pkcs1_der(encoding_key.inner())
-            .map_err(signature::Error::from_source)?;
         let signing_key = SigningKey::<H>::new(private_key);
         Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
     }

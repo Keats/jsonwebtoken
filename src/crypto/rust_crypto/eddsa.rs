@@ -17,7 +17,7 @@ impl EdDSASigner {
         }
 
         Ok(Self(
-            SigningKey::from_pkcs8_der(encoding_key.inner())
+            SigningKey::from_pkcs8_der(encoding_key.as_bytes())
                 .map_err(|_| ErrorKind::InvalidEddsaKey)?,
         ))
     }
@@ -45,7 +45,7 @@ impl EdDSAVerifier {
 
         Ok(Self(
             VerifyingKey::from_bytes(
-                <&[u8; 32]>::try_from(&decoding_key.as_bytes()[..32])
+                <&[u8; 32]>::try_from(&decoding_key.try_get_as_bytes()?[..32])
                     .map_err(|_| ErrorKind::InvalidEddsaKey)?,
             )
             .map_err(|_| ErrorKind::InvalidEddsaKey)?,

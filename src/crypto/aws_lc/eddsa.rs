@@ -16,7 +16,7 @@ impl EdDSASigner {
         }
 
         Ok(Self(
-            Ed25519KeyPair::from_pkcs8(encoding_key.inner())
+            Ed25519KeyPair::from_pkcs8(encoding_key.as_bytes())
                 .map_err(|_| ErrorKind::InvalidEddsaKey)?,
         ))
     }
@@ -48,7 +48,9 @@ impl EdDSAVerifier {
 
 impl Verifier<Vec<u8>> for EdDSAVerifier {
     fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
-        ED25519.verify_sig(self.0.as_bytes(), msg, signature).map_err(Error::from_source)?;
+        ED25519
+            .verify_sig(self.0.try_get_as_bytes().map_err(Error::from_source)?, msg, signature)
+            .map_err(Error::from_source)?;
         Ok(())
     }
 }

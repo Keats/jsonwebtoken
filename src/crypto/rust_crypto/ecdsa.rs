@@ -25,7 +25,7 @@ macro_rules! define_ecdsa_signer {
                 }
 
                 Ok(Self(
-                    <$signing_key>::from_pkcs8_der(encoding_key.inner())
+                    <$signing_key>::from_pkcs8_der(encoding_key.as_bytes())
                         .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
                 ))
             }
@@ -57,7 +57,7 @@ macro_rules! define_ecdsa_verifier {
                 }
 
                 Ok(Self(
-                    <$verifying_key>::from_sec1_bytes(decoding_key.as_bytes())
+                    <$verifying_key>::from_sec1_bytes(decoding_key.try_get_as_bytes()?)
                         .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
                 ))
             }
