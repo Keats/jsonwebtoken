@@ -9,7 +9,7 @@ Add the following to Cargo.toml:
 
 ```toml
 # You will have to select either `aws_lc_rs` or `rust_crypto` as backend if you're not using your own
-jsonwebtoken = { version = "10", features = ["aws_lc_rs"] }
+jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 # If you do not need pem decoding, you can disable the default feature `use_pem` that way:
 # jsonwebtoken = {version = "10", default-features = false, features = ["aws_lc_rs"] }
 serde = {version = "1.0", features = ["derive"] }
@@ -18,7 +18,7 @@ serde = {version = "1.0", features = ["derive"] }
 Two crypto backends are available via features, `aws_lc_rs` and `rust_crypto`, at most one of which must be enabled. If you select neither feature, you need to provide your own `CryptoProvider`.
 
 For examples of how to implement a `CryptoProvider`, see
-- [arckoor/jsonwebtoken-botan](https://github.com/arckoor/jsonwebtoken-botan)
+- [arckoor/jsonwebtoken-providers](https://github.com/arckoor/jsonwebtoken-providers)
 
 The minimum required Rust version (MSRV) is specified in the `rust-version` field in this project's [Cargo.toml](Cargo.toml).
 
@@ -45,7 +45,7 @@ Complete examples are available in the examples directory: a basic one and one w
 In terms of imports and structs:
 ```rust
 use serde::{Serialize, Deserialize};
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+use jsonwebtoken::{encode, decode, Header, Extras, Algorithm, Validation, EncodingKey, DecodingKey};
 
 /// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,7 +86,7 @@ If you want to set the `kid` parameter or change the algorithm for example:
 let mut header = Header::new(Algorithm::HS512);
 header.kid = Some("blabla".to_owned());
 
-let mut extras = HashMap::with_capacity(1);
+let mut extras = Extras::default();
 extras.insert("custom".to_string(), "header".to_string());
 header.extras = Some(extras);
 
@@ -134,8 +134,8 @@ when the Jws is nested in another struct.
 
 If you have a JWK object, you can generate a thumbprint like
 
-```
-let tp = my_jwk.thumbprint(&jsonwebtoken::DIGEST_SHA256);
+```rust
+let tp = my_jwk.thumbprint(&jsonwebtoken::DIGEST_SHA256)?;
 ```
 
 ### Decoding

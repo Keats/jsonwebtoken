@@ -1,4 +1,3 @@
-#![allow(missing_docs)]
 //! This crate contains types only for working JWK and JWK Sets
 //! This is only meant to be used to deal with public JWK, not generate ones.
 //! Most of the code in this file is taken from <https://github.com/lawliet89/biscuit> but
@@ -11,7 +10,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use crate::crypto::CryptoProvider;
 use crate::serialization::b64_encode;
 use crate::{
-    Algorithm, EncodingKey,
+    Algorithm, AlgorithmFamily, EncodingKey,
     errors::{self, Error, ErrorKind},
 };
 
@@ -242,8 +241,8 @@ pub struct CommonParameters {
     #[serde(rename = "use", skip_serializing_if = "Option::is_none", default)]
     pub public_key_use: Option<PublicKeyUse>,
 
-    /// The "key_ops" (key operations) parameter identifies the operation(s)
-    /// for which the key is intended to be used.  The "key_ops" parameter is
+    /// The `key_ops` (key operations) parameter identifies the operation(s)
+    /// for which the key is intended to be used.  The `key_ops` parameter is
     /// intended for use cases in which public, private, or symmetric keys
     /// may be present.
     /// Should not be specified with `public_key_use`.
@@ -403,6 +402,7 @@ pub struct OctetKeyPairParameters {
 /// Algorithm specific parameters
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 #[serde(untagged)]
+#[allow(missing_docs)]
 pub enum AlgorithmParameters {
     EllipticCurve(EllipticCurveKeyParameters),
     RSA(RSAKeyParameters),
@@ -412,6 +412,7 @@ pub enum AlgorithmParameters {
 
 /// The function to use to hash the intermediate thumbprint data.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[allow(missing_docs)]
 pub enum ThumbprintHash {
     SHA256,
     SHA384,
@@ -419,6 +420,7 @@ pub enum ThumbprintHash {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[allow(missing_docs)]
 pub struct Jwk {
     #[serde(flatten)]
     pub common: CommonParameters,
@@ -435,7 +437,11 @@ impl Jwk {
             _ => false,
         }
     }
-    pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> crate::errors::Result<Self> {
+
+    /// Create a `JWK` from an `EncodingKey`.
+    ///
+    /// Edwards curve based keys are not supported.
+    pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> errors::Result<Self> {
         Ok(Self {
             common: CommonParameters {
                 key_algorithm: Some(match alg {
@@ -455,13 +461,11 @@ impl Jwk {
                 ..Default::default()
             },
             algorithm: match key.family() {
-                crate::algorithms::AlgorithmFamily::Hmac => {
-                    AlgorithmParameters::OctetKey(OctetKeyParameters {
-                        key_type: OctetKeyType::Octet,
-                        value: b64_encode(key.inner()),
-                    })
-                }
-                crate::algorithms::AlgorithmFamily::Rsa => {
+                AlgorithmFamily::Hmac => AlgorithmParameters::OctetKey(OctetKeyParameters {
+                    key_type: OctetKeyType::Octet,
+                    value: b64_encode(key.inner()),
+                }),
+                AlgorithmFamily::Rsa => {
                     let (n, e) = (CryptoProvider::get_default()
                         .jwk_utils
                         .extract_rsa_public_key_components)(
@@ -473,7 +477,7 @@ impl Jwk {
                         e: b64_encode(e),
                     })
                 }
-                crate::algorithms::AlgorithmFamily::Ec => {
+                AlgorithmFamily::Ec => {
                     let (curve, x, y) = (CryptoProvider::get_default()
                         .jwk_utils
                         .extract_ec_public_key_coordinates)(
@@ -486,8 +490,8 @@ impl Jwk {
                         y: b64_encode(y),
                     })
                 }
-                crate::algorithms::AlgorithmFamily::Ed => {
-                    unimplemented!();
+                AlgorithmFamily::Ed => {
+                    unimplemented!("Edwards curves are not supported");
                 }
             },
         })
@@ -549,6 +553,7 @@ impl Jwk {
 
 /// A JWK set
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[allow(missing_docs)]
 pub struct JwkSet {
     pub keys: Vec<Jwk>,
 }
