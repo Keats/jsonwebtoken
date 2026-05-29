@@ -52,6 +52,8 @@ pub enum ErrorKind {
     Signing(String),
     /// When the algorithm from string doesn't match the one passed to `from_str`
     InvalidAlgorithmName,
+    /// When the algorithm is not supported
+    UnsupportedAlgorithm,
     /// When a key is provided with an invalid format
     InvalidKeyFormat,
 
@@ -106,6 +108,7 @@ impl StdError for Error {
             ErrorKind::InvalidSubject => None,
             ErrorKind::ImmatureSignature => None,
             ErrorKind::InvalidAlgorithm => None,
+            ErrorKind::UnsupportedAlgorithm => None,
             ErrorKind::InvalidAlgorithmName => None,
             ErrorKind::InvalidKeyFormat => None,
             ErrorKind::Base64(err) => Some(err),
@@ -130,6 +133,7 @@ impl fmt::Display for Error {
             | ErrorKind::InvalidSubject
             | ErrorKind::ImmatureSignature
             | ErrorKind::InvalidAlgorithm
+            | ErrorKind::UnsupportedAlgorithm
             | ErrorKind::InvalidKeyFormat
             | ErrorKind::InvalidEddsaKey
             | ErrorKind::InvalidAlgorithmName => write!(f, "{:?}", self.0),
