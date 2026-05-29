@@ -8,11 +8,9 @@ use std::{fmt, str::FromStr};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use crate::crypto::CryptoProvider;
+use crate::errors::{self, Error, ErrorKind, new_error};
 use crate::serialization::b64_encode;
-use crate::{
-    Algorithm, AlgorithmFamily, EncodingKey,
-    errors::{self, Error, ErrorKind},
-};
+use crate::{Algorithm, AlgorithmFamily, EncodingKey};
 
 /// The intended usage of the public `KeyType`. This enum is serialized `untagged`
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -217,6 +215,47 @@ impl FromStr for KeyAlgorithm {
             "RSA-OAEP" => Ok(KeyAlgorithm::RSA_OAEP),
             "RSA-OAEP-256" => Ok(KeyAlgorithm::RSA_OAEP_256),
             _ => Err(ErrorKind::InvalidAlgorithmName.into()),
+        }
+    }
+}
+
+impl From<Algorithm> for KeyAlgorithm {
+    fn from(alg: Algorithm) -> Self {
+        match alg {
+            Algorithm::HS256 => KeyAlgorithm::HS256,
+            Algorithm::HS384 => KeyAlgorithm::HS384,
+            Algorithm::HS512 => KeyAlgorithm::HS512,
+            Algorithm::ES256 => KeyAlgorithm::ES256,
+            Algorithm::ES384 => KeyAlgorithm::ES384,
+            Algorithm::RS256 => KeyAlgorithm::RS256,
+            Algorithm::RS384 => KeyAlgorithm::RS384,
+            Algorithm::RS512 => KeyAlgorithm::RS512,
+            Algorithm::PS256 => KeyAlgorithm::PS256,
+            Algorithm::PS384 => KeyAlgorithm::PS384,
+            Algorithm::PS512 => KeyAlgorithm::PS512,
+            Algorithm::EdDSA => KeyAlgorithm::EdDSA,
+        }
+    }
+}
+
+impl TryFrom<KeyAlgorithm> for Algorithm {
+    type Error = Error;
+
+    fn try_from(alg: KeyAlgorithm) -> Result<Self, Self::Error> {
+        match alg {
+            KeyAlgorithm::HS256 => Ok(Algorithm::HS256),
+            KeyAlgorithm::HS384 => Ok(Algorithm::HS384),
+            KeyAlgorithm::HS512 => Ok(Algorithm::HS512),
+            KeyAlgorithm::ES256 => Ok(Algorithm::ES256),
+            KeyAlgorithm::ES384 => Ok(Algorithm::ES384),
+            KeyAlgorithm::RS256 => Ok(Algorithm::RS256),
+            KeyAlgorithm::RS384 => Ok(Algorithm::RS384),
+            KeyAlgorithm::RS512 => Ok(Algorithm::RS512),
+            KeyAlgorithm::PS256 => Ok(Algorithm::PS256),
+            KeyAlgorithm::PS384 => Ok(Algorithm::PS384),
+            KeyAlgorithm::PS512 => Ok(Algorithm::PS512),
+            KeyAlgorithm::EdDSA => Ok(Algorithm::EdDSA),
+            _ => Err(new_error(ErrorKind::UnsupportedAlgorithm)),
         }
     }
 }
@@ -443,23 +482,7 @@ impl Jwk {
     /// Edwards curve based keys are not supported.
     pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> errors::Result<Self> {
         Ok(Self {
-            common: CommonParameters {
-                key_algorithm: Some(match alg {
-                    Algorithm::HS256 => KeyAlgorithm::HS256,
-                    Algorithm::HS384 => KeyAlgorithm::HS384,
-                    Algorithm::HS512 => KeyAlgorithm::HS512,
-                    Algorithm::ES256 => KeyAlgorithm::ES256,
-                    Algorithm::ES384 => KeyAlgorithm::ES384,
-                    Algorithm::RS256 => KeyAlgorithm::RS256,
-                    Algorithm::RS384 => KeyAlgorithm::RS384,
-                    Algorithm::RS512 => KeyAlgorithm::RS512,
-                    Algorithm::PS256 => KeyAlgorithm::PS256,
-                    Algorithm::PS384 => KeyAlgorithm::PS384,
-                    Algorithm::PS512 => KeyAlgorithm::PS512,
-                    Algorithm::EdDSA => KeyAlgorithm::EdDSA,
-                }),
-                ..Default::default()
-            },
+            common: CommonParameters { key_algorithm: Some(alg.into()), ..Default::default() },
             algorithm: match key.family() {
                 AlgorithmFamily::Hmac => AlgorithmParameters::OctetKey(OctetKeyParameters {
                     key_type: OctetKeyType::Octet,
@@ -573,6 +596,7 @@ mod tests {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::Algorithm;
+    use crate::errors::ErrorKind;
     use crate::jwk::{
         AlgorithmParameters, Jwk, JwkSet, KeyAlgorithm, OctetKeyType, RSAKeyParameters,
         ThumbprintHash,
@@ -633,5 +657,42 @@ mod tests {
         .unwrap();
 
         assert_eq!(tp.as_str(), "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn check_alg_key_alg_conversion() {
+        let pairs = [
+            (Algorithm::HS256, KeyAlgorithm::HS256),
+            (Algorithm::HS384, KeyAlgorithm::HS384),
+            (Algorithm::HS512, KeyAlgorithm::HS512),
+            (Algorithm::ES256, KeyAlgorithm::ES256),
+            (Algorithm::ES384, KeyAlgorithm::ES384),
+            (Algorithm::RS256, KeyAlgorithm::RS256),
+            (Algorithm::RS384, KeyAlgorithm::RS384),
+            (Algorithm::RS512, KeyAlgorithm::RS512),
+            (Algorithm::PS256, KeyAlgorithm::PS256),
+            (Algorithm::PS384, KeyAlgorithm::PS384),
+            (Algorithm::PS512, KeyAlgorithm::PS512),
+            (Algorithm::EdDSA, KeyAlgorithm::EdDSA),
+        ];
+
+        for (alg, k_alg) in pairs {
+            assert_eq!(KeyAlgorithm::from(alg), k_alg);
+            assert_eq!(Algorithm::try_from(k_alg), Ok(alg));
+        }
+
+        assert!(
+            Algorithm::try_from(KeyAlgorithm::RSA1_5)
+                .is_err_and(|e| *e.kind() == ErrorKind::UnsupportedAlgorithm)
+        );
+        assert!(
+            Algorithm::try_from(KeyAlgorithm::RSA_OAEP)
+                .is_err_and(|e| *e.kind() == ErrorKind::UnsupportedAlgorithm)
+        );
+        assert!(
+            Algorithm::try_from(KeyAlgorithm::RSA_OAEP_256)
+                .is_err_and(|e| *e.kind() == ErrorKind::UnsupportedAlgorithm)
+        );
     }
 }
