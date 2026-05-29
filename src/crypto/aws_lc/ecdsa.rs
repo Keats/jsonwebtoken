@@ -62,7 +62,11 @@ macro_rules! define_ecdsa_verifier {
         impl Verifier<Vec<u8>> for $name {
             fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
                 $verification_alg
-                    .verify_sig(self.0.as_bytes(), msg, signature)
+                    .verify_sig(
+                        self.0.try_get_as_bytes().map_err(Error::from_source)?,
+                        msg,
+                        signature,
+                    )
                     .map_err(Error::from_source)?;
                 Ok(())
             }

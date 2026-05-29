@@ -233,6 +233,18 @@ fn decode_token_wrong_algorithm() {
 
 #[test]
 #[wasm_bindgen_test]
+fn decode_token_wrong_key_family() {
+    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
+    let claims = decode::<Claims>(
+        token,
+        &DecodingKey::from_rsa_der(b"secret"),
+        &Validation::new(Algorithm::HS256),
+    );
+    assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidKeyFormat);
+}
+
+#[test]
+#[wasm_bindgen_test]
 fn encode_wrong_alg_family() {
     let my_claims = Claims {
         sub: "b@b.com".to_string(),
