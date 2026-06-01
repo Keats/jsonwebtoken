@@ -37,7 +37,7 @@ aws-lc-rs = { version = "1.15.0", optional = true }
 
 # "rust_crypto" feature
 ed25519-dalek = { version = "2.1.1", optional = true, features = ["pkcs8"] }
-hmac = { version = "0.12.1", optional = true }
+hmac = { version = "0.12.1", optional = true, features = ["reset"] }
 p256 = { version = "0.13.2", optional = true, features = ["ecdsa"] }
 p384 = { version = "0.13.0", optional = true, features = ["ecdsa"] }
 rand = { version = "0.8.5", optional = true, features = ["std"], default-features = false }
@@ -67,8 +67,20 @@ criterion = { version = "0.8", default-features = false }
 [features]
 default = ["use_pem"]
 use_pem = ["dep:pem", "dep:simple_asn1"]
-rust_crypto = ["dep:ed25519-dalek", "dep:hmac", "dep:p256", "dep:p384", "dep:rand", "dep:rsa", "dep:sha2"]
+
+# Granular RustCrypto sub-features — enable only the algorithm families you need.
+# These are independent; combine freely. `rust_crypto` is a convenience alias for all of them.
+rust_crypto_rsa   = ["dep:rsa", "dep:sha2", "dep:rand"]  # RS256/384/512, PS256/384/512
+rust_crypto_ec    = ["dep:p256", "dep:p384", "dep:sha2"]  # ES256, ES384
+rust_crypto_eddsa = ["dep:ed25519-dalek"]                  # EdDSA
+rust_crypto_hmac  = ["dep:hmac", "dep:sha2"]               # HS256/384/512
+
+# Enables all RustCrypto algorithm families above (unchanged behaviour).
+rust_crypto = ["rust_crypto_rsa", "rust_crypto_ec", "rust_crypto_eddsa", "rust_crypto_hmac"]
+
 aws_lc_rs = ["dep:aws-lc-rs"]
+
+[workspace]
 
 [[bench]]
 name = "jwt"

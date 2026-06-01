@@ -19,7 +19,13 @@ use crate::{DecodingKey, EncodingKey};
 pub mod aws_lc;
 
 /// `RustCrypto` based CryptoProvider.
-#[cfg(feature = "rust_crypto")]
+#[cfg(any(
+    feature = "rust_crypto",
+    feature = "rust_crypto_rsa",
+    feature = "rust_crypto_ec",
+    feature = "rust_crypto_eddsa",
+    feature = "rust_crypto_hmac",
+))]
 pub mod rust_crypto;
 
 use crate::serialization::{b64_decode, b64_encode};
@@ -102,12 +108,27 @@ impl CryptoProvider {
     }
 
     fn from_crate_features() -> &'static Self {
-        #[cfg(all(feature = "rust_crypto", not(feature = "aws_lc_rs")))]
+        #[cfg(all(
+            any(
+                feature = "rust_crypto",
+                feature = "rust_crypto_rsa",
+                feature = "rust_crypto_ec",
+                feature = "rust_crypto_eddsa",
+                feature = "rust_crypto_hmac",
+            ),
+            not(feature = "aws_lc_rs")
+        ))]
         {
             return &rust_crypto::DEFAULT_PROVIDER;
         }
 
-        #[cfg(all(feature = "aws_lc_rs", not(feature = "rust_crypto")))]
+        #[cfg(all(feature = "aws_lc_rs", not(any(
+            feature = "rust_crypto",
+            feature = "rust_crypto_rsa",
+            feature = "rust_crypto_ec",
+            feature = "rust_crypto_eddsa",
+            feature = "rust_crypto_hmac",
+        ))))]
         {
             return &aws_lc::DEFAULT_PROVIDER;
         }

@@ -11,7 +11,7 @@ use p256::ecdsa::{
 use p384::ecdsa::{
     Signature as Signature384, SigningKey as SigningKey384, VerifyingKey as VerifyingKey384,
 };
-use rsa::pkcs8::DecodePrivateKey;
+use p256::pkcs8::DecodePrivateKey;
 use signature::{Error, Signer, Verifier};
 
 macro_rules! define_ecdsa_signer {
