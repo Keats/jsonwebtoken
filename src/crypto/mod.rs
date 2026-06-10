@@ -18,6 +18,10 @@ use crate::{DecodingKey, EncodingKey};
 #[cfg(feature = "aws_lc_rs")]
 pub mod aws_lc;
 
+/// `openssl` based CryptoProvider.
+#[cfg(feature = "openssl")]
+pub mod openssl;
+
 /// `RustCrypto` based CryptoProvider.
 #[cfg(feature = "rust_crypto")]
 pub mod rust_crypto;
@@ -73,6 +77,8 @@ pub fn verify(
 /// You can either install one of the built-in options:
 /// - [`crypto::aws_lc::DEFAULT_PROVIDER`]: (behind the `aws_lc_rs` crate feature).
 ///   This provider uses the [aws-lc-rs](https://github.com/aws/aws-lc-rs) crate.
+/// - [`crypto::openssl::DEFAULT_PROVIDER`]: (behind the `openssl` crate feature).
+///   This provider uses the [openssl](https://github.com/sfackler/rust-openssl) crate.
 /// - [`crypto::rust_crypto::DEFAULT_PROVIDER`]: (behind the `rust_crypto` crate feature)
 ///   This provider uses crates from the [Rust Crypto](https://github.com/RustCrypto) project.
 ///
@@ -102,21 +108,38 @@ impl CryptoProvider {
     }
 
     fn from_crate_features() -> &'static Self {
-        #[cfg(all(feature = "rust_crypto", not(feature = "aws_lc_rs")))]
+        #[cfg(all(
+            feature = "rust_crypto",
+            not(feature = "aws_lc_rs"),
+            not(feature = "openssl")
+        ))]
         {
             return &rust_crypto::DEFAULT_PROVIDER;
         }
 
-        #[cfg(all(feature = "aws_lc_rs", not(feature = "rust_crypto")))]
+        #[cfg(all(
+            feature = "aws_lc_rs",
+            not(feature = "rust_crypto"),
+            not(feature = "openssl")
+        ))]
         {
             return &aws_lc::DEFAULT_PROVIDER;
+        }
+
+        #[cfg(all(
+            feature = "openssl",
+            not(feature = "rust_crypto"),
+            not(feature = "aws_lc_rs")
+        ))]
+        {
+            return &openssl::DEFAULT_PROVIDER;
         }
 
         #[allow(unreachable_code)]
         {
             const NOT_INSTALLED_ERROR: &str = r"
 Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features.
-Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
+Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto', 'aws_lc_rs', and 'openssl' features is enabled.
 See the documentation of the CryptoProvider type for more information.
 ";
 
@@ -156,7 +179,7 @@ impl KeyUtils {
     pub const fn new_unimplemented() -> Self {
         const NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR: &str = r"
 Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features, or your CryptoProvider does not support JWKs.
-Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
+Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto', 'aws_lc_rs', and 'openssl' features is enabled.
 See the documentation of the CryptoProvider type for more information.
 ";
         Self {
