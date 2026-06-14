@@ -11,7 +11,9 @@
 
 use crate::algorithms::Algorithm;
 use crate::errors::{ErrorKind, Result};
-use crate::jwk::{EllipticCurve, ThumbprintHash};
+use crate::jwk::{
+    ED448_PUBLIC_KEY_LENGTH, ED25519_PUBLIC_KEY_LENGTH, EllipticCurve, ThumbprintHash,
+};
 use crate::{DecodingKey, EncodingKey};
 
 /// `aws_lc_rs` based CryptoProvider.
@@ -147,7 +149,6 @@ pub struct KeyUtils {
     pub ec_pub_components_from_private_key:
         fn(&[u8], Algorithm) -> Result<(EllipticCurve, Vec<u8>, Vec<u8>)>,
     /// Given a DER encoded private key and the curve type, extract the ED public key component (x)
-    #[allow(clippy::type_complexity)]
     pub ed_pub_components_from_private_key: fn(&[u8], &EllipticCurve) -> Result<Vec<u8>>,
     /// Given some data and a name of a hash function, compute hash_function(data)
     pub compute_digest: fn(&[u8], ThumbprintHash) -> Result<Vec<u8>>,
@@ -180,7 +181,7 @@ See the documentation of the CryptoProvider type for more information.
     }
 }
 
-/// Given bitstring from DER encoded private key, extract the associated curve
+/// Given bitstring from DER encoded public key, extract the associated curve
 /// and the EC public key components (x, y)
 pub(crate) fn ec_pub_components_from_public_key(
     pub_bytes: &[u8],
@@ -199,12 +200,18 @@ pub(crate) fn ec_pub_components_from_public_key(
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 
-/// Given bitstring from DER encoded private key, extract the associated curve
-/// and the EC public key components (x, y)
+/// Given bitstring from DER encoded public key, extract the associated curve
+/// and the ED public key components (x)
 pub(crate) fn ed_pub_components_from_public_key(
     pub_bytes: &[u8],
 ) -> Result<(EllipticCurve, Vec<u8>)> {
-    todo!()
+    let curve_type = match pub_bytes.len() {
+        ED25519_PUBLIC_KEY_LENGTH => EllipticCurve::Ed25519,
+        ED448_PUBLIC_KEY_LENGTH => EllipticCurve::Ed448,
+        _ => return Err(ErrorKind::InvalidEddsaKey.into()),
+    };
+
+    Ok((curve_type, pub_bytes.to_vec()))
 }
 
 mod static_default {

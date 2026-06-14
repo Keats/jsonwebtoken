@@ -3,13 +3,14 @@ use ::rsa::{
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
     traits::PublicKeyParts,
 };
+use ed25519_dalek::SigningKey;
 use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 use p384::ecdsa::SigningKey as P384SigningKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
 use crate::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils, rust_crypto::eddsa::EdDSAVerifier},
+    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -70,12 +71,12 @@ fn ed_pub_components_from_private_key(
     curve_type: &EllipticCurve,
 ) -> errors::Result<Vec<u8>> {
     match curve_type {
-        EllipticCurve::Ed25519 => {
-            Ok(EdDSAVerifier::from_ed25519_encoding_key(&EncodingKey::from_ed_der(encoding_key))
-                .map_err(|_| ErrorKind::InvalidEddsaKey)?
-                .get_pub_key_bytes())
-        }
-        EllipticCurve::Ed448 => unimplemented!("Ed448 curves are not yet implemented"),
+        EllipticCurve::Ed25519 => Ok(SigningKey::from_pkcs8_der(encoding_key)
+            .map_err(|_| ErrorKind::InvalidEddsaKey)?
+            .verifying_key()
+            .as_bytes()
+            .to_vec()),
+        EllipticCurve::Ed448 => Err(ErrorKind::UnsupportedAlgorithm.into()),
         _ => Err(ErrorKind::InvalidAlgorithm.into()),
     }
 }

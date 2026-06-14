@@ -7,6 +7,7 @@ use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
+use crate::ans1::classify_ed_curve;
 use crate::crypto::{
     CryptoProvider, ec_pub_components_from_public_key, ed_pub_components_from_public_key,
 };
@@ -355,6 +356,13 @@ pub enum EllipticCurve {
     Ed448,
 }
 
+// --- EllipticCurve Constants ---
+// Key Lengths
+// ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
+pub(crate) const ED25519_PUBLIC_KEY_LENGTH: usize = 32;
+// ED448: https://datatracker.ietf.org/doc/html/rfc8032#section-5.2.5
+pub(crate) const ED448_PUBLIC_KEY_LENGTH: usize = 57;
+
 /// Parameters for an Elliptic Curve Key
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct EllipticCurveKeyParameters {
@@ -517,12 +525,11 @@ impl Jwk {
                     })
                 }
                 AlgorithmFamily::Ed => {
-                    // Get the curve type based off the encoding key length
-                    let curve_type: EllipticCurve = match key.inner().len() {
-                        48 => Ok(EllipticCurve::Ed25519),
-                        73 => Ok(EllipticCurve::Ed448),
-                        _ => Err(Error::from(ErrorKind::InvalidEddsaKey)),
-                    }?;
+                    // Get the curve type based off OID
+                    let Ok(asn1_content) = simple_asn1::from_der(key.inner()) else {
+                        return Err(ErrorKind::InvalidKeyFormat.into());
+                    };
+                    let curve_type = classify_ed_curve(&asn1_content)?;
 
                     // Extract the public key from the encoding key
                     let public_key_bytes = (CryptoProvider::get_default()

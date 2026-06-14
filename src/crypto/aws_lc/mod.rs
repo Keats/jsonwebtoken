@@ -2,13 +2,13 @@ use aws_lc_rs::{
     digest,
     signature::{
         self as aws_sig, ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED_SIGNING,
-        EcdsaKeyPair, KeyPair,
+        EcdsaKeyPair, Ed25519KeyPair, KeyPair,
     },
 };
 
 use crate::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils, aws_lc::eddsa::EdDSAVerifier},
+    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -61,12 +61,12 @@ fn ed_pub_components_from_private_key(
     curve_type: &EllipticCurve,
 ) -> errors::Result<Vec<u8>> {
     match curve_type {
-        EllipticCurve::Ed25519 => {
-            Ok(EdDSAVerifier::from_ed25519_encoding_key(&EncodingKey::from_ed_der(encoding_key))
-                .map_err(|_| ErrorKind::InvalidEddsaKey)?
-                .get_pub_key_bytes())
-        }
-        EllipticCurve::Ed448 => unimplemented!("Ed448 curves are not yet implemented"),
+        EllipticCurve::Ed25519 => Ok(Ed25519KeyPair::from_pkcs8(encoding_key)
+            .map_err(|_| ErrorKind::InvalidEddsaKey)?
+            .public_key()
+            .as_ref()
+            .to_vec()),
+        EllipticCurve::Ed448 => Err(ErrorKind::UnsupportedAlgorithm.into()),
         _ => Err(ErrorKind::InvalidAlgorithm.into()),
     }
 }
