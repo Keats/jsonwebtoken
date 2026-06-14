@@ -49,7 +49,6 @@ impl EdDSAVerifier {
         if encoding_key.family() != AlgorithmFamily::Ed {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
-        dbg!("here");
 
         if encoding_key.inner().len() == 57 {
             unimplemented!("Ed448 keys are currently not implemented")

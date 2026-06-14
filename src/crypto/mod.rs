@@ -199,6 +199,14 @@ pub(crate) fn ec_pub_components_from_public_key(
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 
+/// Given bitstring from DER encoded private key, extract the associated curve
+/// and the EC public key components (x, y)
+pub(crate) fn ed_pub_components_from_public_key(
+    pub_bytes: &[u8],
+) -> Result<(EllipticCurve, Vec<u8>)> {
+    todo!()
+}
+
 mod static_default {
     use std::sync::OnceLock;
 

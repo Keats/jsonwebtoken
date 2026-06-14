@@ -7,7 +7,9 @@ use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
-use crate::crypto::{CryptoProvider, ec_pub_components_from_public_key};
+use crate::crypto::{
+    CryptoProvider, ec_pub_components_from_public_key, ed_pub_components_from_public_key,
+};
 use crate::errors::{self, Error, ErrorKind, new_error};
 use crate::serialization::b64_encode;
 use crate::{Algorithm, AlgorithmFamily, DecodingKey, EncodingKey, decoding::DecodingKeyKind};
@@ -481,8 +483,6 @@ impl Jwk {
     }
 
     /// Create a `JWK` from an `EncodingKey`.
-    ///
-    /// Edwards curve based keys are not supported.
     pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> errors::Result<Self> {
         Ok(Self {
             common: CommonParameters { key_algorithm: Some(alg.into()), ..Default::default() },
@@ -517,15 +517,31 @@ impl Jwk {
                     })
                 }
                 AlgorithmFamily::Ed => {
-                    unimplemented!("Edwards curves are not supported");
+                    // Get the curve type based off the encoding key length
+                    let curve_type: EllipticCurve = match key.inner().len() {
+                        48 => Ok(EllipticCurve::Ed25519),
+                        73 => Ok(EllipticCurve::Ed448),
+                        _ => Err(Error::from(ErrorKind::InvalidEddsaKey)),
+                    }?;
+
+                    // Extract the public key from the encoding key
+                    let public_key_bytes = (CryptoProvider::get_default()
+                        .key_utils
+                        .ed_pub_components_from_private_key)(
+                        key.inner(), &curve_type
+                    )?;
+
+                    AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                        key_type: OctetKeyPairType::OctetKeyPair,
+                        curve: curve_type,
+                        x: b64_encode(public_key_bytes),
+                    })
                 }
             },
         })
     }
 
     /// Create a `JWK` from a `DecodingKey`.
-    ///
-    /// Edwards curve based keys are not supported.
     pub fn from_decoding_key(
         key: &DecodingKey,
         alg: Option<Algorithm>,
@@ -577,24 +593,17 @@ impl Jwk {
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Ed => {
-                    // Get the curve type based off the encoding key length
-                    let curve_type: EllipticCurve = match key.inner().len() {
-                        48 => Ok(EllipticCurve::Ed25519),
-                        73 => Ok(EllipticCurve::Ed448),
-                        _ => Err(Error::from(ErrorKind::InvalidEddsaKey)),
-                    }?;
-
-                    // Extract the public key from the encoding key
-                    let public_key_bytes = (CryptoProvider::get_default()
-                        .jwk_utils
-                        .extract_ed_public_key_parameters)(
-                        key.inner(), &curve_type
-                    )?;
+                    let (curve_type, x) = match &key.kind() {
+                        DecodingKeyKind::SecretOrDer(pub_bytes) => {
+                            ed_pub_components_from_public_key(pub_bytes)?
+                        }
+                        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
+                    };
 
                     AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
                         key_type: OctetKeyPairType::OctetKeyPair,
                         curve: curve_type,
-                        x: b64_encode(public_key_bytes),
+                        x: b64_encode(x),
                     })
                 }
             },
