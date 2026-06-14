@@ -8,7 +8,7 @@ use aws_lc_rs::{
 
 use crate::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier, aws_lc::eddsa::EdDSAVerifier},
+    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils, aws_lc::eddsa::EdDSAVerifier},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -56,7 +56,7 @@ fn ec_components_from_private_key(
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 
-fn extract_ed_public_key_parameters(
+fn ed_pub_components_from_private_key(
     encoding_key: &[u8],
     curve_type: &EllipticCurve,
 ) -> errors::Result<Vec<u8>> {
@@ -125,11 +125,11 @@ fn new_verifier(
 pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
     signer_factory: new_signer,
     verifier_factory: new_verifier,
-    jwk_utils: JwkUtils {
-        extract_rsa_public_key_components,
-        extract_ec_public_key_coordinates,
-        extract_ed_public_key_parameters,
-        // ec_pub_components_from_private_key: ec_components_from_private_key,
+    key_utils: KeyUtils {
+        rsa_pub_components_from_private_key: rsa_components_from_private_key,
+        rsa_pub_components_from_public_key: rsa_components_from_public_key,
+        ec_pub_components_from_private_key: ec_components_from_private_key,
+        ed_pub_components_from_private_key,
         compute_digest,
     },
 };

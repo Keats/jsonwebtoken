@@ -148,7 +148,7 @@ pub struct KeyUtils {
         fn(&[u8], Algorithm) -> Result<(EllipticCurve, Vec<u8>, Vec<u8>)>,
     /// Given a DER encoded private key and the curve type, extract the ED public key component (x)
     #[allow(clippy::type_complexity)]
-    pub extract_ed_public_key_parameters: fn(&[u8], &EllipticCurve) -> Result<Vec<u8>>,
+    pub ed_pub_components_from_private_key: fn(&[u8], &EllipticCurve) -> Result<Vec<u8>>,
     /// Given some data and a name of a hash function, compute hash_function(data)
     pub compute_digest: fn(&[u8], ThumbprintHash) -> Result<Vec<u8>>,
 }
@@ -172,7 +172,7 @@ See the documentation of the CryptoProvider type for more information.
             ec_pub_components_from_private_key: |_, _| {
                 panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
             },
-            extract_ed_public_key_parameters: |_, _| {
+            ed_pub_components_from_private_key: |_, _| {
                 panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
             },
             compute_digest: |_, _| panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR),
