@@ -1,4 +1,8 @@
-use ::rsa::{RsaPrivateKey, pkcs1::DecodeRsaPrivateKey, traits::PublicKeyParts};
+use ::rsa::{
+    RsaPrivateKey, RsaPublicKey,
+    pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
+    traits::PublicKeyParts,
+};
 use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 use p384::ecdsa::SigningKey as P384SigningKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
@@ -15,14 +19,20 @@ mod eddsa;
 mod hmac;
 mod rsa;
 
-fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+fn rsa_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let private_key = RsaPrivateKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let public_key = private_key.to_public_key();
     Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
 }
 
-fn extract_ec_public_key_coordinates(
+fn rsa_components_from_public_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+    let public_key = RsaPublicKey::from_pkcs1_der(key_content)
+        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+    Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
+}
+
+fn ec_components_from_private_key(
     key_content: &[u8],
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
@@ -70,12 +80,12 @@ fn extract_ed_public_key_parameters(
     }
 }
 
-fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
-    match hash_function {
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
+    Ok(match hash_function {
         ThumbprintHash::SHA256 => Sha256::digest(data).to_vec(),
         ThumbprintHash::SHA384 => Sha384::digest(data).to_vec(),
         ThumbprintHash::SHA512 => Sha512::digest(data).to_vec(),
-    }
+    })
 }
 
 fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSigner>, Error> {
@@ -127,6 +137,10 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
         extract_rsa_public_key_components,
         extract_ec_public_key_coordinates,
         extract_ed_public_key_parameters,
+    key_utils: KeyUtils {
+        rsa_pub_components_from_private_key: rsa_components_from_private_key,
+        rsa_pub_components_from_public_key: rsa_components_from_public_key,
+        ec_pub_components_from_private_key: ec_components_from_private_key,
         compute_digest,
     },
 };

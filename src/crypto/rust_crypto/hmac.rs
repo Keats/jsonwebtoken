@@ -6,7 +6,7 @@ use sha2::{Sha256, Sha384, Sha512};
 use signature::{Signer, Verifier};
 
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::errors::Result;
+use crate::errors::{ErrorKind, Result};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 
 type HmacSha256 = Hmac<Sha256>;
@@ -21,7 +21,7 @@ macro_rules! define_hmac_signer {
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
                 let inner = <$hmac_type>::new_from_slice(encoding_key.try_get_hmac_secret()?)
-                    .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
+                    .map_err(|_| ErrorKind::InvalidKeyFormat)?;
 
                 Ok(Self(inner))
             }
@@ -53,7 +53,7 @@ macro_rules! define_hmac_verifier {
         impl $name {
             pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
                 let inner = <$hmac_type>::new_from_slice(decoding_key.try_get_hmac_secret()?)
-                    .map_err(|_e| crate::errors::ErrorKind::InvalidKeyFormat)?;
+                    .map_err(|_| ErrorKind::InvalidKeyFormat)?;
 
                 Ok(Self(inner))
             }

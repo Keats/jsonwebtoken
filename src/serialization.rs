@@ -21,7 +21,7 @@ pub(crate) fn b64_encode_part<T: Serialize>(input: &T) -> Result<String> {
 
 /// This is used to decode from base64 then deserialize from JSON to several structs:
 /// - The user-provided struct
-/// - The ClaimsForValidation struct from this crate to run validation on
+/// - The `ClaimsForValidation` struct from this crate to run validation on
 pub(crate) struct DecodedJwtPartClaims {
     b64_decoded: Vec<u8>,
 }

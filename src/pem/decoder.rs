@@ -53,9 +53,8 @@ impl PemEncodedKey {
     pub fn new(input: &[u8]) -> Result<PemEncodedKey> {
         match pem::parse(input) {
             Ok(content) => {
-                let asn1_content = match simple_asn1::from_der(content.contents()) {
-                    Ok(asn1) => asn1,
-                    Err(_) => return Err(ErrorKind::InvalidKeyFormat.into()),
+                let Ok(asn1_content) = simple_asn1::from_der(content.contents()) else {
+                    return Err(ErrorKind::InvalidKeyFormat.into());
                 };
 
                 match content.tag() {
@@ -78,7 +77,7 @@ impl PemEncodedKey {
                     // "there is no such thing as a "PKCS#1 format" for elliptic curve (EC) keys"
 
                     // This handles PKCS#8 certificates and public & private keys
-                    tag @ "PRIVATE KEY" | tag @ "PUBLIC KEY" | tag @ "CERTIFICATE" => {
+                    tag @ ("PRIVATE KEY" | "PUBLIC KEY" | "CERTIFICATE") => {
                         match classify_pem(&asn1_content) {
                             Some(c) => {
                                 let is_private = tag == "PRIVATE KEY";
@@ -187,7 +186,7 @@ impl PemEncodedKey {
 // Though PKCS#11 keys shouldn't have anything else.
 // It will get confusing with certificates.
 fn extract_first_bitstring(asn1: &[simple_asn1::ASN1Block]) -> Result<&[u8]> {
-    for asn1_entry in asn1.iter() {
+    for asn1_entry in asn1 {
         match asn1_entry {
             simple_asn1::ASN1Block::Sequence(_, entries) => {
                 if let Ok(result) = extract_first_bitstring(entries) {
@@ -218,7 +217,7 @@ fn classify_pem(asn1: &[simple_asn1::ASN1Block]) -> Option<Classification> {
     // Defined: https://datatracker.ietf.org/doc/html/rfc8410#section-3 (id-Ed448)
     let ed448_oid = simple_asn1::oid!(1, 3, 101, 113);
 
-    for asn1_entry in asn1.iter() {
+    for asn1_entry in asn1 {
         match asn1_entry {
             simple_asn1::ASN1Block::Sequence(_, entries) => {
                 if let Some(classification) = classify_pem(entries) {

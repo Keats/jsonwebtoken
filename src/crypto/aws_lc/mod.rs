@@ -18,7 +18,7 @@ mod eddsa;
 mod hmac;
 mod rsa;
 
-fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+fn rsa_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let key_pair = aws_sig::RsaKeyPair::from_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let public = key_pair.public_key();
@@ -26,7 +26,15 @@ fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<
     Ok((components.n, components.e))
 }
 
-fn extract_ec_public_key_coordinates(
+fn rsa_components_from_public_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+    let public = aws_lc_rs::rsa::PublicKey::from_der(key_content)
+        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
+
+    let components = aws_sig::RsaPublicKeyComponents::<Vec<u8>>::from(&public);
+    Ok((components.n, components.e))
+}
+
+fn ec_components_from_private_key(
     key_content: &[u8],
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
@@ -63,13 +71,13 @@ fn extract_ed_public_key_parameters(
     }
 }
 
-fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
     let algorithm = match hash_function {
         ThumbprintHash::SHA256 => &digest::SHA256,
         ThumbprintHash::SHA384 => &digest::SHA384,
         ThumbprintHash::SHA512 => &digest::SHA512,
     };
-    digest::digest(algorithm, data).as_ref().to_vec()
+    Ok(digest::digest(algorithm, data).as_ref().to_vec())
 }
 
 fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSigner>, Error> {
@@ -121,6 +129,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
         extract_rsa_public_key_components,
         extract_ec_public_key_coordinates,
         extract_ed_public_key_parameters,
+        // ec_pub_components_from_private_key: ec_components_from_private_key,
         compute_digest,
     },
 };
