@@ -337,6 +337,7 @@ pub enum EllipticCurveKeyType {
 /// Type of cryptographic curve used by a key. This is defined in
 /// [RFC 7518 #7.6](https://tools.ietf.org/html/rfc7518#section-7.6)
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[non_exhaustive]
 pub enum EllipticCurve {
     /// P-256 curve
     #[serde(rename = "P-256")]
@@ -821,6 +822,20 @@ mod tests {
                 .unwrap();
         let expected_jwk = Jwk::from_encoding_key(&enc_key, Algorithm::ES256).unwrap();
         let jwk = Jwk::from_decoding_key(&dec_key, Some(Algorithm::ES256)).unwrap();
+        assert_eq!(jwk, expected_jwk);
+    }
+
+    #[test]
+    #[cfg(feature = "use_pem")]
+    fn check_jwk_from_decoding_key_ed() {
+        let enc_key =
+            EncodingKey::from_ed_pem(include_bytes!("../tests/eddsa/private_ed25519_key.pem"))
+                .unwrap();
+        let dec_key =
+            DecodingKey::from_ed_pem(include_bytes!("../tests/eddsa/public_ed25519_key.pem"))
+                .unwrap();
+        let expected_jwk = Jwk::from_encoding_key(&enc_key, Algorithm::EdDSA).unwrap();
+        let jwk = Jwk::from_decoding_key(&dec_key, Some(Algorithm::EdDSA)).unwrap();
         assert_eq!(jwk, expected_jwk);
     }
 }
