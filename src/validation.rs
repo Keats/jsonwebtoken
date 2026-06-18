@@ -143,13 +143,17 @@ impl Validation {
 
     /// `aud` is a collection of one or more acceptable audience members
     /// The simple usage is `set_audience(&["some aud name"])`
+    /// Makes the `aud` claim required by adding to `required_spec_claims`
     pub fn set_audience<T: ToString>(&mut self, items: &[T]) {
+        self.required_spec_claims.insert("aud".to_string());
         self.aud = Some(items.iter().map(|x| x.to_string()).collect());
     }
 
     /// `iss` is a collection of one or more acceptable issuers members
     /// The simple usage is `set_issuer(&["some iss name"])`
+    /// Makes the `iss` claim required by adding to `required_spec_claims`
     pub fn set_issuer<T: ToString>(&mut self, items: &[T]) {
+        self.required_spec_claims.insert("iss".to_string());
         self.iss = Some(items.iter().map(|x| x.to_string()).collect());
     }
 
@@ -808,6 +812,40 @@ mod tests {
         };
     }
 
+    #[test]
+    #[wasm_bindgen_test]
+    fn set_audience_missing_fails() {
+        let claims = json!({});
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = false;
+        validation.required_spec_claims = HashSet::new();
+        validation.set_audience(&["None"]);
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "aud"),
+            _ => unreachable!(),
+        };
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn set_issuer_missing_fails() {
+        let claims = json!({});
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = false;
+        validation.required_spec_claims = HashSet::new();
+        validation.set_issuer(&["None"]);
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "iss"),
+            _ => unreachable!(),
+        };
+    }
+
     // https://github.com/Keats/jsonwebtoken/issues/51
     #[test]
     #[wasm_bindgen_test]
@@ -815,10 +853,8 @@ mod tests {
         let claims = json!({ "exp": get_current_timestamp() + 10000 });
 
         let mut validation = Validation::new(Algorithm::HS256);
-        validation.set_required_spec_claims(&["exp", "iss"]);
         validation.leeway = 5;
         validation.set_issuer(&["iss no check"]);
-        validation.set_audience(&["iss no check"]);
 
         let res = validate(deserialize_claims(&claims), &validation);
         // It errors because it needs to validate iss/sub which are missing
