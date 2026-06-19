@@ -103,9 +103,6 @@ pub struct Validation {
     ///
     /// Defaults to `vec![Algorithm::HS256]`.
     pub algorithms: Vec<Algorithm>,
-
-    /// Whether to validate the JWT signature. Very insecure to turn that off
-    pub(crate) validate_signature: bool,
 }
 
 impl Validation {
@@ -136,8 +133,6 @@ impl Validation {
             iss: None,
             sub: None,
             aud: None,
-
-            validate_signature: true,
         }
     }
 
@@ -160,17 +155,6 @@ impl Validation {
     /// param directly.
     pub fn set_required_spec_claims<T: ToString>(&mut self, items: &[T]) {
         self.required_spec_claims = items.iter().map(|x| x.to_string()).collect();
-    }
-
-    /// Whether to validate the JWT cryptographic signature.
-    /// Disabling validation is dangerous, only do it if you know what you're doing.
-    /// With validation disabled you should not trust any of the values of the claims.
-    #[deprecated(
-        since = "10.1.0",
-        note = "Use `jsonwebtoken::dangerous::insecure_decode` if you require this functionality."
-    )]
-    pub fn insecure_disable_signature_validation(&mut self) {
-        self.validate_signature = false;
     }
 }
 
