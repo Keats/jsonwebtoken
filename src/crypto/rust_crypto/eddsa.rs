@@ -35,7 +35,7 @@ impl JwtSigner for EdDSASigner {
     }
 }
 
-pub struct EdDSAVerifier(pub VerifyingKey);
+pub struct EdDSAVerifier(VerifyingKey);
 
 impl EdDSAVerifier {
     pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {

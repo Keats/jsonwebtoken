@@ -3,7 +3,7 @@ use ::rsa::{
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
     traits::PublicKeyParts,
 };
-use ed25519_dalek::SigningKey;
+use ed25519_dalek::SigningKey as Ed25519SigningKey;
 use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 use p384::ecdsa::SigningKey as P384SigningKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
@@ -71,7 +71,7 @@ fn ed_pub_components_from_private_key(
     curve_type: &EllipticCurve,
 ) -> errors::Result<Vec<u8>> {
     match curve_type {
-        EllipticCurve::Ed25519 => Ok(SigningKey::from_pkcs8_der(encoding_key)
+        EllipticCurve::Ed25519 => Ok(Ed25519SigningKey::from_pkcs8_der(encoding_key)
             .map_err(|_| ErrorKind::InvalidEddsaKey)?
             .verifying_key()
             .as_bytes()

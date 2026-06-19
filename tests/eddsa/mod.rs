@@ -198,6 +198,6 @@ fn ed_jwk_from_ed448_key() {
     // Unimplemented so it should fail to extract JWK
     assert_eq!(
         Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap_err().into_kind(),
-        ErrorKind::UnsupportedAlgorithm
+        ErrorKind::InvalidEddsaKey
     );
 }

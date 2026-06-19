@@ -11,9 +11,7 @@
 
 use crate::algorithms::Algorithm;
 use crate::errors::{ErrorKind, Result};
-use crate::jwk::{
-    ED448_PUBLIC_KEY_LENGTH, ED25519_PUBLIC_KEY_LENGTH, EllipticCurve, ThumbprintHash,
-};
+use crate::jwk::{EllipticCurve, ThumbprintHash};
 use crate::{DecodingKey, EncodingKey};
 
 /// `aws_lc_rs` based CryptoProvider.
@@ -206,8 +204,10 @@ pub(crate) fn ed_pub_components_from_public_key(
     pub_bytes: &[u8],
 ) -> Result<(EllipticCurve, Vec<u8>)> {
     let curve_type = match pub_bytes.len() {
-        ED25519_PUBLIC_KEY_LENGTH => EllipticCurve::Ed25519,
-        ED448_PUBLIC_KEY_LENGTH => EllipticCurve::Ed448,
+        // ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
+        32 => EllipticCurve::Ed25519,
+        // ED448: https://datatracker.ietf.org/doc/html/rfc8032#section-5.2.5
+        57 => EllipticCurve::Ed448,
         _ => return Err(ErrorKind::InvalidEddsaKey.into()),
     };
 

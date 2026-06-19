@@ -7,7 +7,6 @@ use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
-use crate::ans1::classify_ed_curve;
 use crate::crypto::{
     CryptoProvider, ec_pub_components_from_public_key, ed_pub_components_from_public_key,
 };
@@ -357,13 +356,6 @@ pub enum EllipticCurve {
     Ed448,
 }
 
-// --- EllipticCurve Constants ---
-// Key Lengths
-// ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
-pub(crate) const ED25519_PUBLIC_KEY_LENGTH: usize = 32;
-// ED448: https://datatracker.ietf.org/doc/html/rfc8032#section-5.2.5
-pub(crate) const ED448_PUBLIC_KEY_LENGTH: usize = 57;
-
 /// Parameters for an Elliptic Curve Key
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct EllipticCurveKeyParameters {
@@ -492,6 +484,7 @@ impl Jwk {
     }
 
     /// Create a `JWK` from an `EncodingKey`.
+    /// Note: Ed448 curve keys are not supported
     pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> errors::Result<Self> {
         Ok(Self {
             common: CommonParameters { key_algorithm: Some(alg.into()), ..Default::default() },
@@ -526,11 +519,13 @@ impl Jwk {
                     })
                 }
                 AlgorithmFamily::Ed => {
-                    // Get the curve type based off OID
-                    let Ok(asn1_content) = simple_asn1::from_der(key.inner()) else {
-                        return Err(ErrorKind::InvalidKeyFormat.into());
-                    };
-                    let curve_type = classify_ed_curve(&asn1_content)?;
+                    // Get the curve type based off the encoding key length
+                    // Note: here we will receive a DER key which contains a 16 byte ANS.1 header
+                    let curve_type: EllipticCurve = match key.inner().len() {
+                        // 16 byte header + 32 byte Ed25519 key
+                        48 => Ok(EllipticCurve::Ed25519),
+                        _ => Err(Error::from(ErrorKind::InvalidEddsaKey)),
+                    }?;
 
                     // Extract the public key from the encoding key
                     let public_key_bytes = (CryptoProvider::get_default()
