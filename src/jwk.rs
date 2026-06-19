@@ -484,7 +484,6 @@ impl Jwk {
     }
 
     /// Create a `JWK` from an `EncodingKey`.
-    /// Note: Ed448 curve keys are not supported
     pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> errors::Result<Self> {
         Ok(Self {
             common: CommonParameters { key_algorithm: Some(alg.into()), ..Default::default() },

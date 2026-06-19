@@ -190,14 +190,9 @@ fn ed_jwk_from_ed25519_der_key() {
 #[test]
 #[wasm_bindgen_test]
 fn ed_jwk_from_ed448_key() {
-    use jsonwebtoken::jwk::Jwk;
-
     let privkey_pem = include_bytes!("private_ed448_key.pem");
-    let encoding_key = EncodingKey::from_ed_pem(privkey_pem).unwrap();
-
-    // Unimplemented so it should fail to extract JWK
     assert_eq!(
-        Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap_err().into_kind(),
-        ErrorKind::InvalidEddsaKey
+        EncodingKey::from_ed_pem(privkey_pem).unwrap_err().into_kind(),
+        ErrorKind::InvalidKeyFormat
     );
 }
