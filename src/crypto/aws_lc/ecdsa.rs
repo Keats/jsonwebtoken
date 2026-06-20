@@ -23,7 +23,7 @@ macro_rules! define_ecdsa_signer {
                 }
 
                 Ok(Self(
-                    EcdsaKeyPair::from_pkcs8($signing_alg, encoding_key.inner())
+                    EcdsaKeyPair::from_pkcs8($signing_alg, encoding_key.as_bytes())
                         .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
                 ))
             }
@@ -62,7 +62,11 @@ macro_rules! define_ecdsa_verifier {
         impl Verifier<Vec<u8>> for $name {
             fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
                 $verification_alg
-                    .verify_sig(self.0.as_bytes(), msg, signature)
+                    .verify_sig(
+                        self.0.try_get_as_bytes().map_err(Error::from_source)?,
+                        msg,
+                        signature,
+                    )
                     .map_err(Error::from_source)?;
                 Ok(())
             }

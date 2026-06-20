@@ -6,8 +6,8 @@ use sha2::{Sha256, Sha384, Sha512};
 use signature::{Signer, Verifier};
 
 use crate::crypto::{JwtSigner, JwtVerifier};
-use crate::errors::{ErrorKind, Result};
-use crate::{Algorithm, DecodingKey, EncodingKey};
+use crate::errors::{ErrorKind, Result, new_error};
+use crate::{Algorithm, AlgorithmFamily, DecodingKey, EncodingKey};
 
 type HmacSha256 = Hmac<Sha256>;
 type HmacSha384 = Hmac<Sha384>;
@@ -20,7 +20,11 @@ macro_rules! define_hmac_signer {
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-                let inner = <$hmac_type>::new_from_slice(encoding_key.try_get_hmac_secret()?)
+                if encoding_key.family() != AlgorithmFamily::Hmac {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
+
+                let inner = <$hmac_type>::new_from_slice(encoding_key.as_bytes())
                     .map_err(|_| ErrorKind::InvalidKeyFormat)?;
 
                 Ok(Self(inner))
@@ -52,7 +56,11 @@ macro_rules! define_hmac_verifier {
 
         impl $name {
             pub(crate) fn new(decoding_key: &DecodingKey) -> Result<Self> {
-                let inner = <$hmac_type>::new_from_slice(decoding_key.try_get_hmac_secret()?)
+                if decoding_key.family() != AlgorithmFamily::Hmac {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
+
+                let inner = <$hmac_type>::new_from_slice(decoding_key.try_get_as_bytes()?)
                     .map_err(|_| ErrorKind::InvalidKeyFormat)?;
 
                 Ok(Self(inner))

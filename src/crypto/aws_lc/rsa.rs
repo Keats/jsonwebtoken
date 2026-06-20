@@ -16,7 +16,7 @@ fn try_sign_rsa(
     encoding_key: &EncodingKey,
     msg: &[u8],
 ) -> std::result::Result<Vec<u8>, signature::Error> {
-    let key_pair = crypto_sig::RsaKeyPair::from_der(encoding_key.inner())
+    let key_pair = crypto_sig::RsaKeyPair::from_der(encoding_key.as_bytes())
         .map_err(signature::Error::from_source)?;
 
     let mut signature = vec![0; key_pair.public_modulus_len()];

@@ -485,13 +485,13 @@ impl Jwk {
             algorithm: match key.family() {
                 AlgorithmFamily::Hmac => AlgorithmParameters::OctetKey(OctetKeyParameters {
                     key_type: OctetKeyType::Octet,
-                    value: b64_encode(key.inner()),
+                    value: b64_encode(key.as_bytes()),
                 }),
                 AlgorithmFamily::Rsa => {
                     let (n, e) = (CryptoProvider::get_default()
                         .key_utils
                         .rsa_pub_components_from_private_key)(
-                        key.inner()
+                        key.as_bytes()
                     )?;
                     AlgorithmParameters::RSA(RSAKeyParameters {
                         key_type: RSAKeyType::RSA,
@@ -503,7 +503,7 @@ impl Jwk {
                     let (curve, x, y) = (CryptoProvider::get_default()
                         .key_utils
                         .ec_pub_components_from_private_key)(
-                        key.inner(), alg
+                        key.as_bytes(), alg
                     )?;
                     AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
                         key_type: EllipticCurveKeyType::EC,
@@ -515,7 +515,7 @@ impl Jwk {
                 AlgorithmFamily::Ed => {
                     // Get the curve type based off the encoding key length
                     // Note: here we will receive a DER key which contains a 16 byte ANS.1 header
-                    let curve_type: EllipticCurve = match key.inner().len() {
+                    let curve_type: EllipticCurve = match key.as_bytes().len() {
                         // 16 byte header + 32 byte Ed25519 key
                         48 => Ok(EllipticCurve::Ed25519),
                         _ => Err(Error::from(ErrorKind::InvalidEddsaKey)),
@@ -525,7 +525,7 @@ impl Jwk {
                     let public_key_bytes = (CryptoProvider::get_default()
                         .key_utils
                         .ed_pub_components_from_private_key)(
-                        key.inner(), &curve_type
+                        key.as_bytes(), &curve_type
                     )?;
 
                     AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
@@ -547,14 +547,9 @@ impl Jwk {
             common: CommonParameters { key_algorithm: alg.map(|a| a.into()), ..Default::default() },
             algorithm: match key.family() {
                 crate::algorithms::AlgorithmFamily::Hmac => {
-                    let secret = match &key.kind() {
-                        DecodingKeyKind::SecretOrDer(secret) => secret,
-                        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
-                    };
-
                     AlgorithmParameters::OctetKey(OctetKeyParameters {
                         key_type: OctetKeyType::Octet,
-                        value: b64_encode(secret),
+                        value: b64_encode(key.try_get_as_bytes()?),
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Rsa => {
@@ -575,13 +570,7 @@ impl Jwk {
                     AlgorithmParameters::RSA(RSAKeyParameters { key_type: RSAKeyType::RSA, n, e })
                 }
                 crate::algorithms::AlgorithmFamily::Ec => {
-                    let (curve, x, y) = match &key.kind() {
-                        DecodingKeyKind::SecretOrDer(pub_bytes) => {
-                            ec_pub_components_from_public_key(pub_bytes)?
-                        }
-                        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
-                    };
-
+                    let (curve, x, y) = ec_pub_components_from_public_key(key.try_get_as_bytes()?)?;
                     AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
                         key_type: EllipticCurveKeyType::EC,
                         curve,
@@ -590,15 +579,11 @@ impl Jwk {
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Ed => {
-                    let (curve_type, x) = match &key.kind() {
-                        DecodingKeyKind::SecretOrDer(pub_bytes) => {
-                            match pub_bytes.len() {
-                                // ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
-                                32 => (EllipticCurve::Ed25519, pub_bytes),
-                                _ => return Err(ErrorKind::InvalidEddsaKey.into()),
-                            }
-                        }
-                        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
+                    let pub_bytes = key.try_get_as_bytes()?;
+                    let (curve_type, x) = match pub_bytes.len() {
+                        // ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
+                        32 => (EllipticCurve::Ed25519, pub_bytes),
+                        _ => return Err(ErrorKind::InvalidEddsaKey.into()),
                     };
 
                     AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
