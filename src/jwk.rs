@@ -334,6 +334,7 @@ pub enum EllipticCurveKeyType {
 /// Type of cryptographic curve used by a key. This is defined in
 /// [RFC 7518 #7.6](https://tools.ietf.org/html/rfc7518#section-7.6)
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[non_exhaustive]
 pub enum EllipticCurve {
     /// P-256 curve
     #[serde(rename = "P-256")]
@@ -478,8 +479,6 @@ impl Jwk {
     }
 
     /// Create a `JWK` from an `EncodingKey`.
-    ///
-    /// Edwards curve based keys are not supported.
     pub fn from_encoding_key(key: &EncodingKey, alg: Algorithm) -> errors::Result<Self> {
         Ok(Self {
             common: CommonParameters { key_algorithm: Some(alg.into()), ..Default::default() },
@@ -514,15 +513,32 @@ impl Jwk {
                     })
                 }
                 AlgorithmFamily::Ed => {
-                    unimplemented!("Edwards curves are not supported");
+                    // Get the curve type based off the encoding key length
+                    // Note: here we will receive a DER key which contains a 16 byte ANS.1 header
+                    let curve_type: EllipticCurve = match key.inner().len() {
+                        // 16 byte header + 32 byte Ed25519 key
+                        48 => Ok(EllipticCurve::Ed25519),
+                        _ => Err(Error::from(ErrorKind::InvalidEddsaKey)),
+                    }?;
+
+                    // Extract the public key from the encoding key
+                    let public_key_bytes = (CryptoProvider::get_default()
+                        .key_utils
+                        .ed_pub_components_from_private_key)(
+                        key.inner(), &curve_type
+                    )?;
+
+                    AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                        key_type: OctetKeyPairType::OctetKeyPair,
+                        curve: curve_type,
+                        x: b64_encode(public_key_bytes),
+                    })
                 }
             },
         })
     }
 
     /// Create a `JWK` from a `DecodingKey`.
-    ///
-    /// Edwards curve based keys are not supported.
     pub fn from_decoding_key(
         key: &DecodingKey,
         alg: Option<Algorithm>,
@@ -574,7 +590,22 @@ impl Jwk {
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Ed => {
-                    unimplemented!("Edwards curves are not supported");
+                    let (curve_type, x) = match &key.kind() {
+                        DecodingKeyKind::SecretOrDer(pub_bytes) => {
+                            match pub_bytes.len() {
+                                // ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
+                                32 => (EllipticCurve::Ed25519, pub_bytes),
+                                _ => return Err(ErrorKind::InvalidEddsaKey.into()),
+                            }
+                        }
+                        _ => return Err(ErrorKind::InvalidKeyFormat.into()),
+                    };
+
+                    AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                        key_type: OctetKeyPairType::OctetKeyPair,
+                        curve: curve_type,
+                        x: b64_encode(x),
+                    })
                 }
             },
         })
@@ -595,7 +626,9 @@ impl Jwk {
                         a.y,
                     )
                 }
-                EllipticCurve::Ed25519 => panic!("EllipticCurve can't contain this curve type"),
+                EllipticCurve::Ed25519 => {
+                    panic!("EllipticCurve can't contain this curve type")
+                }
             },
             AlgorithmParameters::RSA(a) => {
                 format!(
@@ -782,6 +815,20 @@ mod tests {
                 .unwrap();
         let expected_jwk = Jwk::from_encoding_key(&enc_key, Algorithm::ES256).unwrap();
         let jwk = Jwk::from_decoding_key(&dec_key, Some(Algorithm::ES256)).unwrap();
+        assert_eq!(jwk, expected_jwk);
+    }
+
+    #[test]
+    #[cfg(feature = "use_pem")]
+    fn check_jwk_from_decoding_key_ed() {
+        let enc_key =
+            EncodingKey::from_ed_pem(include_bytes!("../tests/eddsa/private_ed25519_key.pem"))
+                .unwrap();
+        let dec_key =
+            DecodingKey::from_ed_pem(include_bytes!("../tests/eddsa/public_ed25519_key.pem"))
+                .unwrap();
+        let expected_jwk = Jwk::from_encoding_key(&enc_key, Algorithm::EdDSA).unwrap();
+        let jwk = Jwk::from_decoding_key(&dec_key, Some(Algorithm::EdDSA)).unwrap();
         assert_eq!(jwk, expected_jwk);
     }
 }

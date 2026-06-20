@@ -8,7 +8,7 @@ use jsonwebtoken::{
     crypto::{sign, verify},
 };
 #[cfg(feature = "use_pem")]
-use jsonwebtoken::{Header, Validation, decode, encode};
+use jsonwebtoken::{Header, Validation, decode, encode, errors::ErrorKind};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -137,4 +137,62 @@ fn ed_jwk() {
         &Validation::new(Algorithm::EdDSA),
     );
     assert!(res.is_ok());
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn ed_jwk_from_ed25519_key() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
+    let privkey_pem = include_bytes!("private_ed25519_key.pem");
+    let encoding_key = EncodingKey::from_ed_pem(privkey_pem).unwrap();
+
+    let jwk = Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap();
+
+    assert_eq!(
+        jwk,
+        serde_json::from_value(json!({
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "x": "2-Jj2UvNCvQiUPNYRgSi0cJSPiJI6Rs6D0UTeEpQVj8",
+            "alg": "EdDSA",
+        }))
+        .unwrap()
+    );
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn ed_jwk_from_ed25519_der_key() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
+    let privkey_der = include_bytes!("private_ed25519_der_key.bin");
+    let encoding_key = EncodingKey::from_ed_der(privkey_der);
+
+    let jwk = Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap();
+
+    assert_eq!(
+        jwk,
+        serde_json::from_value(json!({
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "x": "2-Jj2UvNCvQiUPNYRgSi0cJSPiJI6Rs6D0UTeEpQVj8",
+            "alg": "EdDSA",
+        }))
+        .unwrap()
+    );
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn ed_jwk_from_ed448_key() {
+    let privkey_pem = include_bytes!("private_ed448_key.pem");
+    assert_eq!(
+        EncodingKey::from_ed_pem(privkey_pem).unwrap_err().into_kind(),
+        ErrorKind::InvalidKeyFormat
+    );
 }

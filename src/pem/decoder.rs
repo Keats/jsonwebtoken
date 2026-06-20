@@ -207,11 +207,13 @@ fn extract_first_bitstring(asn1: &[simple_asn1::ASN1Block]) -> Result<&[u8]> {
 }
 
 /// Find whether this is EC, RSA, or Ed
+/// Note: Ed448 keys are not supported
 fn classify_pem(asn1: &[simple_asn1::ASN1Block]) -> Option<Classification> {
     // These should be constant but the macro requires
     // #![feature(const_vec_new)]
     let ec_public_key_oid = simple_asn1::oid!(1, 2, 840, 10_045, 2, 1);
     let rsa_public_key_oid = simple_asn1::oid!(1, 2, 840, 113_549, 1, 1, 1);
+    // Defined: https://datatracker.ietf.org/doc/html/rfc8410#section-3 id-Ed25519)
     let ed25519_oid = simple_asn1::oid!(1, 3, 101, 112);
 
     for asn1_entry in asn1 {

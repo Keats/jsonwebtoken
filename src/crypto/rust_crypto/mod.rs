@@ -3,6 +3,7 @@ use ::rsa::{
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
     traits::PublicKeyParts,
 };
+use ed25519_dalek::SigningKey as Ed25519SigningKey;
 use p256::{ecdsa::SigningKey as P256SigningKey, pkcs8::DecodePrivateKey};
 use p384::ecdsa::SigningKey as P384SigningKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
@@ -65,6 +66,20 @@ fn ec_components_from_private_key(
     }
 }
 
+fn ed_pub_components_from_private_key(
+    encoding_key: &[u8],
+    curve_type: &EllipticCurve,
+) -> errors::Result<Vec<u8>> {
+    match curve_type {
+        EllipticCurve::Ed25519 => Ok(Ed25519SigningKey::from_pkcs8_der(encoding_key)
+            .map_err(|_| ErrorKind::InvalidEddsaKey)?
+            .verifying_key()
+            .as_bytes()
+            .to_vec()),
+        _ => Err(ErrorKind::InvalidAlgorithm.into()),
+    }
+}
+
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
     Ok(match hash_function {
         ThumbprintHash::SHA256 => Sha256::digest(data).to_vec(),
@@ -122,6 +137,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
         rsa_pub_components_from_private_key: rsa_components_from_private_key,
         rsa_pub_components_from_public_key: rsa_components_from_public_key,
         ec_pub_components_from_private_key: ec_components_from_private_key,
+        ed_pub_components_from_private_key,
         compute_digest,
     },
 };

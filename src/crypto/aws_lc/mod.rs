@@ -2,7 +2,7 @@ use aws_lc_rs::{
     digest,
     signature::{
         self as aws_sig, ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED_SIGNING,
-        EcdsaKeyPair, KeyPair,
+        EcdsaKeyPair, Ed25519KeyPair, KeyPair,
     },
 };
 
@@ -54,6 +54,20 @@ fn ec_components_from_private_key(
 
     let (x, y) = pub_bytes[1..].split_at(pub_elem_bytes);
     Ok((curve, x.to_vec(), y.to_vec()))
+}
+
+fn ed_pub_components_from_private_key(
+    encoding_key: &[u8],
+    curve_type: &EllipticCurve,
+) -> errors::Result<Vec<u8>> {
+    match curve_type {
+        EllipticCurve::Ed25519 => Ok(Ed25519KeyPair::from_pkcs8(encoding_key)
+            .map_err(|_| ErrorKind::InvalidEddsaKey)?
+            .public_key()
+            .as_ref()
+            .to_vec()),
+        _ => Err(ErrorKind::InvalidAlgorithm.into()),
+    }
 }
 
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
@@ -114,6 +128,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
         rsa_pub_components_from_private_key: rsa_components_from_private_key,
         rsa_pub_components_from_public_key: rsa_components_from_public_key,
         ec_pub_components_from_private_key: ec_components_from_private_key,
+        ed_pub_components_from_private_key,
         compute_digest,
     },
 };
