@@ -1,5 +1,5 @@
-#![allow(deprecated)]
 use jsonwebtoken::Extras;
+use jsonwebtoken::dangerous::insecure_decode;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use wasm_bindgen_test::wasm_bindgen_test;
@@ -268,41 +268,14 @@ fn decode_header_only() {
 #[wasm_bindgen_test]
 fn dangerous_insecure_decode_valid_token() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.insecure_disable_signature_validation();
-    let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
-    claims.unwrap();
+    insecure_decode::<Claims>(&token).unwrap();
 }
 
 #[test]
 #[wasm_bindgen_test]
 fn dangerous_insecure_decode_token_invalid_signature() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.wrong";
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.insecure_disable_signature_validation();
-    let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
-    claims.unwrap();
-}
-
-#[test]
-#[wasm_bindgen_test]
-fn dangerous_insecure_decode_token_wrong_algorithm() {
-    let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.insecure_disable_signature_validation();
-    let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
-    claims.unwrap();
-}
-
-#[test]
-#[wasm_bindgen_test]
-fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
-    let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjk1MzI1MjQ4OX0.ONtEUTtP1QmyksYH9ijtPCaXoHjZVHcHKZGX1DuJyPiSyKlT93Y-oKgrp_OSkHSu4huxCcVObLzwsdwF-xwiAQ";
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.insecure_disable_signature_validation();
-    let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
-    let err = claims.unwrap_err();
-    assert_eq!(err.kind(), &ErrorKind::ExpiredSignature);
+    insecure_decode::<Claims>(&token).unwrap();
 }
 
 #[test]

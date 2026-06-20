@@ -281,7 +281,7 @@ pub fn decode<T: DeserializeOwned>(
     let token = token.as_ref();
     let header = decode_header(token)?;
 
-    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+    if !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
@@ -335,25 +335,21 @@ pub(crate) fn verify_signature_body(
     validation: &Validation,
     verifying_provider: Box<dyn JwtVerifier>,
 ) -> Result<()> {
-    if validation.validate_signature && validation.algorithms.is_empty() {
+    if validation.algorithms.is_empty() {
         return Err(new_error(ErrorKind::MissingAlgorithm));
     }
 
-    if validation.validate_signature {
-        for alg in &validation.algorithms {
-            if verifying_provider.algorithm().family() != alg.family() {
-                return Err(new_error(ErrorKind::InvalidAlgorithm));
-            }
+    for alg in &validation.algorithms {
+        if verifying_provider.algorithm().family() != alg.family() {
+            return Err(new_error(ErrorKind::InvalidAlgorithm));
         }
     }
 
-    if validation.validate_signature && !validation.algorithms.contains(&header.alg) {
+    if !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
 
-    if validation.validate_signature
-        && verifying_provider.verify(message, &b64_decode(signature)?).is_err()
-    {
+    if verifying_provider.verify(message, &b64_decode(signature)?).is_err() {
         return Err(new_error(ErrorKind::InvalidSignature));
     }
 
