@@ -66,7 +66,6 @@ fn ed_pub_components_from_private_key(
             .public_key()
             .as_ref()
             .to_vec()),
-        EllipticCurve::Ed448 => Err(ErrorKind::UnsupportedAlgorithm.into()),
         _ => Err(ErrorKind::InvalidAlgorithm.into()),
     }
 }

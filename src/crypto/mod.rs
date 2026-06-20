@@ -198,22 +198,6 @@ pub(crate) fn ec_pub_components_from_public_key(
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 
-/// Given bitstring from DER encoded public key, extract the associated curve
-/// and the ED public key components (x)
-pub(crate) fn ed_pub_components_from_public_key(
-    pub_bytes: &[u8],
-) -> Result<(EllipticCurve, Vec<u8>)> {
-    let curve_type = match pub_bytes.len() {
-        // ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
-        32 => EllipticCurve::Ed25519,
-        // ED448: https://datatracker.ietf.org/doc/html/rfc8032#section-5.2.5
-        57 => EllipticCurve::Ed448,
-        _ => return Err(ErrorKind::InvalidEddsaKey.into()),
-    };
-
-    Ok((curve_type, pub_bytes.to_vec()))
-}
-
 mod static_default {
     use std::sync::OnceLock;
 

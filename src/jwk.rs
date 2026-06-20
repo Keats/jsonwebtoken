@@ -7,9 +7,7 @@ use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
-use crate::crypto::{
-    CryptoProvider, ec_pub_components_from_public_key, ed_pub_components_from_public_key,
-};
+use crate::crypto::{CryptoProvider, ec_pub_components_from_public_key};
 use crate::errors::{self, Error, ErrorKind, new_error};
 use crate::serialization::b64_encode;
 use crate::{Algorithm, AlgorithmFamily, DecodingKey, EncodingKey, decoding::DecodingKeyKind};
@@ -351,9 +349,6 @@ pub enum EllipticCurve {
     /// Ed25519 curve
     #[serde(rename = "Ed25519")]
     Ed25519,
-    /// Ed448 curve
-    #[serde(rename = "Ed448")]
-    Ed448,
 }
 
 /// Parameters for an Elliptic Curve Key
@@ -597,7 +592,11 @@ impl Jwk {
                 crate::algorithms::AlgorithmFamily::Ed => {
                     let (curve_type, x) = match &key.kind() {
                         DecodingKeyKind::SecretOrDer(pub_bytes) => {
-                            ed_pub_components_from_public_key(pub_bytes)?
+                            match pub_bytes.len() {
+                                // ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
+                                32 => (EllipticCurve::Ed25519, pub_bytes),
+                                _ => return Err(ErrorKind::InvalidEddsaKey.into()),
+                            }
                         }
                         _ => return Err(ErrorKind::InvalidKeyFormat.into()),
                     };
@@ -627,7 +626,7 @@ impl Jwk {
                         a.y,
                     )
                 }
-                EllipticCurve::Ed25519 | EllipticCurve::Ed448 => {
+                EllipticCurve::Ed25519 => {
                     panic!("EllipticCurve can't contain this curve type")
                 }
             },
@@ -650,7 +649,7 @@ impl Jwk {
                 EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
                     panic!("OctetKeyPair can't contain this curve type")
                 }
-                EllipticCurve::Ed25519 | EllipticCurve::Ed448 => {
+                EllipticCurve::Ed25519 => {
                     format!(
                         r#"{{"crv":{},"kty":{},"x":"{}"}}"#,
                         serde_json::to_string(&a.curve).unwrap(),
