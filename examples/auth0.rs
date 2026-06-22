@@ -22,9 +22,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let validation = {
-        let mut validation = Validation::new(header.alg);
-        validation.set_audience(&["https://dev-duzyayk4.eu.auth0.com/api/v2/"]);
-        validation.validate_exp = false;
+        let validation = Validation::new()
+            .with_exp(false, false)
+            .with_algorithm(header.alg)
+            .with_audience(&["https://dev-duzyayk4.eu.auth0.com/api/v2/"]);
         validation
     };
 

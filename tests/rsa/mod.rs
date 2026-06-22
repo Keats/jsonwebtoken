@@ -125,7 +125,7 @@ fn round_trip_claim() {
         let token_data = decode::<Claims>(
             &token,
             &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
-            &Validation::new(alg),
+            &Validation::new().with_algorithm(alg),
         )
         .unwrap();
         assert_eq!(my_claims, token_data.claims);
@@ -134,7 +134,7 @@ fn round_trip_claim() {
         let cert_token_data = decode::<Claims>(
             &token,
             &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
-            &Validation::new(alg),
+            &Validation::new().with_algorithm(alg),
         )
         .unwrap();
         assert_eq!(my_claims, cert_token_data.claims);
@@ -164,7 +164,7 @@ fn rsa_modulus_exponent() {
     let res = decode::<Claims>(
         &encrypted,
         &DecodingKey::from_rsa_components(n, e).unwrap(),
-        &Validation::new(Algorithm::RS256),
+        &Validation::new().with_algorithm(Algorithm::RS256),
     );
     assert!(res.is_ok());
 }
@@ -200,7 +200,7 @@ fn rsa_jwk() {
     let res = decode::<Claims>(
         &encrypted,
         &DecodingKey::from_jwk(&jwk).unwrap(),
-        &Validation::new(Algorithm::RS256),
+        &Validation::new().with_algorithm(Algorithm::RS256),
     );
     assert!(res.is_ok());
 }
@@ -228,7 +228,7 @@ fn roundtrip_with_jwtio_example_jey() {
         let token_data = decode::<Claims>(
             &token,
             &DecodingKey::from_rsa_pem(pubkey_pem).unwrap(),
-            &Validation::new(alg),
+            &Validation::new().with_algorithm(alg),
         )
         .unwrap();
         assert_eq!(my_claims, token_data.claims);
@@ -236,7 +236,7 @@ fn roundtrip_with_jwtio_example_jey() {
         let cert_token_data = decode::<Claims>(
             &token,
             &DecodingKey::from_rsa_pem(certificate_pem).unwrap(),
-            &Validation::new(alg),
+            &Validation::new().with_algorithm(alg),
         )
         .unwrap();
         assert_eq!(my_claims, cert_token_data.claims);

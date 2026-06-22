@@ -24,10 +24,10 @@ fn main() {
         Err(_) => panic!(), // in practice you would return the error
     };
 
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.sub = Some("b@b.com".to_string());
-    validation.set_audience(&["me"]);
-    validation.set_required_spec_claims(&["exp", "sub", "aud"]);
+    let validation = Validation::new()
+        .with_algorithm(Algorithm::HS256)
+        .with_subject("b@b.com".to_string())
+        .with_audience(&["me"]);
     let token_data = match decode::<Claims>(&token, &DecodingKey::from_secret(key), &validation) {
         Ok(c) => c,
         Err(err) => match *err.kind() {

@@ -70,7 +70,7 @@ fn round_trip_claim() {
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
-        &Validation::new(Algorithm::ES256),
+        &Validation::new().with_algorithm(Algorithm::ES256),
     )
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
@@ -98,7 +98,7 @@ fn ec_x_y() {
     let res = decode::<Claims>(
         &encrypted,
         &DecodingKey::from_ec_components(x, y).unwrap(),
-        &Validation::new(Algorithm::ES256),
+        &Validation::new().with_algorithm(Algorithm::ES256),
     );
     assert!(res.is_ok());
 }
@@ -136,7 +136,7 @@ fn ed_jwk() {
     let res = decode::<Claims>(
         &encrypted,
         &DecodingKey::from_jwk(&jwk).unwrap(),
-        &Validation::new(Algorithm::ES256),
+        &Validation::new().with_algorithm(Algorithm::ES256),
     );
     assert!(res.is_ok());
 }
@@ -163,7 +163,7 @@ fn roundtrip_with_jwtio_example() {
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
-        &Validation::new(Algorithm::ES384),
+        &Validation::new().with_algorithm(Algorithm::ES384),
     )
     .unwrap();
     assert_eq!(my_claims, token_data.claims);

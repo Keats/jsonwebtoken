@@ -9,6 +9,13 @@ use serde::{Deserialize, Deserializer};
 use crate::algorithms::{Algorithm, AlgorithmFamily};
 use crate::errors::{ErrorKind, Result, new_error};
 
+/// The only values that will be considered are "exp", "nbf", "aud", "iss", "sub".
+const AUDIENCE_CLAIM: &str = "aud";
+const EXPIRY_CLAIM: &str = "exp";
+const ISSUER_CLAIM: &str = "iss";
+const NOT_BEFORE_CLAIM: &str = "nbf";
+const SUBJECT_CLAIM: &str = "sub";
+
 /// Contains the various validations that are applied after decoding a JWT.
 ///
 /// All time validation happen on UTC timestamps as seconds.
@@ -16,7 +23,7 @@ use crate::errors::{ErrorKind, Result, new_error};
 /// ```rust
 /// use jsonwebtoken::{Validation, Algorithm};
 ///
-/// let mut validation = Validation::new(Algorithm::HS256);
+/// let mut validation = Validation::new().with_algorithm(Algorithm::HS256);
 /// validation.leeway = 5;
 /// // Setting audience
 /// validation.set_audience(&["Me"]); // a single string
@@ -35,25 +42,25 @@ pub struct Validation {
     /// The only value that will be used are "exp", "nbf", "aud", "iss", "sub". Anything else will be ignored.
     ///
     /// Defaults to `{"exp"}`
-    pub required_spec_claims: HashSet<String>,
+    required_spec_claims: HashSet<String>,
     /// Add some leeway (in seconds) to the `exp` and `nbf` validation to
     /// account for clock skew.
     ///
     /// Defaults to `60`.
-    pub leeway: u64,
+    leeway: u64,
     /// Reject a token some time (in seconds) before the `exp` to prevent
     /// expiration in transit over the network.
     ///
     /// The value is the inverse of `leeway`, subtracting from the validation time.
     ///
     /// Defaults to `0`.
-    pub reject_tokens_expiring_in_less_than: u64,
+    reject_tokens_expiring_in_less_than: u64,
     /// Whether to validate the `exp` field.
     ///
     /// It will return an error if the time in the `exp` field is past.
     ///
     /// Defaults to `true`.
-    pub validate_exp: bool,
+    validate_exp: bool,
     /// Whether to validate the `nbf` field.
     ///
     /// It will return an error if the current timestamp is before the time in the `nbf` field.
@@ -62,7 +69,7 @@ pub struct Validation {
     /// Adding `nbf` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `false`.
-    pub validate_nbf: bool,
+    validate_nbf: bool,
     /// Whether to validate the `aud` field.
     ///
     /// It will return an error if the `aud` field is not a member of the audience provided.
@@ -71,7 +78,7 @@ pub struct Validation {
     /// Adding `aud` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `true`. Very insecure to turn this off. Only do this if you know what you are doing.
-    pub validate_aud: bool,
+    validate_aud: bool,
     /// Validation will check that the `aud` field is a member of the
     /// audience provided and will error otherwise.
     /// Use `set_audience` to set it
@@ -80,7 +87,7 @@ pub struct Validation {
     /// Adding `aud` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `None`.
-    pub aud: Option<HashSet<String>>,
+    aud: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `iss` field is a member of the
     /// iss provided and will error otherwise.
     /// Use `set_issuer` to set it
@@ -89,7 +96,7 @@ pub struct Validation {
     /// Adding `iss` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `None`.
-    pub iss: Option<HashSet<String>>,
+    iss: Option<HashSet<String>>,
     /// If it contains a value, the validation will check that the `sub` field is the same as the
     /// one provided and will error otherwise.
     ///
@@ -97,12 +104,12 @@ pub struct Validation {
     /// Adding `sub` to `required_spec_claims` will make it required.
     ///
     /// Defaults to `None`.
-    pub sub: Option<String>,
+    sub: Option<String>,
     /// The validation will check that the `alg` of the header is contained
     /// in the ones provided and will error otherwise. Will error if it is empty.
     ///
     /// Defaults to `vec![Algorithm::HS256]`.
-    pub algorithms: Vec<Algorithm>,
+    pub(crate) algorithms: Vec<Algorithm>,
 
     /// Whether to validate the JWT signature. Very insecure to turn that off
     pub(crate) validate_signature: bool,
@@ -110,60 +117,81 @@ pub struct Validation {
 
 impl Validation {
     /// Create a default validation setup allowing the given alg
-    pub fn new(alg: Algorithm) -> Validation {
-        Self::new_impl(vec![alg])
+    pub fn new() -> Validation {
+        Validation::default()
+    }
+
+    /// Create a default validation setup allowing the given alg
+    pub fn with_algorithm(mut self, alg: Algorithm) -> Validation {
+        // Self::new_impl(vec![alg])
+        self.algorithms = vec![alg];
+        self
     }
 
     /// Create a default validation setup allowing any algorithm in the family
-    pub fn new_for_family(family: AlgorithmFamily) -> Validation {
-        Self::new_impl(family.algorithms().to_vec())
-    }
-
-    fn new_impl(algorithms: Vec<Algorithm>) -> Validation {
-        let mut required_claims = HashSet::with_capacity(1);
-        required_claims.insert("exp".to_owned());
-
-        Validation {
-            required_spec_claims: required_claims,
-            algorithms,
-            leeway: 60,
-            reject_tokens_expiring_in_less_than: 0,
-
-            validate_exp: true,
-            validate_nbf: false,
-            validate_aud: true,
-
-            iss: None,
-            sub: None,
-            aud: None,
-
-            validate_signature: true,
-        }
+    pub fn with_algorithm_family(mut self, family: AlgorithmFamily) -> Validation {
+        self.algorithms = family.algorithms().to_vec();
+        self
     }
 
     /// `aud` is a collection of one or more acceptable audience members
     /// The simple usage is `set_audience(&["some aud name"])`
     /// Makes the `aud` claim required by adding to `required_spec_claims`
-    pub fn set_audience<T: ToString>(&mut self, items: &[T]) {
-        self.required_spec_claims.insert("aud".to_string());
+    pub fn with_audience<T: ToString>(mut self, items: &[T]) -> Validation {
+        self.required_spec_claims.insert(AUDIENCE_CLAIM.to_string());
         self.aud = Some(items.iter().map(|x| x.to_string()).collect());
+        self.validate_aud = true;
+        self
     }
 
     /// `iss` is a collection of one or more acceptable issuers members
     /// The simple usage is `set_issuer(&["some iss name"])`
     /// Makes the `iss` claim required by adding to `required_spec_claims`
-    pub fn set_issuer<T: ToString>(&mut self, items: &[T]) {
-        self.required_spec_claims.insert("iss".to_string());
+    pub fn with_issuer<T: ToString>(mut self, items: &[T]) -> Validation {
+        self.required_spec_claims.insert(ISSUER_CLAIM.to_string());
         self.iss = Some(items.iter().map(|x| x.to_string()).collect());
+        self
     }
 
-    /// Which claims are required to be present for this JWT to be considered valid.
-    /// The only values that will be considered are "exp", "nbf", "aud", "iss", "sub".
-    /// The simple usage is `set_required_spec_claims(&["exp", "nbf"])`.
-    /// If you want to have an empty set, do not use this function - set an empty set on the struct
-    /// param directly.
-    pub fn set_required_spec_claims<T: ToString>(&mut self, items: &[T]) {
-        self.required_spec_claims = items.iter().map(|x| x.to_string()).collect();
+    /// TODO: docs
+    pub fn with_subject<T: ToString>(mut self, subject: T) -> Validation {
+        self.required_spec_claims.insert(SUBJECT_CLAIM.to_string());
+        self.sub = Some(subject.to_string());
+        self
+    }
+
+    /// TODO: docs
+    pub fn with_exp(mut self, required: bool, validated: bool) -> Validation {
+        if required {
+            self.required_spec_claims.insert(EXPIRY_CLAIM.to_string());
+        } else {
+            self.required_spec_claims.remove(EXPIRY_CLAIM);
+        }
+        self.validate_exp = validated;
+        self
+    }
+
+    /// TODO: docs
+    pub fn with_nbf(mut self, required: bool, validated: bool) -> Validation {
+        if required {
+            self.required_spec_claims.insert(NOT_BEFORE_CLAIM.to_string());
+        } else {
+            self.required_spec_claims.remove(NOT_BEFORE_CLAIM);
+        }
+        self.validate_nbf = validated;
+        self
+    }
+
+    /// TODO: docs
+    pub fn with_leeway(mut self, seconds: u64) -> Validation {
+        self.leeway = seconds;
+        self
+    }
+
+    /// TODO: docs
+    pub fn with_reject_tokens_expiring_in_less_than(mut self, seconds: u64) -> Validation {
+        self.reject_tokens_expiring_in_less_than = seconds;
+        self
     }
 
     /// Whether to validate the JWT cryptographic signature.
@@ -180,7 +208,25 @@ impl Validation {
 
 impl Default for Validation {
     fn default() -> Self {
-        Self::new(Algorithm::HS256)
+        let mut required_claims = HashSet::with_capacity(1);
+        required_claims.insert("exp".to_owned());
+
+        Validation {
+            required_spec_claims: required_claims,
+            algorithms: vec![Algorithm::HS256],
+            leeway: 60,
+            reject_tokens_expiring_in_less_than: 0,
+
+            validate_exp: true,
+            validate_nbf: false,
+            validate_aud: false,
+
+            iss: None,
+            sub: None,
+            aud: None,
+
+            validate_signature: true,
+        }
     }
 }
 
@@ -271,11 +317,11 @@ fn is_subset(reference: &HashSet<String>, given: &HashSet<BorrowedCowIfPossible<
 pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Result<()> {
     for required_claim in &options.required_spec_claims {
         let present = match required_claim.as_str() {
-            "exp" => matches!(claims.exp, TryParse::Parsed(_)),
-            "sub" => matches!(claims.sub, TryParse::Parsed(_)),
-            "iss" => matches!(claims.iss, TryParse::Parsed(_)),
-            "aud" => matches!(claims.aud, TryParse::Parsed(_)),
-            "nbf" => matches!(claims.nbf, TryParse::Parsed(_)),
+            EXPIRY_CLAIM => matches!(claims.exp, TryParse::Parsed(_)),
+            SUBJECT_CLAIM => matches!(claims.sub, TryParse::Parsed(_)),
+            ISSUER_CLAIM => matches!(claims.iss, TryParse::Parsed(_)),
+            AUDIENCE_CLAIM => matches!(claims.aud, TryParse::Parsed(_)),
+            NOT_BEFORE_CLAIM => matches!(claims.nbf, TryParse::Parsed(_)),
             _ => continue,
         };
 
@@ -421,7 +467,10 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_in_future_ok() {
         let claims = json!({ "exp": get_current_timestamp() + 10000 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let res = validate(
+            deserialize_claims(&claims),
+            &Validation::new().with_algorithm(Algorithm::HS256),
+        );
         assert!(res.is_ok());
     }
 
@@ -429,7 +478,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_in_future_but_in_rejection_period_fails() {
         let claims = json!({ "exp": get_current_timestamp() + 500 });
-        let mut validation = Validation::new(Algorithm::HS256);
+        let mut validation = Validation::new().with_algorithm(Algorithm::HS256);
         validation.leeway = 0;
         validation.reject_tokens_expiring_in_less_than = 501;
         let res = validate(deserialize_claims(&claims), &validation);
@@ -440,7 +489,10 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_float_in_future_ok() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) + 10000.123 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let res = validate(
+            deserialize_claims(&claims),
+            &Validation::new().with_algorithm(Algorithm::HS256),
+        );
         assert!(res.is_ok());
     }
 
@@ -448,7 +500,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_float_in_future_but_in_rejection_period_fails() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) + 500.123 });
-        let mut validation = Validation::new(Algorithm::HS256);
+        let mut validation = Validation::new().with_algorithm(Algorithm::HS256);
         validation.leeway = 0;
         validation.reject_tokens_expiring_in_less_than = 501;
         let res = validate(deserialize_claims(&claims), &validation);
@@ -459,7 +511,10 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_in_past_fails() {
         let claims = json!({ "exp": get_current_timestamp() - 100000 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let res = validate(
+            deserialize_claims(&claims),
+            &Validation::new().with_algorithm(Algorithm::HS256),
+        );
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -472,7 +527,10 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_float_in_past_fails() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
-        let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        let res = validate(
+            deserialize_claims(&claims),
+            &Validation::new().with_algorithm(Algorithm::HS256),
+        );
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
@@ -485,8 +543,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_in_past_but_in_leeway_ok() {
         let claims = json!({ "exp": get_current_timestamp() - 500 });
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.leeway = 1000 * 60;
+        let validation = Validation::new().with_algorithm(Algorithm::HS256).with_leeway(1000 * 60);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -495,22 +552,25 @@ mod tests {
     #[test]
     #[wasm_bindgen_test]
     fn validate_required_fields_are_present() {
-        for spec_claim in ["exp", "nbf", "aud", "iss", "sub"] {
-            let claims = json!({});
-            let mut validation = Validation::new(Algorithm::HS256);
-            validation.set_required_spec_claims(&[spec_claim]);
-            let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
-            assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim(spec_claim.to_owned()));
-        }
+        // TODO: I removed aud, iss, sub as new api only requires and validates them
+        // if the user uses with_audience, with_issuer or with_subject
+        // for spec_claim in ["exp", "nbf", "aud", "iss", "sub"] {
+        let claims = json!({});
+        let validation = Validation::new().with_exp(true, false);
+        let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
+        assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim("exp".to_owned()));
+
+        let claims = json!({});
+        let validation = Validation::new().with_exp(false, false).with_nbf(true, false);
+        let res = validate(deserialize_claims(&claims), &validation).unwrap_err();
+        assert_eq!(res.kind(), &ErrorKind::MissingRequiredClaim("nbf".to_owned()));
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn exp_validated_but_not_required_ok() {
         let claims = json!({});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = true;
+        let validation = Validation::new().with_exp(false, true);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -519,9 +579,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_validated_but_not_required_fails() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = true;
+        let validation = Validation::new().with_exp(false, true);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
     }
@@ -530,9 +588,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_required_but_not_validated_ok() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.set_required_spec_claims(&["exp"]);
-        validation.validate_exp = false;
+        let validation = Validation::new().with_exp(true, false);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -541,9 +597,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn exp_required_but_not_validated_fails() {
         let claims = json!({});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.set_required_spec_claims(&["exp"]);
-        validation.validate_exp = false;
+        let validation = Validation::new().with_exp(true, false);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
     }
@@ -552,10 +606,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn nbf_in_past_ok() {
         let claims = json!({ "nbf": get_current_timestamp() - 10000 });
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.validate_nbf = true;
+        let validation = Validation::new().with_exp(false, false).with_nbf(false, true);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -564,10 +615,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn nbf_float_in_past_ok() {
         let claims = json!({ "nbf": (get_current_timestamp() as f64) - 10000.1234 });
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.validate_nbf = true;
+        let validation = Validation::new().with_exp(false, false).with_nbf(true, true);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -576,10 +624,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn nbf_in_future_fails() {
         let claims = json!({ "nbf": get_current_timestamp() + 100000 });
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.validate_nbf = true;
+        let validation = Validation::new().with_exp(false, false).with_nbf(false, true);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
@@ -593,11 +638,8 @@ mod tests {
     #[wasm_bindgen_test]
     fn nbf_in_future_but_in_leeway_ok() {
         let claims = json!({ "nbf": get_current_timestamp() + 500 });
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.validate_nbf = true;
-        validation.leeway = 1000 * 60;
+        let validation =
+            Validation::new().with_exp(false, false).with_nbf(false, true).with_leeway(1000 * 60);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -606,10 +648,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn iss_string_ok() {
         let claims = json!({"iss": ["Keats"]});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.set_issuer(&["Keats"]);
+        let validation = Validation::new().with_exp(false, false).with_issuer(&["Keats"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -618,10 +657,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn iss_array_of_string_ok() {
         let claims = json!({"iss": ["UserA", "UserB"]});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.set_issuer(&["UserA", "UserB"]);
+        let validation = Validation::new().with_exp(false, false).with_issuer(&["UserA", "UserB"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -631,10 +667,7 @@ mod tests {
     fn iss_not_matching_fails() {
         let claims = json!({"iss": "Hacked"});
 
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.set_issuer(&["Keats"]);
+        let validation = Validation::new().with_exp(false, false).with_issuer(&["Keats"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
@@ -649,10 +682,7 @@ mod tests {
     fn iss_missing_fails() {
         let claims = json!({});
 
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.set_required_spec_claims(&["iss"]);
-        validation.validate_exp = false;
-        validation.set_issuer(&["Keats"]);
+        let validation = Validation::new().with_exp(false, false).with_issuer(&["Keats"]);
         let res = validate(deserialize_claims(&claims), &validation);
 
         match res.unwrap_err().kind() {
@@ -665,10 +695,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn sub_ok() {
         let claims = json!({"sub": "Keats"});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.sub = Some("Keats".to_owned());
+        let validation = Validation::new().with_exp(false, false).with_subject("Keats".to_owned());
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -677,10 +704,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn sub_not_matching_fails() {
         let claims = json!({"sub": "Hacked"});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.required_spec_claims = HashSet::new();
-        validation.validate_exp = false;
-        validation.sub = Some("Keats".to_owned());
+        let validation = Validation::new().with_exp(false, false).with_subject("Keats".to_owned());
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
@@ -694,10 +718,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn sub_missing_fails() {
         let claims = json!({});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.set_required_spec_claims(&["sub"]);
-        validation.sub = Some("Keats".to_owned());
+        let validation = Validation::new().with_exp(false, false).with_subject("Keats".to_owned());
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
@@ -711,10 +732,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn aud_string_ok() {
         let claims = json!({"aud": "Everyone"});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.set_audience(&["Everyone"]);
+        let validation = Validation::new().with_exp(false, false).with_audience(&["Everyone"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -723,10 +741,8 @@ mod tests {
     #[wasm_bindgen_test]
     fn aud_array_of_string_ok() {
         let claims = json!({"aud": ["UserA", "UserB"]});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.set_audience(&["UserA", "UserB"]);
+        let validation =
+            Validation::new().with_exp(false, false).with_audience(&["UserA", "UserB"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -735,62 +751,43 @@ mod tests {
     #[wasm_bindgen_test]
     fn aud_type_mismatch_fails() {
         let claims = json!({"aud": ["Everyone"]});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.set_audience(&["UserA", "UserB"]);
+        let validation =
+            Validation::new().with_exp(false, false).with_audience(&["UserA", "UserB"]);
         let res = validate(deserialize_claims(&claims), &validation);
-        assert!(res.is_err());
 
-        match res.unwrap_err().kind() {
-            ErrorKind::InvalidAudience => (),
-            _ => unreachable!(),
-        };
+        assert_eq!(&ErrorKind::InvalidAudience, res.expect_err("error expected").kind());
     }
 
     #[test]
     #[wasm_bindgen_test]
     fn aud_correct_type_not_matching_fails() {
         let claims = json!({"aud": ["Everyone"]});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.set_audience(&["None"]);
+        let validation = Validation::new().with_exp(false, false).with_audience(&["None"]);
         let res = validate(deserialize_claims(&claims), &validation);
-        assert!(res.is_err());
 
-        match res.unwrap_err().kind() {
-            ErrorKind::InvalidAudience => (),
-            _ => unreachable!(),
-        };
+        assert_eq!(&ErrorKind::InvalidAudience, res.expect_err("error expected").kind());
     }
 
-    #[test]
-    #[wasm_bindgen_test]
-    fn aud_none_fails() {
-        let claims = json!({"aud": ["Everyone"]});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.aud = None;
-        let res = validate(deserialize_claims(&claims), &validation);
-        assert!(res.is_err());
+    // TODO: this is no longer desired behaviour, audience should be required and validated only when the user calls .with_audience(...)
+    // #[test]
+    // #[wasm_bindgen_test]
+    // fn aud_none_fails() {
+    //     let claims = json!({"aud": ["Everyone"]});
+    //     let validation = Validation::new().with_exp(false, false);
+    //     let res = validate(deserialize_claims(&claims), &validation);
+    //     assert!(res.is_err());
 
-        match res.unwrap_err().kind() {
-            ErrorKind::InvalidAudience => (),
-            _ => unreachable!(),
-        };
-    }
+    //     match res.unwrap_err().kind() {
+    //         ErrorKind::InvalidAudience => (),
+    //         _ => unreachable!(),
+    //     };
+    // }
 
     #[test]
     #[wasm_bindgen_test]
     fn aud_validation_skipped() {
         let claims = json!({"aud": ["Everyone"]});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.validate_aud = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.aud = None;
+        let validation = Validation::new().with_exp(false, false);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_ok());
     }
@@ -799,10 +796,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn aud_missing_fails() {
         let claims = json!({});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.set_required_spec_claims(&["aud"]);
-        validation.set_audience(&["None"]);
+        let validation = Validation::new().with_exp(false, false).with_audience(&["None"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
@@ -812,31 +806,26 @@ mod tests {
         };
     }
 
-    #[test]
-    #[wasm_bindgen_test]
-    fn set_audience_missing_fails() {
-        let claims = json!({});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.set_audience(&["None"]);
-        let res = validate(deserialize_claims(&claims), &validation);
-        assert!(res.is_err());
+    // TODO: this is now the same as above
+    // #[test]
+    // #[wasm_bindgen_test]
+    // fn set_audience_missing_fails() {
+    //     let claims = json!({});
+    //     let validation = Validation::new().with_exp(false, false).with_audience(&["None"]);
+    //     let res = validate(deserialize_claims(&claims), &validation);
+    //     assert!(res.is_err());
 
-        match res.unwrap_err().kind() {
-            ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "aud"),
-            _ => unreachable!(),
-        };
-    }
+    //     match res.unwrap_err().kind() {
+    //         ErrorKind::MissingRequiredClaim(claim) => assert_eq!(claim, "aud"),
+    //         _ => unreachable!(),
+    //     };
+    // }
 
     #[test]
     #[wasm_bindgen_test]
     fn set_issuer_missing_fails() {
         let claims = json!({});
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.set_issuer(&["None"]);
+        let validation = Validation::new().with_exp(false, false).with_issuer(&["None"]);
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
@@ -852,9 +841,7 @@ mod tests {
     fn does_validation_in_right_order() {
         let claims = json!({ "exp": get_current_timestamp() + 10000 });
 
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.leeway = 5;
-        validation.set_issuer(&["iss no check"]);
+        let validation = Validation::new().with_issuer(&["iss no check"]).with_leeway(5);
 
         let res = validate(deserialize_claims(&claims), &validation);
         // It errors because it needs to validate iss/sub which are missing
@@ -865,23 +852,24 @@ mod tests {
         };
     }
 
-    // https://github.com/Keats/jsonwebtoken/issues/110
-    #[test]
-    #[wasm_bindgen_test]
-    fn aud_use_validation_struct() {
-        let claims = json!({"aud": "my-googleclientid1234.apps.googleusercontent.com"});
+    // TODO: I think this test is outdated? What is aud_hashset used for?
+    // // https://github.com/Keats/jsonwebtoken/issues/110
+    // #[test]
+    // #[wasm_bindgen_test]
+    // fn aud_use_validation_struct() {
+    //     let claims = json!({"aud": "my-googleclientid1234.apps.googleusercontent.com"});
 
-        let aud = "my-googleclientid1234.apps.googleusercontent.com".to_string();
-        let mut aud_hashset = std::collections::HashSet::new();
-        aud_hashset.insert(aud);
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.validate_exp = false;
-        validation.required_spec_claims = HashSet::new();
-        validation.set_audience(&["my-googleclientid1234.apps.googleusercontent.com"]);
+    //     let aud = "my-googleclientid1234.apps.googleusercontent.com".to_string();
+    //     let mut aud_hashset = std::collections::HashSet::new();
+    //     aud_hashset.insert(aud);
+    //     let mut validation = Validation::new().with_algorithm(Algorithm::HS256);
+    //     validation.validate_exp = false;
+    //     validation.required_spec_claims = HashSet::new();
+    //     validation.set_audience(&["my-googleclientid1234.apps.googleusercontent.com"]);
 
-        let res = validate(deserialize_claims(&claims), &validation);
-        assert!(res.is_ok());
-    }
+    //     let res = validate(deserialize_claims(&claims), &validation);
+    //     assert!(res.is_ok());
+    // }
 
     // https://github.com/Keats/jsonwebtoken/issues/388
     #[test]
@@ -889,8 +877,7 @@ mod tests {
     fn doesnt_panic_with_leeway_overflow() {
         let claims = json!({ "exp": 1 });
 
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.reject_tokens_expiring_in_less_than = 100;
+        let validation = Validation::new().with_reject_tokens_expiring_in_less_than(100);
 
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());

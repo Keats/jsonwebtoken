@@ -51,7 +51,7 @@ fn encode_with_custom_header() {
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     )
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
@@ -74,7 +74,7 @@ fn encode_with_extra_custom_header() {
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     )
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
@@ -98,7 +98,7 @@ fn encode_with_multiple_extra_custom_headers() {
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     )
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
@@ -126,7 +126,7 @@ fn encode_with_extra_non_string_header() {
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     )
     .unwrap();
     let extras = token_data.header.extras;
@@ -155,7 +155,7 @@ fn round_trip_claim() {
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     )
     .unwrap();
     assert_eq!(my_claims, token_data.claims);
@@ -169,7 +169,7 @@ fn decode_token() {
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     );
     println!("{:?}", claims);
     claims.unwrap();
@@ -182,7 +182,7 @@ fn decode_token_custom_headers() {
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     )
     .unwrap();
     let my_claims =
@@ -202,7 +202,7 @@ fn decode_token_missing_parts() {
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     );
     claims.unwrap();
 }
@@ -214,7 +214,7 @@ fn decode_token_invalid_signature() {
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     );
     assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidSignature);
 }
@@ -226,7 +226,7 @@ fn decode_token_wrong_algorithm() {
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"secret"),
-        &Validation::new(Algorithm::RS512),
+        &Validation::new().with_algorithm(Algorithm::RS512),
     );
     assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidAlgorithm);
 }
@@ -250,7 +250,7 @@ fn decode_token_with_bytes_secret() {
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(b"\x01\x02\x03"),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     );
     assert!(claims.is_ok());
 }
@@ -268,7 +268,7 @@ fn decode_header_only() {
 #[wasm_bindgen_test]
 fn dangerous_insecure_decode_valid_token() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
-    let mut validation = Validation::new(Algorithm::HS256);
+    let mut validation = Validation::new().with_algorithm(Algorithm::HS256);
     validation.insecure_disable_signature_validation();
     let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     claims.unwrap();
@@ -278,7 +278,7 @@ fn dangerous_insecure_decode_valid_token() {
 #[wasm_bindgen_test]
 fn dangerous_insecure_decode_token_invalid_signature() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.wrong";
-    let mut validation = Validation::new(Algorithm::HS256);
+    let mut validation = Validation::new().with_algorithm(Algorithm::HS256);
     validation.insecure_disable_signature_validation();
     let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     claims.unwrap();
@@ -288,7 +288,7 @@ fn dangerous_insecure_decode_token_invalid_signature() {
 #[wasm_bindgen_test]
 fn dangerous_insecure_decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.fLxey-hxAKX5rNHHIx1_Ch0KmrbiuoakDVbsJjLWrx8fbjKjrPuWMYEJzTU3SBnYgnZokC-wqSdqckXUOunC-g";
-    let mut validation = Validation::new(Algorithm::HS256);
+    let mut validation = Validation::new().with_algorithm(Algorithm::HS256);
     validation.insecure_disable_signature_validation();
     let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     claims.unwrap();
@@ -298,7 +298,7 @@ fn dangerous_insecure_decode_token_wrong_algorithm() {
 #[wasm_bindgen_test]
 fn dangerous_insecure_decode_token_with_validation_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjk1MzI1MjQ4OX0.ONtEUTtP1QmyksYH9ijtPCaXoHjZVHcHKZGX1DuJyPiSyKlT93Y-oKgrp_OSkHSu4huxCcVObLzwsdwF-xwiAQ";
-    let mut validation = Validation::new(Algorithm::HS256);
+    let mut validation = Validation::new().with_algorithm(Algorithm::HS256);
     validation.insecure_disable_signature_validation();
     let claims = decode::<Claims>(token, &DecodingKey::from_secret(&[]), &validation);
     let err = claims.unwrap_err();
@@ -318,9 +318,8 @@ fn verify_hs256_rfc7517_appendix_a1() {
                  }"#;
     let jwk: Jwk = serde_json::from_str(jwk).unwrap();
     let key = DecodingKey::from_jwk(&jwk).unwrap();
-    let mut validation = Validation::new(Algorithm::HS256);
+    let validation = Validation::new().with_algorithm(Algorithm::HS256).with_exp(true, false);
     // The RFC example signed jwt has expired
-    validation.validate_exp = false;
     let c = decode::<C>(token, &key, &validation).unwrap();
     assert_eq!(c.claims.iss, "joe");
 }
@@ -349,9 +348,7 @@ fn test_string_nbf_rejected_when_validate_nbf_enabled() {
     };
     let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret")).unwrap();
 
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.validate_nbf = true;
-    validation.required_spec_claims = std::collections::HashSet::new();
+    let validation = Validation::new().with_algorithm(Algorithm::HS256).with_exp(false, false).with_nbf(false, true);
 
     let result =
         decode::<serde_json::Value>(&token, &DecodingKey::from_secret(b"secret"), &validation);
@@ -370,9 +367,7 @@ fn test_string_exp_rejected_when_validate_exp_enabled() {
     };
     let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret")).unwrap();
 
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.validate_exp = true;
-    validation.required_spec_claims = std::collections::HashSet::new();
+    let validation = Validation::new().with_algorithm(Algorithm::HS256).with_exp(false, true);
 
     let result =
         decode::<serde_json::Value>(&token, &DecodingKey::from_secret(b"secret"), &validation);

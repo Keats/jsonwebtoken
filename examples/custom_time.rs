@@ -88,7 +88,7 @@ mod jwt_numeric_date {
             let decoded = decode::<Claims>(
                 &token,
                 &DecodingKey::from_secret(SECRET.as_ref()),
-                &Validation::new(Algorithm::HS256),
+                &Validation::new().with_algorithm(Algorithm::HS256),
             )
             .expect("Failed to decode token");
 
@@ -103,7 +103,7 @@ mod jwt_numeric_date {
             let decode_result = decode::<Claims>(
                 &overflow_token,
                 &DecodingKey::from_secret(SECRET.as_ref()),
-                &Validation::new(Algorithm::HS256),
+                &Validation::new().with_algorithm(Algorithm::HS256),
             );
 
             assert!(decode_result.is_err());
@@ -124,7 +124,7 @@ mod jwt_numeric_date {
             let decoded = decode::<Claims>(
                 &token,
                 &DecodingKey::from_secret(SECRET.as_ref()),
-                &Validation::new(Algorithm::HS256),
+                &Validation::new().with_algorithm(Algorithm::HS256),
             )
             .expect("Failed to decode token")
             .claims;
@@ -152,7 +152,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token_data = jsonwebtoken::decode::<Claims>(
         &token,
         &DecodingKey::from_secret(SECRET.as_ref()),
-        &Validation::new(Algorithm::HS256),
+        &Validation::new().with_algorithm(Algorithm::HS256),
     )?;
 
     println!("token data:\n{:#?}", &token_data);

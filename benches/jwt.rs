@@ -41,7 +41,7 @@ fn bench_decode(c: &mut Criterion) {
             decode::<Claims>(
                 black_box(token),
                 black_box(&key),
-                black_box(&Validation::new(Algorithm::HS256)),
+                black_box(&Validation::new()),
             )
         })
     });

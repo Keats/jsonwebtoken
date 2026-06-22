@@ -270,7 +270,7 @@ impl TryFrom<&Jwk> for DecodingKey {
 ///
 /// let token = "a.jwt.token".to_string();
 /// // Claims is a struct that implements Deserialize
-/// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
+/// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new().with_algorithm(Algorithm::HS256));
 /// ```
 pub fn decode<T: DeserializeOwned>(
     token: impl AsRef<[u8]>,

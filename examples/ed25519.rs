@@ -30,7 +30,7 @@ fn main() {
     let token =
         encode(&jsonwebtoken::Header::new(Algorithm::EdDSA), &claims, &encoding_key).unwrap();
 
-    let validation = Validation::new(Algorithm::EdDSA);
+    let validation = Validation::new().with_algorithm(Algorithm::EdDSA);
     let _token_data = decode::<Claims>(&token, &decoding_key, &validation).unwrap();
 }
 
@@ -69,7 +69,7 @@ mod tests {
             encode(&jsonwebtoken::Header::new(Algorithm::EdDSA), &claims, &jot.encoding_key)
                 .unwrap();
 
-        let validation = Validation::new(Algorithm::EdDSA);
+        let validation = Validation::new().with_algorithm(Algorithm::EdDSA);
         let token_data = decode::<Claims>(&token, &jot.decoding_key, &validation).unwrap();
         assert_eq!(token_data.claims.sub, "test");
     }

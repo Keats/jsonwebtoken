@@ -36,7 +36,7 @@ fn main() {
     let token_data = match decode::<Claims>(
         &token,
         &DecodingKey::from_secret(key),
-        &Validation::new(Algorithm::HS512),
+        &Validation::new().with_algorithm(Algorithm::HS512),
     ) {
         Ok(c) => c,
         Err(err) => match *err.kind() {
