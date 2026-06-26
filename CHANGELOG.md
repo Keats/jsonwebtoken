@@ -1,5 +1,26 @@
 # Changelog
 
+## 11.0.0 (unreleased)
+
+- Add conversions between `Algorithm` and `KeyAlgorithm`
+- JWKs can now be created from `DecodingKey`s, creation from `EncodingKey` and `DecodingKey` supports Ed25519 now as well
+- BREAKING: `Algorithm` and `EllipticCurve` are now `non_exhaustive`
+- BREAKING: `Header.extras` is now a struct that allows for deserialization to any `T`
+- BREAKING: Removed implicit features resulting from optional crates
+- BREAKING: `Validation.insecure_disable_signature_validation` has been removed. Use `dangerous::insecure_decode` instead
+- BREAKING: `EncodingKey.inner` has been renamed to `as_bytes`, `try_get_hmac_secret` has been removed.
+- BREAKING: `DecodingKey.as_bytes` and `try_get_hmac_secret` have been removed, use `try_get_as_bytes` instead
+
+### Changes for `CryptoProvider`s
+
+- When constructing HMAC signers, the algorithm family must now be verified on construction
+- `JwkUtils` has been renamed to `KeyUtils`
+    - `compute_digest` now returns a `Result<_>`
+    - `extract_rsa_public_key_components` has been renamed to `rsa_pub_components_from_private_key`
+    - `rsa_pub_components_from_public_key` has been added
+    - `extract_ec_public_key_coordinates` has been renamed to `ec_pub_components_from_private_key`
+    - `ed_pub_components_from_private_key` has been added
+
 ## 10.4.0 (2026-05-11)
 
 - Fix incorrect encoding for Ed25519 JWK thumbprints
@@ -45,7 +66,6 @@
 
 - Supports deserialization of unsupported algorithms for JWKs
 
-
 ## 9.0.0 (2023-10-16)
 
 - Update ring
@@ -56,12 +76,10 @@
 - Update base64
 - Implement Clone for TokenData<T> if T impls Clone
 
-
 ## 8.2.0 (2022-12-03)
 
 - Add DecodingKey::from_jwk
 - Can now use PEM certificates if you have the `use_pem` feature enabled
-
 
 ## 8.1.1 (2022-06-17)
 
@@ -76,9 +94,8 @@
 
 - Fix documentation of leeway
 
-
 ## 8.0.0 (2022-02-02)
- 
+
 - Add EdDSA algorithm
 - `sign`/`verify` now takes a `&[u8]` instead of `&str` to be more flexible
 - `DecodingKey` now own its data
@@ -115,7 +132,7 @@
 - Add support for PS256, PS384 and PS512
 - Add support for verifying with modulus/exponent components for RSA
 - Update to 2018 edition
-- Changed aud field type in Validation to `Option<HashSet<String>>`.  Audience 
+- Changed aud field type in Validation to `Option<HashSet<String>>`. Audience
   validation now tests for "any-of-these" audience membership.
 - Add support for keys in PEM format
 - Add EncodingKey/DecodingKey API to improve performance and UX
@@ -154,6 +171,7 @@
 ## 3.0.0 (2017-09-08)
 
 ### Breaking changes
+
 - Remove `validate_signature` from `Validation`, use `decode_header` instead if you don't know the alg used
 - Make `typ` optional in header, some providers apparently don't use it
 
