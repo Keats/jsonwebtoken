@@ -11,7 +11,7 @@ Add the following to Cargo.toml:
 # You will have to select either `aws_lc_rs` or `rust_crypto` as backend if you're not using your own
 jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 # If you do not need pem decoding, you can disable the default feature `use_pem` that way:
-# jsonwebtoken = {version = "10", default-features = false, features = ["aws_lc_rs"] }
+# jsonwebtoken = {version = "11", default-features = false, features = ["aws_lc_rs"] }
 serde = {version = "1.0", features = ["derive"] }
 ```
 
