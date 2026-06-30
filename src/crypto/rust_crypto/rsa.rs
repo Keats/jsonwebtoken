@@ -1,7 +1,6 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
 //! RSA family of algorithms using RustCrypto.
 
-use hmac::digest::FixedOutputReset;
 use rsa::{
     BigUint, Pkcs1v15Sign, Pss, RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
@@ -10,7 +9,10 @@ use rsa::{
     pss::BlindedSigningKey,
     traits::SignatureScheme,
 };
-use sha2::{Digest, Sha256, Sha384, Sha512};
+use sha2::{
+    Sha256, Sha384, Sha512,
+    digest::{Digest, FixedOutputReset},
+};
 use signature::{RandomizedSigner, SignatureEncoding, Signer, Verifier};
 
 use crate::algorithms::AlgorithmFamily;

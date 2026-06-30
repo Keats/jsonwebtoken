@@ -8,10 +8,10 @@ use crate::{Algorithm, DecodingKey, EncodingKey};
 use p256::ecdsa::{
     Signature as Signature256, SigningKey as SigningKey256, VerifyingKey as VerifyingKey256,
 };
+use p256::pkcs8::DecodePrivateKey;
 use p384::ecdsa::{
     Signature as Signature384, SigningKey as SigningKey384, VerifyingKey as VerifyingKey384,
 };
-use rsa::pkcs8::DecodePrivateKey;
 use signature::{Error, Signer, Verifier};
 
 macro_rules! define_ecdsa_signer {
