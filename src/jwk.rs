@@ -612,7 +612,7 @@ impl Jwk {
                     )
                 }
                 EllipticCurve::Ed25519 => {
-                    panic!("EllipticCurve can't contain this curve type")
+                    return Err(ErrorKind::InvalidKeyFormat.into());
                 }
             },
             AlgorithmParameters::RSA(a) => {
@@ -632,7 +632,7 @@ impl Jwk {
             }
             AlgorithmParameters::OctetKeyPair(a) => match a.curve {
                 EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
-                    panic!("OctetKeyPair can't contain this curve type")
+                    return Err(ErrorKind::InvalidKeyFormat.into());
                 }
                 EllipticCurve::Ed25519 => {
                     format!(
@@ -676,8 +676,8 @@ mod tests {
     use crate::Algorithm;
     use crate::errors::ErrorKind;
     use crate::jwk::{
-        AlgorithmParameters, Jwk, JwkSet, KeyAlgorithm, OctetKeyType, RSAKeyParameters,
-        ThumbprintHash,
+        AlgorithmParameters, CommonParameters, EllipticCurve, Jwk, JwkSet, KeyAlgorithm,
+        OctetKeyPairParameters, OctetKeyPairType, OctetKeyType, RSAKeyParameters, ThumbprintHash,
     };
     use crate::serialization::b64_encode;
     use crate::{DecodingKey, EncodingKey};
@@ -736,6 +736,26 @@ mod tests {
         .unwrap();
 
         assert_eq!(tp.as_str(), "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs");
+    }
+
+    #[test]
+    fn check_thumbprint_bad_key() {
+        let jwk = Jwk {
+            common: CommonParameters {
+                key_algorithm: Some(KeyAlgorithm::ES256),
+                ..Default::default()
+            },
+            algorithm: AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                key_type: OctetKeyPairType::OctetKeyPair,
+                curve: EllipticCurve::P256,
+                x: "".to_string(),
+            }),
+        };
+
+        assert_eq!(
+            jwk.thumbprint(ThumbprintHash::SHA256).unwrap_err().into_kind(),
+            ErrorKind::InvalidKeyFormat
+        );
     }
 
     #[test]
