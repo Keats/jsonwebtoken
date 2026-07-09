@@ -653,7 +653,7 @@ impl Jwk {
 }
 
 /// A JWK set
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Hash)]
 #[allow(missing_docs)]
 pub struct JwkSet {
     pub keys: Vec<Jwk>,
@@ -835,5 +835,13 @@ mod tests {
         let expected_jwk = Jwk::from_encoding_key(&enc_key, Algorithm::EdDSA).unwrap();
         let jwk = Jwk::from_decoding_key(&dec_key, Some(Algorithm::EdDSA)).unwrap();
         assert_eq!(jwk, expected_jwk);
+    }
+
+    #[test]
+    fn check_jwkset_default() {
+        #[derive(Default)]
+        struct Derived(JwkSet);
+
+        assert!(Derived::default().0.keys.is_empty());
     }
 }
