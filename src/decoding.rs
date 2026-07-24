@@ -226,6 +226,7 @@ impl DecodingKey {
                     kind: DecodingKeyKind::SecretOrDer(out),
                 })
             }
+            AlgorithmParameters::Other(_) => Err(ErrorKind::UnsupportedAlgorithm.into()),
         }
     }
 

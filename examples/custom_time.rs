@@ -147,7 +147,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &EncodingKey::from_secret(SECRET.as_ref()),
     )?;
 
-    println!("serialized token: {}", &token);
+    println!("serialized token: {}", token);
 
     let token_data = jsonwebtoken::decode::<Claims>(
         &token,
@@ -155,6 +155,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &Validation::new(Algorithm::HS256),
     )?;
 
-    println!("token data:\n{:#?}", &token_data);
+    println!("token data:\n{:#?}", token_data);
     Ok(())
 }

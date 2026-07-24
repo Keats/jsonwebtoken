@@ -3,6 +3,7 @@
 //! Most of the code in this file is taken from <https://github.com/lawliet89/biscuit> but
 //! tweaked to remove the private bits as it's not the goal for this crate currently.
 
+use std::collections::BTreeMap;
 use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
@@ -149,6 +150,7 @@ impl<'de> Deserialize<'de> for KeyOperations {
 /// The algorithms of the keys
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum KeyAlgorithm {
     /// HMAC using SHA-256
     HS256,
@@ -439,20 +441,31 @@ pub struct OctetKeyPairParameters {
     pub x: String,
 }
 
+/// Parameters for unknown keys
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
+pub struct OtherKeyParameters {
+    #[serde(flatten)]
+    #[allow(missing_docs)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
 /// Algorithm specific parameters
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 #[serde(untagged)]
 #[allow(missing_docs)]
+#[non_exhaustive]
 pub enum AlgorithmParameters {
     EllipticCurve(EllipticCurveKeyParameters),
     RSA(RSAKeyParameters),
     OctetKey(OctetKeyParameters),
     OctetKeyPair(OctetKeyPairParameters),
+    Other(OtherKeyParameters),
 }
 
 /// The function to use to hash the intermediate thumbprint data.
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[allow(missing_docs)]
+#[non_exhaustive]
 pub enum ThumbprintHash {
     SHA256,
     SHA384,
@@ -643,6 +656,7 @@ impl Jwk {
                     )
                 }
             },
+            AlgorithmParameters::Other(_) => return Err(ErrorKind::UnsupportedAlgorithm.into()),
         };
 
         Ok(b64_encode((CryptoProvider::get_default().key_utils.compute_digest)(
@@ -670,6 +684,8 @@ impl JwkSet {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use serde_json::json;
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -719,6 +735,42 @@ mod tests {
         let key_alg_result: KeyAlgorithm =
             serde_json::from_value(key_alg_json).expect("Could not deserialize json");
         assert_eq!(key_alg_result, KeyAlgorithm::UNKNOWN_ALGORITHM);
+    }
+
+    #[test]
+    fn deserialize_unknown_kty() {
+        let parameters_json = json!({
+            "kty": "AKP",
+            "foo": "bar",
+            "solution": 42
+        });
+        let parameters_result: AlgorithmParameters =
+            serde_json::from_value(parameters_json).expect("Could not deserialize json");
+        match parameters_result {
+            AlgorithmParameters::Other(other_key_parameters) => {
+                let mut expected = BTreeMap::new();
+                expected.insert("kty".to_owned(), serde_json::to_value("AKP").unwrap());
+                expected.insert("foo".to_owned(), serde_json::to_value("bar").unwrap());
+                expected.insert("solution".to_owned(), serde_json::to_value(42).unwrap());
+                assert_eq!(other_key_parameters.fields, expected);
+            }
+            _ => {
+                panic!("Unexpected deserialization result");
+            }
+        }
+
+        // RFC 9964 Appendix A.1 JWK
+        let jwk: Jwk = serde_json::from_value(json!({
+            "kid": "T4xl70S7MT6Zeq6r9V9fPJGVn76wfnXJ21-gyo0Gu6o",
+            "kty": "AKP",
+            "alg": "ML-DSA-44",
+            "pub": "...",
+            "priv": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        }))
+        .expect("Could not deserialize json");
+
+        assert!(!jwk.is_supported());
+        assert!(matches!(jwk.algorithm, AlgorithmParameters::Other(_)));
     }
 
     #[test]

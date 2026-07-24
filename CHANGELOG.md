@@ -4,7 +4,8 @@
 
 - Add conversions between `Algorithm` and `KeyAlgorithm`
 - JWKs can now be created from `DecodingKey`s, creation from `EncodingKey` and `DecodingKey` now supports Ed25519 as well
-- BREAKING: `Algorithm` and `EllipticCurve` are now `non_exhaustive`
+- JWKs with unknown key types are now deserializable
+- BREAKING: `Algorithm`, `KeyAlgorithm`, `EllipticCurve` and `ThumbprintHash` are now `non_exhaustive`
 - BREAKING: `Jwk.thumbprint` now returns a `Result<_>`
 - BREAKING: `Header.extras` is now a struct that allows for deserialization to any `T`
 - BREAKING: Implicit features resulting from optional crates have been removed
