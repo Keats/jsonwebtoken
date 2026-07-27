@@ -57,9 +57,12 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
                 .map_err(signature::Error::from_source)?;
         }
         DecodingKeyKind::RsaModulusExponent { n, e } => {
-            RsaPublicKey::new(BoxedUint::from_be_slice_vartime(n), BoxedUint::from_be_slice_vartime(e))?
-                .verify(scheme, &digest, signature)
-                .map_err(signature::Error::from_source)?;
+            RsaPublicKey::new(
+                BoxedUint::from_be_slice_vartime(n),
+                BoxedUint::from_be_slice_vartime(e),
+            )?
+            .verify(scheme, &digest, signature)
+            .map_err(signature::Error::from_source)?;
         }
     };
 
