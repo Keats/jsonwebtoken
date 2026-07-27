@@ -2,7 +2,7 @@
 //! RSA family of algorithms using RustCrypto.
 
 use rsa::{
-    BigUint, Pkcs1v15Sign, Pss, RsaPublicKey,
+    BoxedUint, Pkcs1v15Sign, Pss, RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
     pkcs1v15::SigningKey,
     pkcs8::AssociatedOid,
@@ -29,7 +29,7 @@ fn try_sign_rsa<H>(
 where
     H: Digest + AssociatedOid + FixedOutputReset,
 {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let private_key = rsa::RsaPrivateKey::from_pkcs1_der(encoding_key.as_bytes())
         .map_err(signature::Error::from_source)?;
     if pss {
@@ -57,7 +57,7 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
                 .map_err(signature::Error::from_source)?;
         }
         DecodingKeyKind::RsaModulusExponent { n, e } => {
-            RsaPublicKey::new(BigUint::from_bytes_be(n), BigUint::from_bytes_be(e))?
+            RsaPublicKey::new(BoxedUint::from_be_slice_vartime(n), BoxedUint::from_be_slice_vartime(e))?
                 .verify(scheme, &digest, signature)
                 .map_err(signature::Error::from_source)?;
         }
@@ -115,7 +115,7 @@ macro_rules! define_rsa_verifier {
                 signature: &Vec<u8>,
             ) -> std::result::Result<(), signature::Error> {
                 if $pss {
-                    verify_rsa::<Pss, $hash>(Pss::new::<$hash>(), &self.0, msg, signature)
+                    verify_rsa::<Pss<$hash>, $hash>(Pss::<$hash>::new(), &self.0, msg, signature)
                 } else {
                     verify_rsa::<_, $hash>(Pkcs1v15Sign::new::<$hash>(), &self.0, msg, signature)
                 }

@@ -191,3 +191,80 @@ fn ec_jwk_from_key() {
         .unwrap()
     );
 }
+
+#[test]
+#[wasm_bindgen_test]
+fn es512_round_trip_sign_verification_pk8() {
+    let privkey = include_bytes!("private_es512_key.pk8");
+    let pubkey = include_bytes!("public_es512_key.pk8");
+
+    let encrypted =
+        sign(b"hello world", &EncodingKey::from_ec_der(privkey), Algorithm::ES512).unwrap();
+    let is_valid =
+        verify(&encrypted, b"hello world", &DecodingKey::from_ec_der(pubkey), Algorithm::ES512)
+            .unwrap();
+    assert!(is_valid);
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn es512_round_trip_sign_verification_pem() {
+    let privkey_pem = include_bytes!("private_es512_key.pem");
+    let pubkey_pem = include_bytes!("public_es512_key.pem");
+
+    let encrypted =
+        sign(b"hello world", &EncodingKey::from_ec_pem(privkey_pem).unwrap(), Algorithm::ES512)
+            .unwrap();
+    let is_valid = verify(
+        &encrypted,
+        b"hello world",
+        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+        Algorithm::ES512,
+    )
+    .unwrap();
+    assert!(is_valid);
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn es512_round_trip_claim() {
+    let privkey_pem = include_bytes!("private_es512_key.pem");
+    let pubkey_pem = include_bytes!("public_es512_key.pem");
+    let my_claims = Claims {
+        sub: "es512@example.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let token = encode(
+        &Header::new(Algorithm::ES512),
+        &my_claims,
+        &EncodingKey::from_ec_pem(privkey_pem).unwrap(),
+    )
+    .unwrap();
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_ec_pem(pubkey_pem).unwrap(),
+        &Validation::new(Algorithm::ES512),
+    )
+    .unwrap();
+    assert_eq!(my_claims, token_data.claims);
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn es512_jwk_from_key() {
+    use jsonwebtoken::jwk::Jwk;
+
+    let privkey = include_str!("private_es512_key.pem");
+    let encoding_key = EncodingKey::from_ec_pem(privkey.as_ref()).unwrap();
+    let jwk = Jwk::from_encoding_key(&encoding_key, Algorithm::ES512).unwrap();
+    match jwk.algorithm {
+        jsonwebtoken::jwk::AlgorithmParameters::EllipticCurve(params) => {
+            assert_eq!(params.curve, jsonwebtoken::jwk::EllipticCurve::P521);
+        }
+        _ => panic!("expected EC algorithm parameters"),
+    }
+}
