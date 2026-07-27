@@ -18,7 +18,7 @@ use p521::ecdsa::{
 use signature::{Error, Signer, Verifier};
 
 macro_rules! define_ecdsa_signer {
-    ($name:ident, $alg:expr, $signing_key:ty) => {
+    ($name:ident, $alg:expr, $signing_key:ty, $signature:ty) => {
         pub struct $name($signing_key);
 
         impl $name {
@@ -36,7 +36,7 @@ macro_rules! define_ecdsa_signer {
 
         impl Signer<Vec<u8>> for $name {
             fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
-                let signature = self.0.sign_recoverable(msg).0;
+                let signature: $signature = self.0.sign(msg);
                 Ok(signature.to_vec())
             }
         }
@@ -83,40 +83,10 @@ macro_rules! define_ecdsa_verifier {
     };
 }
 
-define_ecdsa_signer!(Es256Signer, Algorithm::ES256, SigningKey256);
-define_ecdsa_signer!(Es384Signer, Algorithm::ES384, SigningKey384);
+define_ecdsa_signer!(Es256Signer, Algorithm::ES256, SigningKey256, Signature256);
+define_ecdsa_signer!(Es384Signer, Algorithm::ES384, SigningKey384, Signature384);
+define_ecdsa_signer!(Es512Signer, Algorithm::ES512, SigningKey521, Signature521);
 
 define_ecdsa_verifier!(Es256Verifier, Algorithm::ES256, VerifyingKey256, Signature256);
 define_ecdsa_verifier!(Es384Verifier, Algorithm::ES384, VerifyingKey384, Signature384);
-
-// P-521 (ES512) has no `sign_recoverable()` support in RustCrypto, so it can't
-// go through the `define_ecdsa_signer!` macro used for ES256/ES384.
-pub struct Es512Signer(SigningKey521);
-
-impl Es512Signer {
-    pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
-        if encoding_key.family() != AlgorithmFamily::Ec {
-            return Err(new_error(ErrorKind::InvalidKeyFormat));
-        }
-
-        Ok(Self(
-            SigningKey521::from_pkcs8_der(encoding_key.as_bytes())
-                .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
-        ))
-    }
-}
-
-impl Signer<Vec<u8>> for Es512Signer {
-    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
-        let signature: Signature521 = self.0.sign(msg);
-        Ok(signature.to_vec())
-    }
-}
-
-impl JwtSigner for Es512Signer {
-    fn algorithm(&self) -> Algorithm {
-        Algorithm::ES512
-    }
-}
-
 define_ecdsa_verifier!(Es512Verifier, Algorithm::ES512, VerifyingKey521, Signature521);
