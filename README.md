@@ -191,7 +191,7 @@ openssl pkcs8 -topk8 -nocrypt -in sec1.pem -out pkcs8.pem
 
 
 ## Validation
-This library automatically validates the `exp` claim, and `nbf` is validated if present. You can also validate the `sub`, `iss`, and `aud` but
+This library automatically validates the `exp` claim. The `nbf` claim can also be validated when present by enabling `validate_nbf` in the `Validation` struct. By default, `nbf` validation is disabled. You can also validate the `sub`, `iss`, and `aud` but
 those require setting the expected values in the `Validation` struct. In the case of `aud`, if there is a value set in the token but
 not in the `Validation`, the token will be rejected.
 
