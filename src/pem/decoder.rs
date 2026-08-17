@@ -9,6 +9,8 @@ enum PemType {
     RsaPrivate,
     EdPublic,
     EdPrivate,
+    MldsaPublic,
+    MldsaPrivate,
 }
 
 #[derive(Debug, PartialEq)]
@@ -24,6 +26,7 @@ enum Classification {
     Ec,
     Ed,
     Rsa,
+    Mldsa,
 }
 
 /// The return type of a successful PEM encoded key with `decode_pem`
@@ -103,6 +106,13 @@ impl PemEncodedKey {
                                             PemType::RsaPublic
                                         }
                                     }
+                                    Classification::Mldsa => {
+                                        if is_private {
+                                            PemType::MldsaPrivate
+                                        } else {
+                                            PemType::MldsaPublic
+                                        }
+                                    }
                                 };
                                 Ok(PemEncodedKey {
                                     content: content.into_contents(),
@@ -178,6 +188,30 @@ impl PemEncodedKey {
             },
         }
     }
+
+    /// Can only be PKCS8. Returns the full PKCS#8 DER, as expected by the
+    /// ML-DSA key parsers in both backends.
+    pub fn as_mldsa_private_key(&self) -> Result<&[u8]> {
+        match self.standard {
+            Standard::Pkcs1 => Err(ErrorKind::InvalidKeyFormat.into()),
+            Standard::Pkcs8 => match self.pem_type {
+                PemType::MldsaPrivate => Ok(self.content.as_slice()),
+                _ => Err(ErrorKind::InvalidKeyFormat.into()),
+            },
+        }
+    }
+
+    /// Can only be PKCS8. Returns the raw fixed-size public key encoding
+    /// (the bit string content of the SPKI structure).
+    pub fn as_mldsa_public_key(&self) -> Result<&[u8]> {
+        match self.standard {
+            Standard::Pkcs1 => Err(ErrorKind::InvalidKeyFormat.into()),
+            Standard::Pkcs8 => match self.pem_type {
+                PemType::MldsaPublic => extract_first_bitstring(&self.asn1),
+                _ => Err(ErrorKind::InvalidKeyFormat.into()),
+            },
+        }
+    }
 }
 
 // This really just finds and returns the first bitstring or octet string
@@ -206,7 +240,7 @@ fn extract_first_bitstring(asn1: &[simple_asn1::ASN1Block]) -> Result<&[u8]> {
     Err(ErrorKind::InvalidEcdsaKey.into())
 }
 
-/// Find whether this is EC, RSA, or Ed
+/// Find whether this is EC, RSA, Ed, or ML-DSA
 /// Note: Ed448 keys are not supported
 fn classify_pem(asn1: &[simple_asn1::ASN1Block]) -> Option<Classification> {
     // These should be constant but the macro requires
@@ -215,6 +249,10 @@ fn classify_pem(asn1: &[simple_asn1::ASN1Block]) -> Option<Classification> {
     let rsa_public_key_oid = simple_asn1::oid!(1, 2, 840, 113_549, 1, 1, 1);
     // Defined: https://datatracker.ietf.org/doc/html/rfc8410#section-3 id-Ed25519)
     let ed25519_oid = simple_asn1::oid!(1, 3, 101, 112);
+    // US NIST standardized ML-DSA variants have one OID each
+    let mldsa44_oid = simple_asn1::oid!(2, 16, 840, 1, 101, 3, 4, 3, 17);
+    let mldsa65_oid = simple_asn1::oid!(2, 16, 840, 1, 101, 3, 4, 3, 18);
+    let mldsa87_oid = simple_asn1::oid!(2, 16, 840, 1, 101, 3, 4, 3, 19);
 
     for asn1_entry in asn1 {
         match asn1_entry {
@@ -232,6 +270,9 @@ fn classify_pem(asn1: &[simple_asn1::ASN1Block]) -> Option<Classification> {
                 }
                 if oid == ed25519_oid {
                     return Some(Classification::Ed);
+                }
+                if oid == mldsa44_oid || oid == mldsa65_oid || oid == mldsa87_oid {
+                    return Some(Classification::Mldsa);
                 }
             }
             _ => {}
