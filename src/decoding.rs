@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter};
+use std::unreachable;
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::de::DeserializeOwned;
@@ -310,7 +311,7 @@ impl DecodingKey {
                     Algorithm::MLDSA65 => ML_DSA_65_PUBLIC_KEY_LEN,
                     Algorithm::MLDSA87 => ML_DSA_87_PUBLIC_KEY_LEN,
                     // Unreachable: family check above guarantees an ML-DSA alg.
-                    _ => return Err(new_error(ErrorKind::InvalidAlgorithm)),
+                    _ => unreachable!(),
                 };
                 if decoded.len() != expected_len {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));

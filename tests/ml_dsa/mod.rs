@@ -17,99 +17,102 @@ pub struct Claims {
     exp: i64,
 }
 
-macro_rules! ml_dsa_der_round_trip {
-    ($name:ident, $alg:expr, $priv:literal, $pub_raw:literal) => {
-        #[test]
-        #[wasm_bindgen_test]
-        fn $name() {
-            let privkey = include_bytes!($priv);
-            let pubkey = include_bytes!($pub_raw);
+fn ml_dsa_der_round_trip(alg: Algorithm, privkey: &[u8], pubkey: &[u8]) {
+    let signed = sign(b"hello world", &EncodingKey::from_mldsa_der(privkey), alg).unwrap();
 
-            let signed = sign(b"hello world", &EncodingKey::from_mldsa_der(privkey), $alg).unwrap();
-            let is_valid =
-                verify(&signed, b"hello world", &DecodingKey::from_mldsa_der(pubkey), $alg).unwrap();
-            assert!(is_valid);
+    let is_valid =
+        verify(&signed, b"hello world", &DecodingKey::from_mldsa_der(pubkey), alg).unwrap();
+    assert!(is_valid);
 
-            // Wrong message must not verify.
-            let is_valid =
-                verify(&signed, b"goodbye world", &DecodingKey::from_mldsa_der(pubkey), $alg)
-                    .unwrap();
-            assert!(!is_valid);
-        }
-    };
+    // Wrong message must not verify.
+    let is_valid =
+        verify(&signed, b"goodbye world", &DecodingKey::from_mldsa_der(pubkey), alg).unwrap();
+    assert!(!is_valid);
 }
 
-ml_dsa_der_round_trip!(
-    round_trip_der_44,
-    Algorithm::MLDSA44,
-    "private_ml_dsa_44.der",
-    "public_ml_dsa_44.raw"
-);
-ml_dsa_der_round_trip!(
-    round_trip_der_65,
-    Algorithm::MLDSA65,
-    "private_ml_dsa_65.der",
-    "public_ml_dsa_65.raw"
-);
-ml_dsa_der_round_trip!(
-    round_trip_der_87,
-    Algorithm::MLDSA87,
-    "private_ml_dsa_87.der",
-    "public_ml_dsa_87.raw"
-);
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_der_mldsa44() {
+    ml_dsa_der_round_trip(
+        Algorithm::MLDSA44,
+        include_bytes!("private_ml_dsa_44.der"),
+        include_bytes!("public_ml_dsa_44.raw"),
+    );
+}
 
-#[cfg(feature = "use_pem")]
-macro_rules! ml_dsa_pem_round_trip_claim {
-    ($name:ident, $alg:expr, $priv:literal, $pub:literal) => {
-        #[cfg(feature = "use_pem")]
-        #[test]
-        #[wasm_bindgen_test]
-        fn $name() {
-            let privkey_pem = include_bytes!($priv);
-            let pubkey_pem = include_bytes!($pub);
-            let my_claims = Claims {
-                sub: "b@b.com".to_string(),
-                company: "ACME".to_string(),
-                exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
-            };
-            let token = encode(
-                &Header::new($alg),
-                &my_claims,
-                &EncodingKey::from_mldsa_pem(privkey_pem).unwrap(),
-            )
-            .unwrap();
-            let token_data = decode::<Claims>(
-                &token,
-                &DecodingKey::from_mldsa_pem(pubkey_pem).unwrap(),
-                &Validation::new($alg),
-            )
-            .unwrap();
-            assert_eq!(my_claims, token_data.claims);
-        }
-    };
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_der_mldsa65() {
+    ml_dsa_der_round_trip(
+        Algorithm::MLDSA65,
+        include_bytes!("private_ml_dsa_65.der"),
+        include_bytes!("public_ml_dsa_65.raw"),
+    );
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_der_mldsa87() {
+    ml_dsa_der_round_trip(
+        Algorithm::MLDSA87,
+        include_bytes!("private_ml_dsa_87.der"),
+        include_bytes!("public_ml_dsa_87.raw"),
+    );
 }
 
 #[cfg(feature = "use_pem")]
-ml_dsa_pem_round_trip_claim!(
-    round_trip_pem_claim_44,
-    Algorithm::MLDSA44,
-    "private_ml_dsa_44.pem",
-    "public_ml_dsa_44.pem"
-);
+fn ml_dsa_pem_round_trip_claim(alg: Algorithm, privkey_pem: &[u8], pubkey_pem: &[u8]) {
+    let my_claims = Claims {
+        sub: "b@b.com".to_string(),
+        company: "ACME".to_string(),
+        exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
+    };
+    let token =
+        encode(&Header::new(alg), &my_claims, &EncodingKey::from_mldsa_pem(privkey_pem).unwrap())
+            .unwrap();
+
+    let token_data = decode::<Claims>(
+        &token,
+        &DecodingKey::from_mldsa_pem(pubkey_pem).unwrap(),
+        &Validation::new(alg),
+    )
+    .unwrap();
+
+    assert_eq!(my_claims, token_data.claims);
+}
+
 #[cfg(feature = "use_pem")]
-ml_dsa_pem_round_trip_claim!(
-    round_trip_pem_claim_65,
-    Algorithm::MLDSA65,
-    "private_ml_dsa_65.pem",
-    "public_ml_dsa_65.pem"
-);
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_pem_claim_mldsa44() {
+    ml_dsa_pem_round_trip_claim(
+        Algorithm::MLDSA44,
+        include_bytes!("private_ml_dsa_44.pem"),
+        include_bytes!("public_ml_dsa_44.pem"),
+    );
+}
+
 #[cfg(feature = "use_pem")]
-ml_dsa_pem_round_trip_claim!(
-    round_trip_pem_claim_87,
-    Algorithm::MLDSA87,
-    "private_ml_dsa_87.pem",
-    "public_ml_dsa_87.pem"
-);
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_pem_claim_mldsa65() {
+    ml_dsa_pem_round_trip_claim(
+        Algorithm::MLDSA65,
+        include_bytes!("private_ml_dsa_65.pem"),
+        include_bytes!("public_ml_dsa_65.pem"),
+    );
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
+fn round_trip_pem_claim_mldsa87() {
+    ml_dsa_pem_round_trip_claim(
+        Algorithm::MLDSA87,
+        include_bytes!("private_ml_dsa_87.pem"),
+        include_bytes!("public_ml_dsa_87.pem"),
+    );
+}
 
 #[cfg(feature = "use_pem")]
 #[test]
@@ -129,8 +132,7 @@ fn ml_dsa_jwk_round_trip() {
         company: "ACME".to_string(),
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
-    let token =
-        encode(&Header::new(Algorithm::MLDSA65), &my_claims, &encoding_key).unwrap();
+    let token = encode(&Header::new(Algorithm::MLDSA65), &my_claims, &encoding_key).unwrap();
     let token_data = decode::<Claims>(
         &token,
         &DecodingKey::from_jwk(&jwk).unwrap(),

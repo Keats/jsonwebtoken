@@ -788,7 +788,7 @@ impl Jwk {
             .common
             .key_algorithm
             .filter(|alg| *alg != KeyAlgorithm::UNKNOWN_ALGORITHM)
-            .map(|alg| serde_json::to_value(alg))
+            .map(serde_json::to_value)
             .transpose()?
             .and_then(|value| value.as_str().map(str::to_owned));
 
