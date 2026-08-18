@@ -14,8 +14,7 @@ use crate::{Algorithm, DecodingKey, EncodingKey};
 use ml_dsa::signature::{Signer as MlDsaSigner, Verifier as MlDsaVerifier};
 use ml_dsa::{
     EncodedSignature, EncodedVerifyingKey, MlDsa44, MlDsa65, MlDsa87, Signature, SigningKey,
-    VerifyingKey,
-    pkcs8::DecodePrivateKey,
+    VerifyingKey, pkcs8::DecodePrivateKey,
 };
 use signature::{Error, Signer, Verifier};
 
@@ -64,10 +63,9 @@ macro_rules! define_ml_dsa_verifier {
                 }
 
                 // RFC 9964 carries the raw fixed-size public key encoding.
-                let encoded = EncodedVerifyingKey::<$params>::try_from(
-                    decoding_key.try_get_as_bytes()?,
-                )
-                .map_err(|_| ErrorKind::InvalidKeyFormat)?;
+                let encoded =
+                    EncodedVerifyingKey::<$params>::try_from(decoding_key.try_get_as_bytes()?)
+                        .map_err(|_| ErrorKind::InvalidKeyFormat)?;
 
                 Ok(Self(VerifyingKey::<$params>::decode(&encoded)))
             }
@@ -77,8 +75,7 @@ macro_rules! define_ml_dsa_verifier {
             fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), Error> {
                 let encoded = EncodedSignature::<$params>::try_from(signature.as_slice())
                     .map_err(Error::from_source)?;
-                let signature =
-                    Signature::<$params>::decode(&encoded).ok_or_else(Error::new)?;
+                let signature = Signature::<$params>::decode(&encoded).ok_or_else(Error::new)?;
                 self.0.verify(msg, &signature).map_err(Error::from_source)
             }
         }
