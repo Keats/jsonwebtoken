@@ -50,7 +50,7 @@ zeroize = { version = "1.8.2", features = ["derive"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
-getrandom = "0.2"
+getrandom = "0.4"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.1"
