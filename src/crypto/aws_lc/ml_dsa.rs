@@ -31,8 +31,7 @@ macro_rules! define_ml_dsa_signer {
         impl Signer<Vec<u8>> for $name {
             fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
                 let mut signature = vec![0u8; self.0.algorithm().signature_len()];
-                let len = self.0.sign(msg, &mut signature).map_err(Error::from_source)?;
-                signature.truncate(len);
+                self.0.sign(msg, &mut signature).map_err(Error::from_source)?;
                 Ok(signature)
             }
         }
@@ -88,3 +87,72 @@ define_ml_dsa_verifier!(MlDsa65Verifier, Algorithm::MLDSA65, ML_DSA_65);
 
 define_ml_dsa_signer!(MlDsa87Signer, Algorithm::MLDSA87, &ML_DSA_87_SIGNING);
 define_ml_dsa_verifier!(MlDsa87Verifier, Algorithm::MLDSA87, ML_DSA_87);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::crypto::{sign, verify};
+    use crate::jwk::Jwk;
+    use aws_lc_rs::signature::{KeyPair, PqdsaSigningAlgorithm};
+
+    fn round_trip(alg: Algorithm, signing_algorithm: &'static PqdsaSigningAlgorithm) {
+        let key_pair = PqdsaKeyPair::generate(signing_algorithm).unwrap();
+        let pkcs8 = key_pair.to_pkcs8v1().unwrap();
+        let encoding_key = EncodingKey::from_mldsa_der(pkcs8.as_ref());
+        let decoding_key = DecodingKey::from_mldsa_der(key_pair.public_key().as_ref());
+
+        let msg = b"hello ml-dsa world";
+        let signature = sign(msg, &encoding_key, alg).unwrap();
+
+        assert!(verify(&signature, msg, &decoding_key, alg).unwrap());
+        assert!(!verify(&signature, b"tampered", &decoding_key, alg).unwrap());
+    }
+
+    #[test]
+    fn round_trip_test_mldsa44() {
+        round_trip(Algorithm::MLDSA44, &ML_DSA_44_SIGNING);
+    }
+
+    #[test]
+    fn round_trip_test_mldsa65() {
+        round_trip(Algorithm::MLDSA65, &ML_DSA_65_SIGNING);
+    }
+
+    #[test]
+    fn round_trip_test_mldsa87() {
+        round_trip(Algorithm::MLDSA87, &ML_DSA_87_SIGNING);
+    }
+
+    fn jwk_round_trip(alg: Algorithm, signing_algorithm: &'static PqdsaSigningAlgorithm) {
+        let key_pair = PqdsaKeyPair::generate(signing_algorithm).unwrap();
+        let pkcs8 = key_pair.to_pkcs8v1().unwrap();
+        let encoding_key = EncodingKey::from_mldsa_der(pkcs8.as_ref());
+        let decoding_key = DecodingKey::from_mldsa_der(key_pair.public_key().as_ref());
+
+        let jwk = Jwk::from_encoding_key(&encoding_key, alg).unwrap();
+        assert!(jwk.is_supported());
+
+        let jwk_from_dec = Jwk::from_decoding_key(&decoding_key, Some(alg)).unwrap();
+        assert_eq!(jwk.algorithm, jwk_from_dec.algorithm);
+
+        let decoding_key_from_jwk = DecodingKey::from_jwk(&jwk).unwrap();
+        let msg = b"hello ml-dsa jwk";
+        let signature = sign(msg, &encoding_key, alg).unwrap();
+        assert!(verify(&signature, msg, &decoding_key_from_jwk, alg).unwrap());
+    }
+
+    #[test]
+    fn jwk_round_trip_test_mldsa44() {
+        jwk_round_trip(Algorithm::MLDSA44, &ML_DSA_44_SIGNING);
+    }
+
+    #[test]
+    fn jwk_round_trip_test_mldsa65() {
+        jwk_round_trip(Algorithm::MLDSA65, &ML_DSA_65_SIGNING);
+    }
+
+    #[test]
+    fn jwk_round_trip_test_mldsa87() {
+        jwk_round_trip(Algorithm::MLDSA87, &ML_DSA_87_SIGNING);
+    }
+}
