@@ -117,25 +117,13 @@ impl FromStr for Algorithm {
 }
 
 impl fmt::Display for Algorithm {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Algorithm::HS256 => "HS256",
-            Algorithm::HS384 => "HS384",
-            Algorithm::HS512 => "HS512",
-            Algorithm::ES256 => "ES256",
-            Algorithm::ES384 => "ES384",
-            Algorithm::RS256 => "RS256",
-            Algorithm::RS384 => "RS384",
-            Algorithm::RS512 => "RS512",
-            Algorithm::PS256 => "PS256",
-            Algorithm::PS384 => "PS384",
-            Algorithm::PS512 => "PS512",
-            Algorithm::EdDSA => "EdDSA",
-            Algorithm::MLDSA44 => "ML-DSA-44",
-            Algorithm::MLDSA65 => "ML-DSA-65",
-            Algorithm::MLDSA87 => "ML-DSA-87",
-        };
-        f.write_str(s)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Algorithm::MLDSA44 => write!(f, "ML-DSA-44"),
+            Algorithm::MLDSA65 => write!(f, "ML-DSA-65"),
+            Algorithm::MLDSA87 => write!(f, "ML-DSA-87"),
+            other => write!(f, "{:?}", other),
+        }
     }
 }
 
