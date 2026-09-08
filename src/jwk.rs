@@ -492,16 +492,6 @@ pub struct AKPKeyParameters {
     #[serde(rename = "kty")]
     pub key_type: AKPKeyType,
 
-    /// The "alg" parameter contains the algorithm name.
-    ///
-    /// On the wire this member is shared with the top-level JWK `alg`
-    /// (see `CommonParameters::key_algorithm`). To avoid emitting a duplicate
-    /// `alg` JSON member when both `common` and `algorithm` are flattened, this
-    /// field is skipped by serde and is instead populated/emitted by the custom
-    /// `Serialize`/`Deserialize` implementations on `Jwk`.
-    #[serde(default, skip)]
-    pub alg: String,
-
     /// The "priv" parameter contains the private key.
     /// It is optional since public JWKs do not carry it.
     /// Underscore is used since "priv" is a rust keyword.
@@ -538,21 +528,18 @@ pub enum ThumbprintHash {
     SHA512,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Hash)]
 #[allow(missing_docs)]
 pub struct Jwk {
+    #[serde(flatten)]
     pub common: CommonParameters,
     /// Key algorithm specific parameters
+    #[serde(flatten)]
     pub algorithm: AlgorithmParameters,
 }
 
-/// Serde helper mirroring the flattened wire layout of a [`Jwk`].
-///
-/// All fields other than the AKP `alg` are handled entirely by serde. The AKP
-/// `alg` member is shared with the top-level `alg` (`CommonParameters`), so it
-/// is skipped inside `AKPKeyParameters` and reconciled here in [`Jwk`]'s
-/// `Serialize`/`Deserialize` implementations.
-#[derive(Serialize, Deserialize)]
+/// Serde helper used to validate algorithm-specific fields after deserialization.
+#[derive(Deserialize)]
 struct JwkWire {
     #[serde(flatten)]
     common: CommonParameters,
@@ -560,48 +547,15 @@ struct JwkWire {
     algorithm: AlgorithmParameters,
 }
 
-impl Serialize for Jwk {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        if let AlgorithmParameters::AlgorithmKeyPair(akp) = &self.algorithm {
-            let alg = self.reconciled_akp_alg(akp).map_err(serde::ser::Error::custom)?;
-            let mut common = self.common.clone();
-            common.key_algorithm = None;
-            let mut value =
-                serde_json::to_value(JwkWire { common, algorithm: self.algorithm.clone() })
-                    .map_err(serde::ser::Error::custom)?;
-            value
-                .as_object_mut()
-                .ok_or_else(|| serde::ser::Error::custom("JWK must serialize as an object"))?
-                .insert("alg".to_owned(), serde_json::Value::String(alg));
-            return value.serialize(serializer);
-        }
-
-        JwkWire { common: self.common.clone(), algorithm: self.algorithm.clone() }
-            .serialize(serializer)
-    }
-}
-
 impl<'de> Deserialize<'de> for Jwk {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let value = serde_json::Value::deserialize(deserializer)?;
-        let raw_alg = value.get("alg").and_then(serde_json::Value::as_str).map(str::to_owned);
-        let JwkWire { common, mut algorithm } =
-            serde_json::from_value(value).map_err(de::Error::custom)?;
+        let JwkWire { common, algorithm } = JwkWire::deserialize(deserializer)?;
 
-        // The AKP `alg` is skipped by serde (shared with the top-level `alg`),
-        // so it can only arrive via `common.key_algorithm`. Backfill the
-        // per-parameter copy so both authoritative values agree. Without this
-        // the field would be an empty string and thumbprint/decoding would be
-        // wrong. RFC 9964 requires `alg` for AKP keys, so its absence is an
-        // error.
-        if let AlgorithmParameters::AlgorithmKeyPair(akp) = &mut algorithm {
-            akp.alg = raw_alg.ok_or_else(|| de::Error::missing_field("alg"))?;
+        if let AlgorithmParameters::AlgorithmKeyPair(_) = &algorithm {
+            common.key_algorithm.ok_or_else(|| de::Error::missing_field("alg"))?;
         }
 
         Ok(Jwk { common, algorithm })
@@ -612,10 +566,11 @@ impl Jwk {
     /// Find whether the Algorithm is implemented and supported
     pub fn is_supported(&self) -> bool {
         match &self.algorithm {
-            AlgorithmParameters::AlgorithmKeyPair(akp) => self
-                .reconciled_akp_alg(akp)
-                .and_then(|alg| Algorithm::from_str(&alg))
-                .is_ok_and(|alg| alg.family() == AlgorithmFamily::Mldsa),
+            AlgorithmParameters::AlgorithmKeyPair(_) => self
+                .common
+                .key_algorithm
+                .and_then(|alg| Algorithm::try_from(alg).ok())
+                .is_some_and(|alg| alg.family() == AlgorithmFamily::Mldsa),
             _ => match self.common.key_algorithm {
                 Some(alg) => alg.to_algorithm().is_ok(),
                 None => false,
@@ -688,7 +643,6 @@ impl Jwk {
 
                     AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
                         key_type: AKPKeyType::AKP,
-                        alg: alg.to_string(),
                         priv_: None,
                         pub_: b64_encode(public_key_bytes),
                     })
@@ -766,37 +720,12 @@ impl Jwk {
 
                     AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
                         key_type: AKPKeyType::AKP,
-                        alg: alg.to_string(),
                         priv_: None,
                         pub_: b64_encode(pub_bytes),
                     })
                 }
             },
         })
-    }
-
-    /// Reconcile the two authoritative copies of an AKP algorithm.
-    ///
-    /// The algorithm of an AKP key can be stored both in
-    /// [`AKPKeyParameters::alg`] and in [`CommonParameters::key_algorithm`].
-    /// This returns the single agreed wire name, preferring whichever is
-    /// present and erroring if both are present but disagree, or if neither is
-    /// (RFC 9964 requires `alg` for AKP keys).
-    fn reconciled_akp_alg(&self, akp: &AKPKeyParameters) -> errors::Result<String> {
-        let param_alg = (!akp.alg.is_empty()).then(|| akp.alg.clone());
-        let common_alg = self
-            .common
-            .key_algorithm
-            .filter(|alg| *alg != KeyAlgorithm::UNKNOWN_ALGORITHM)
-            .map(serde_json::to_value)
-            .transpose()?
-            .and_then(|value| value.as_str().map(str::to_owned));
-
-        match (common_alg, param_alg) {
-            (Some(a), Some(b)) if a != b => Err(new_error(ErrorKind::InvalidAlgorithm)),
-            (Some(a), _) | (None, Some(a)) => Ok(a),
-            (None, None) => Err(new_error(ErrorKind::InvalidKeyFormat)),
-        }
     }
 
     /// Compute the thumbprint of the JWK.
@@ -847,9 +776,10 @@ impl Jwk {
                 }
             },
             AlgorithmParameters::AlgorithmKeyPair(a) => {
-                // Reconcile the two authoritative algorithm copies and use the
-                // agreed value for the thumbprint (RFC 9964 requires `alg`).
-                let alg = self.reconciled_akp_alg(a)?;
+                let alg = self
+                    .common
+                    .key_algorithm
+                    .ok_or_else(|| new_error(ErrorKind::InvalidKeyFormat))?;
                 // Members must appear in lexicographic order: alg, kty, pub.
                 format!(
                     r#"{{"alg":{},"kty":{},"pub":"{}"}}"#,
@@ -983,9 +913,6 @@ mod tests {
                 assert_eq!(params.key_type, AKPKeyType::AKP);
                 assert_eq!(params.pub_, "abc");
                 assert!(params.priv_.is_none());
-                // `alg` is skipped by serde and backfilled from the shared
-                // top-level `alg` member during deserialization.
-                assert_eq!(params.alg, "ML-DSA-44");
             }
             _ => panic!("Expected AlgorithmKeyPair"),
         }
@@ -1013,31 +940,17 @@ mod tests {
     }
 
     #[test]
-    fn unknown_akp_alg_roundtrips_and_thumbprints() {
-        let input = json!({
+    fn unknown_akp_alg_is_unsupported() {
+        let jwk: Jwk = serde_json::from_value(json!({
             "kty": "AKP",
             "alg": "future-signature-algorithm",
             "pub": "abc",
-        });
+        }))
+        .expect("deserialize");
 
-        let jwk: Jwk = serde_json::from_value(input.clone()).expect("deserialize");
         assert_eq!(jwk.common.key_algorithm, Some(KeyAlgorithm::UNKNOWN_ALGORITHM));
-        let AlgorithmParameters::AlgorithmKeyPair(akp) = &jwk.algorithm else {
-            panic!("expected AlgorithmKeyPair");
-        };
-        assert_eq!(akp.alg, "future-signature-algorithm");
+        assert!(matches!(jwk.algorithm, AlgorithmParameters::AlgorithmKeyPair(_)));
         assert!(!jwk.is_supported());
-        assert_eq!(serde_json::to_value(&jwk).expect("serialize"), input);
-
-        let canonical = r#"{"alg":"future-signature-algorithm","kty":"AKP","pub":"abc"}"#;
-        let expected = b64_encode(
-            (CryptoProvider::get_default().key_utils.compute_digest)(
-                canonical.as_bytes(),
-                ThumbprintHash::SHA256,
-            )
-            .unwrap(),
-        );
-        assert_eq!(jwk.thumbprint(ThumbprintHash::SHA256).unwrap(), expected);
     }
 
     #[test]
@@ -1089,7 +1002,6 @@ mod tests {
             },
             algorithm: AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
                 key_type: AKPKeyType::AKP,
-                alg: "ML-DSA-44".to_owned(),
                 priv_: None,
                 pub_: "abc".to_string(),
             }),
@@ -1113,127 +1025,12 @@ mod tests {
 
     #[test]
     fn deserialize_akp_jwk_missing_alg_fails() {
-        // RFC 9964 requires `alg` for AKP keys. Deserialization must reject a
-        // JWK that omits it rather than silently producing an empty `alg`.
+        // RFC 9964 requires `alg` for AKP keys.
         let result: Result<Jwk, _> = serde_json::from_value(json!({
             "kty": "AKP",
             "pub": "abc",
         }));
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn serialize_akp_jwk_conflicting_alg_fails() {
-        // The two authoritative algorithm copies disagree: serialization must
-        // refuse rather than emit a JWK that decodes/thumbprints inconsistently.
-        let jwk = Jwk {
-            common: CommonParameters {
-                key_algorithm: Some(KeyAlgorithm::MLDSA44),
-                ..Default::default()
-            },
-            algorithm: AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
-                key_type: AKPKeyType::AKP,
-                alg: "ML-DSA-65".to_owned(),
-                priv_: None,
-                pub_: "abc".to_string(),
-            }),
-        };
-
-        assert!(serde_json::to_string(&jwk).is_err());
-    }
-
-    #[test]
-    fn serialize_akp_jwk_backfills_alg_from_params() {
-        // Only the per-parameter `alg` is set; serialization must backfill the
-        // shared top-level `alg` so the wire form stays RFC 9964 compliant.
-        let jwk = Jwk {
-            common: CommonParameters::default(),
-            algorithm: AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
-                key_type: AKPKeyType::AKP,
-                alg: "ML-DSA-87".to_owned(),
-                priv_: None,
-                pub_: "abc".to_string(),
-            }),
-        };
-
-        let value = serde_json::to_value(&jwk).unwrap();
-        assert_eq!(value.get("alg").and_then(|v| v.as_str()), Some("ML-DSA-87"));
-        // Exactly one `alg` member on the wire.
-        assert_eq!(serde_json::to_string(&jwk).unwrap().matches("\"alg\"").count(), 1);
-    }
-
-    #[test]
-    fn is_supported_reconciles_akp_alg() {
-        let mut jwk = Jwk {
-            common: CommonParameters::default(),
-            algorithm: AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
-                key_type: AKPKeyType::AKP,
-                alg: "ML-DSA-44".to_owned(),
-                priv_: None,
-                pub_: "abc".to_string(),
-            }),
-        };
-
-        assert!(jwk.is_supported());
-
-        jwk.common.key_algorithm = Some(KeyAlgorithm::MLDSA65);
-        assert!(!jwk.is_supported());
-    }
-
-    #[test]
-    fn thumbprint_akp_conflicting_alg_fails() {
-        // A manually constructed JWK with disagreeing algorithm copies must not
-        // silently produce a thumbprint.
-        let jwk = Jwk {
-            common: CommonParameters {
-                key_algorithm: Some(KeyAlgorithm::MLDSA44),
-                ..Default::default()
-            },
-            algorithm: AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
-                key_type: AKPKeyType::AKP,
-                alg: "ML-DSA-65".to_owned(),
-                priv_: None,
-                pub_: "abc".to_string(),
-            }),
-        };
-
-        assert_eq!(
-            jwk.thumbprint(ThumbprintHash::SHA256).unwrap_err().into_kind(),
-            ErrorKind::InvalidAlgorithm
-        );
-    }
-
-    #[test]
-    fn thumbprint_akp_backfills_alg_from_common() {
-        // Only `common.key_algorithm` is set (per-parameter `alg` empty). The
-        // thumbprint must still use the agreed algorithm.
-        let with_common = Jwk {
-            common: CommonParameters {
-                key_algorithm: Some(KeyAlgorithm::MLDSA44),
-                ..Default::default()
-            },
-            algorithm: AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
-                key_type: AKPKeyType::AKP,
-                alg: String::new(),
-                priv_: None,
-                pub_: "abc".to_string(),
-            }),
-        };
-
-        let with_param = Jwk {
-            common: CommonParameters::default(),
-            algorithm: AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
-                key_type: AKPKeyType::AKP,
-                alg: "ML-DSA-44".to_owned(),
-                priv_: None,
-                pub_: "abc".to_string(),
-            }),
-        };
-
-        assert_eq!(
-            with_common.thumbprint(ThumbprintHash::SHA256).unwrap(),
-            with_param.thumbprint(ThumbprintHash::SHA256).unwrap()
-        );
     }
 
     #[test]

@@ -267,28 +267,16 @@ impl DecodingKey {
             }
             AlgorithmParameters::AlgorithmKeyPair(params) => {
                 // RFC 9964 requires the "alg" parameter for AKP keys, and it is
-                // authoritative for the ML-DSA parameter set. Do not trust the
-                // key material without a matching valid algorithm.
-                //
-                // A `Jwk` can carry the algorithm in two places:
-                // the per-parameter `AKPKeyParameters::alg` and the shared
-                // top-level `common.key_algorithm`. Reconcile them: use whichever
-                // is present, and if both are present but disagree, reject.
-                let param_alg: Option<Algorithm> = if params.alg.is_empty() {
-                    None
-                } else {
-                    Some(params.alg.parse().map_err(|_| new_error(ErrorKind::InvalidAlgorithm))?)
-                };
-                let common_alg: Option<Algorithm> =
-                    jwk.common.key_algorithm.map(Algorithm::try_from).transpose()?;
-
-                let alg = match (param_alg, common_alg) {
-                    (Some(a), Some(b)) if a != b => {
-                        return Err(new_error(ErrorKind::InvalidAlgorithm));
-                    }
-                    (Some(a), _) | (None, Some(a)) => a,
-                    (None, None) => return Err(new_error(ErrorKind::InvalidAlgorithm)),
-                };
+                // authoritative for the ML-DSA parameter set. To avoid two
+                // authoritative location for "alg", use the value specified in the
+                // `CommonParameters`. Do not trust the key material without a
+                // matching valid algorithm.
+                let alg = jwk
+                    .common
+                    .key_algorithm
+                    .ok_or_else(|| new_error(ErrorKind::InvalidAlgorithm))?;
+                let alg =
+                    Algorithm::try_from(alg).map_err(|_| new_error(ErrorKind::InvalidAlgorithm))?;
 
                 if alg.family() != AlgorithmFamily::Mldsa {
                     return Err(new_error(ErrorKind::InvalidAlgorithm));
