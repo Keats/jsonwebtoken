@@ -1,10 +1,14 @@
 use std::fmt::{Debug, Formatter};
+use std::unreachable;
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::de::DeserializeOwned;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::algorithms::AlgorithmFamily;
+use crate::algorithms::{
+    Algorithm, AlgorithmFamily, ML_DSA_44_PUBLIC_KEY_LEN, ML_DSA_65_PUBLIC_KEY_LEN,
+    ML_DSA_87_PUBLIC_KEY_LEN,
+};
 use crate::crypto::{CryptoProvider, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::header::Header;
@@ -200,6 +204,41 @@ impl DecodingKey {
         }
     }
 
+    /// If you know what you're doing and have the raw ML-DSA public key bytes
+    /// (the fixed-size encoding used by RFC 9964), use this.
+    pub fn from_mldsa_der(der: &[u8]) -> Self {
+        DecodingKey {
+            family: AlgorithmFamily::Mldsa,
+            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
+        }
+    }
+
+    /// If you have a ML-DSA public key in PEM (SPKI) format, use this.
+    /// Only exists if the feature `use_pem` is enabled.
+    #[cfg(feature = "use_pem")]
+    pub fn from_mldsa_pem(key: &[u8]) -> Result<Self> {
+        let pem_key = PemEncodedKey::new(key)?;
+        let content = pem_key.as_mldsa_public_key()?;
+        Ok(DecodingKey {
+            family: AlgorithmFamily::Mldsa,
+            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
+        })
+    }
+
+    /// From the `pub` part (base64url encoded) of an RFC 9964 AKP JWK.
+    pub fn from_mldsa_components(pub_key: &str) -> Result<Self> {
+        let decoded = b64_decode(pub_key)?;
+        // The raw public key must be one of the fixed FIPS 204 sizes.
+        match decoded.len() {
+            ML_DSA_44_PUBLIC_KEY_LEN | ML_DSA_65_PUBLIC_KEY_LEN | ML_DSA_87_PUBLIC_KEY_LEN => {}
+            _ => return Err(new_error(ErrorKind::InvalidKeyFormat)),
+        }
+        Ok(DecodingKey {
+            family: AlgorithmFamily::Mldsa,
+            kind: DecodingKeyKind::SecretOrDer(decoded),
+        })
+    }
+
     /// From x part (base64 encoded) of the JWK encoding
     pub fn from_ed_components(x: &str) -> Result<Self> {
         let x_decoded = b64_decode(x)?;
@@ -224,6 +263,42 @@ impl DecodingKey {
                 Ok(DecodingKey {
                     family: AlgorithmFamily::Hmac,
                     kind: DecodingKeyKind::SecretOrDer(out),
+                })
+            }
+            AlgorithmParameters::AlgorithmKeyPair(params) => {
+                // RFC 9964 requires the "alg" parameter for AKP keys, and it is
+                // authoritative for the ML-DSA parameter set. To avoid two
+                // authoritative location for "alg", use the value specified in the
+                // `CommonParameters`. Do not trust the key material without a
+                // matching valid algorithm.
+                let alg = jwk
+                    .common
+                    .key_algorithm
+                    .ok_or_else(|| new_error(ErrorKind::InvalidAlgorithm))?;
+                let alg =
+                    Algorithm::try_from(alg).map_err(|_| new_error(ErrorKind::InvalidAlgorithm))?;
+
+                if alg.family() != AlgorithmFamily::Mldsa {
+                    return Err(new_error(ErrorKind::InvalidAlgorithm));
+                }
+
+                // The declared parameter set fixes the exact public-key length
+                // (FIPS 204). Reject keys whose `pub` does not match.
+                let decoded = b64_decode(&params.pub_)?;
+                let expected_len = match alg {
+                    Algorithm::MLDSA44 => ML_DSA_44_PUBLIC_KEY_LEN,
+                    Algorithm::MLDSA65 => ML_DSA_65_PUBLIC_KEY_LEN,
+                    Algorithm::MLDSA87 => ML_DSA_87_PUBLIC_KEY_LEN,
+                    // Unreachable: family check above guarantees an ML-DSA alg.
+                    _ => unreachable!(),
+                };
+                if decoded.len() != expected_len {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
+
+                Ok(DecodingKey {
+                    family: AlgorithmFamily::Mldsa,
+                    kind: DecodingKeyKind::SecretOrDer(decoded),
                 })
             }
             AlgorithmParameters::Other(_) => Err(ErrorKind::UnsupportedAlgorithm.into()),

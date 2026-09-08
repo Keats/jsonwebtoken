@@ -8,6 +8,9 @@ use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
+use crate::algorithms::{
+    ML_DSA_44_PUBLIC_KEY_LEN, ML_DSA_65_PUBLIC_KEY_LEN, ML_DSA_87_PUBLIC_KEY_LEN,
+};
 use crate::crypto::{CryptoProvider, ec_pub_components_from_public_key};
 use crate::errors::{self, Error, ErrorKind, new_error};
 use crate::serialization::b64_encode;
@@ -192,6 +195,16 @@ pub enum KeyAlgorithm {
     #[serde(rename = "RSA-OAEP-256")]
     RSA_OAEP_256,
 
+    /// ML-DSA-44 as described in US NIST FIPS 204
+    #[serde(rename = "ML-DSA-44")]
+    MLDSA44,
+    /// ML-DSA-65 as described in US NIST FIPS 204
+    #[serde(rename = "ML-DSA-65")]
+    MLDSA65,
+    /// ML-DSA-87 as described in US NIST FIPS 204
+    #[serde(rename = "ML-DSA-87")]
+    MLDSA87,
+
     /// Catch-All for when the key algorithm can not be determined or is not supported
     #[serde(other)]
     UNKNOWN_ALGORITHM,
@@ -216,6 +229,9 @@ impl FromStr for KeyAlgorithm {
             "RSA1_5" => Ok(KeyAlgorithm::RSA1_5),
             "RSA-OAEP" => Ok(KeyAlgorithm::RSA_OAEP),
             "RSA-OAEP-256" => Ok(KeyAlgorithm::RSA_OAEP_256),
+            "ML-DSA-44" => Ok(KeyAlgorithm::MLDSA44),
+            "ML-DSA-65" => Ok(KeyAlgorithm::MLDSA65),
+            "ML-DSA-87" => Ok(KeyAlgorithm::MLDSA87),
             _ => Err(ErrorKind::InvalidAlgorithmName.into()),
         }
     }
@@ -236,6 +252,9 @@ impl From<Algorithm> for KeyAlgorithm {
             Algorithm::PS384 => KeyAlgorithm::PS384,
             Algorithm::PS512 => KeyAlgorithm::PS512,
             Algorithm::EdDSA => KeyAlgorithm::EdDSA,
+            Algorithm::MLDSA44 => KeyAlgorithm::MLDSA44,
+            Algorithm::MLDSA65 => KeyAlgorithm::MLDSA65,
+            Algorithm::MLDSA87 => KeyAlgorithm::MLDSA87,
         }
     }
 }
@@ -257,6 +276,9 @@ impl TryFrom<KeyAlgorithm> for Algorithm {
             KeyAlgorithm::PS384 => Ok(Algorithm::PS384),
             KeyAlgorithm::PS512 => Ok(Algorithm::PS512),
             KeyAlgorithm::EdDSA => Ok(Algorithm::EdDSA),
+            KeyAlgorithm::MLDSA44 => Ok(Algorithm::MLDSA44),
+            KeyAlgorithm::MLDSA65 => Ok(Algorithm::MLDSA65),
+            KeyAlgorithm::MLDSA87 => Ok(Algorithm::MLDSA87),
             _ => Err(new_error(ErrorKind::UnsupportedAlgorithm)),
         }
     }
@@ -264,7 +286,12 @@ impl TryFrom<KeyAlgorithm> for Algorithm {
 
 impl fmt::Display for KeyAlgorithm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            KeyAlgorithm::MLDSA44 => write!(f, "ML-DSA-44"),
+            KeyAlgorithm::MLDSA65 => write!(f, "ML-DSA-65"),
+            KeyAlgorithm::MLDSA87 => write!(f, "ML-DSA-87"),
+            other => write!(f, "{:?}", other),
+        }
     }
 }
 
@@ -449,6 +476,34 @@ pub struct OtherKeyParameters {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
+/// Key type value for an AKP.
+/// This single value enum is a workaround for Rust not supporting associated constants.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Hash)]
+pub enum AKPKeyType {
+    /// Key type value for an AKP.
+    #[default]
+    AKP,
+}
+
+/// Parameters for an AKP
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
+pub struct AKPKeyParameters {
+    /// Key type value for an AKP
+    #[serde(rename = "kty")]
+    pub key_type: AKPKeyType,
+
+    /// The "priv" parameter contains the private key.
+    /// It is optional since public JWKs do not carry it.
+    /// Underscore is used since "priv" is a rust keyword.
+    #[serde(rename = "priv", skip_serializing_if = "Option::is_none", default)]
+    pub priv_: Option<String>,
+
+    /// The "pub" parameter contains the public key.
+    /// Underscore is used since "pub" is a rust keyword.
+    #[serde(rename = "pub")]
+    pub pub_: String,
+}
+
 /// Algorithm specific parameters
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
 #[serde(untagged)]
@@ -459,6 +514,7 @@ pub enum AlgorithmParameters {
     RSA(RSAKeyParameters),
     OctetKey(OctetKeyParameters),
     OctetKeyPair(OctetKeyPairParameters),
+    AlgorithmKeyPair(AKPKeyParameters),
     Other(OtherKeyParameters),
 }
 
@@ -472,7 +528,7 @@ pub enum ThumbprintHash {
     SHA512,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Hash)]
 #[allow(missing_docs)]
 pub struct Jwk {
     #[serde(flatten)]
@@ -482,12 +538,43 @@ pub struct Jwk {
     pub algorithm: AlgorithmParameters,
 }
 
+/// Serde helper used to validate algorithm-specific fields after deserialization.
+#[derive(Deserialize)]
+struct JwkWire {
+    #[serde(flatten)]
+    common: CommonParameters,
+    #[serde(flatten)]
+    algorithm: AlgorithmParameters,
+}
+
+impl<'de> Deserialize<'de> for Jwk {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let JwkWire { common, algorithm } = JwkWire::deserialize(deserializer)?;
+
+        if let AlgorithmParameters::AlgorithmKeyPair(_) = &algorithm {
+            common.key_algorithm.ok_or_else(|| de::Error::missing_field("alg"))?;
+        }
+
+        Ok(Jwk { common, algorithm })
+    }
+}
+
 impl Jwk {
     /// Find whether the Algorithm is implemented and supported
     pub fn is_supported(&self) -> bool {
-        match self.common.key_algorithm {
-            Some(alg) => alg.to_algorithm().is_ok(),
-            _ => false,
+        match &self.algorithm {
+            AlgorithmParameters::AlgorithmKeyPair(_) => self
+                .common
+                .key_algorithm
+                .and_then(|alg| Algorithm::try_from(alg).ok())
+                .is_some_and(|alg| alg.family() == AlgorithmFamily::Mldsa),
+            _ => match self.common.key_algorithm {
+                Some(alg) => alg.to_algorithm().is_ok(),
+                None => false,
+            },
         }
     }
 
@@ -545,6 +632,19 @@ impl Jwk {
                         key_type: OctetKeyPairType::OctetKeyPair,
                         curve: curve_type,
                         x: b64_encode(public_key_bytes),
+                    })
+                }
+                AlgorithmFamily::Mldsa => {
+                    let public_key_bytes = (CryptoProvider::get_default()
+                        .key_utils
+                        .mldsa_pub_components_from_private_key)(
+                        key.as_bytes(), alg
+                    )?;
+
+                    AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
+                        key_type: AKPKeyType::AKP,
+                        priv_: None,
+                        pub_: b64_encode(public_key_bytes),
                     })
                 }
             },
@@ -605,6 +705,25 @@ impl Jwk {
                         x: b64_encode(x),
                     })
                 }
+                crate::algorithms::AlgorithmFamily::Mldsa => {
+                    let alg = alg.ok_or_else(|| new_error(ErrorKind::InvalidAlgorithm))?;
+                    let expected_len = match alg {
+                        Algorithm::MLDSA44 => ML_DSA_44_PUBLIC_KEY_LEN,
+                        Algorithm::MLDSA65 => ML_DSA_65_PUBLIC_KEY_LEN,
+                        Algorithm::MLDSA87 => ML_DSA_87_PUBLIC_KEY_LEN,
+                        _ => return Err(new_error(ErrorKind::InvalidAlgorithm)),
+                    };
+                    let pub_bytes = key.try_get_as_bytes()?;
+                    if pub_bytes.len() != expected_len {
+                        return Err(new_error(ErrorKind::InvalidKeyFormat));
+                    }
+
+                    AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
+                        key_type: AKPKeyType::AKP,
+                        priv_: None,
+                        pub_: b64_encode(pub_bytes),
+                    })
+                }
             },
         })
     }
@@ -656,6 +775,19 @@ impl Jwk {
                     )
                 }
             },
+            AlgorithmParameters::AlgorithmKeyPair(a) => {
+                let alg = self
+                    .common
+                    .key_algorithm
+                    .ok_or_else(|| new_error(ErrorKind::InvalidKeyFormat))?;
+                // Members must appear in lexicographic order: alg, kty, pub.
+                format!(
+                    r#"{{"alg":{},"kty":{},"pub":"{}"}}"#,
+                    serde_json::to_string(&alg).unwrap(),
+                    serde_json::to_string(&a.key_type).unwrap(),
+                    a.pub_,
+                )
+            }
             AlgorithmParameters::Other(_) => return Err(ErrorKind::UnsupportedAlgorithm.into()),
         };
 
@@ -690,10 +822,13 @@ mod tests {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::Algorithm;
+    use crate::algorithms::ML_DSA_44_PUBLIC_KEY_LEN;
+    use crate::crypto::CryptoProvider;
     use crate::errors::ErrorKind;
     use crate::jwk::{
-        AlgorithmParameters, CommonParameters, EllipticCurve, Jwk, JwkSet, KeyAlgorithm,
-        OctetKeyPairParameters, OctetKeyPairType, OctetKeyType, RSAKeyParameters, ThumbprintHash,
+        AKPKeyParameters, AKPKeyType, AlgorithmParameters, CommonParameters, EllipticCurve, Jwk,
+        JwkSet, KeyAlgorithm, OctetKeyPairParameters, OctetKeyPairType, OctetKeyType,
+        RSAKeyParameters, ThumbprintHash,
     };
     use crate::serialization::b64_encode;
     use crate::{DecodingKey, EncodingKey};
@@ -740,7 +875,7 @@ mod tests {
     #[test]
     fn deserialize_unknown_kty() {
         let parameters_json = json!({
-            "kty": "AKP",
+            "kty": "UKN",
             "foo": "bar",
             "solution": 42
         });
@@ -749,7 +884,7 @@ mod tests {
         match parameters_result {
             AlgorithmParameters::Other(other_key_parameters) => {
                 let mut expected = BTreeMap::new();
-                expected.insert("kty".to_owned(), serde_json::to_value("AKP").unwrap());
+                expected.insert("kty".to_owned(), serde_json::to_value("UKN").unwrap());
                 expected.insert("foo".to_owned(), serde_json::to_value("bar").unwrap());
                 expected.insert("solution".to_owned(), serde_json::to_value(42).unwrap());
                 assert_eq!(other_key_parameters.fields, expected);
@@ -758,19 +893,64 @@ mod tests {
                 panic!("Unexpected deserialization result");
             }
         }
+    }
 
-        // RFC 9964 Appendix A.1 JWK
+    #[test]
+    fn deserialize_public_akp_jwk_without_priv() {
+        // A public AKP JWK omits the `priv` member entirely.
         let jwk: Jwk = serde_json::from_value(json!({
-            "kid": "T4xl70S7MT6Zeq6r9V9fPJGVn76wfnXJ21-gyo0Gu6o",
             "kty": "AKP",
             "alg": "ML-DSA-44",
-            "pub": "...",
-            "priv": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "pub": "abc",
         }))
         .expect("Could not deserialize json");
 
+        // The top-level `alg` is shared with `common.key_algorithm`.
+        assert_eq!(jwk.common.key_algorithm, Some(KeyAlgorithm::MLDSA44));
+
+        match jwk.algorithm {
+            AlgorithmParameters::AlgorithmKeyPair(params) => {
+                assert_eq!(params.key_type, AKPKeyType::AKP);
+                assert_eq!(params.pub_, "abc");
+                assert!(params.priv_.is_none());
+            }
+            _ => panic!("Expected AlgorithmKeyPair"),
+        }
+    }
+
+    #[test]
+    fn akp_jwk_roundtrip_single_alg_member() {
+        // Encode -> decode round-trip must preserve the AKP parameters and emit
+        // exactly one `alg` member on the wire (RFC 9964).
+        let input = json!({
+            "kty": "AKP",
+            "alg": "ML-DSA-44",
+            "pub": "abc",
+        });
+
+        let jwk: Jwk = serde_json::from_value(input).expect("deserialize");
+        let value = serde_json::to_value(&jwk).expect("serialize");
+
+        let obj = value.as_object().expect("object");
+        assert_eq!(obj.get("alg").and_then(|v| v.as_str()), Some("ML-DSA-44"));
+        assert_eq!(obj.get("kty").and_then(|v| v.as_str()), Some("AKP"));
+        assert_eq!(obj.get("pub").and_then(|v| v.as_str()), Some("abc"));
+        // No duplicate/nested encoding of `alg`.
+        assert_eq!(serde_json::to_string(&jwk).unwrap().matches("\"alg\"").count(), 1);
+    }
+
+    #[test]
+    fn unknown_akp_alg_is_unsupported() {
+        let jwk: Jwk = serde_json::from_value(json!({
+            "kty": "AKP",
+            "alg": "future-signature-algorithm",
+            "pub": "abc",
+        }))
+        .expect("deserialize");
+
+        assert_eq!(jwk.common.key_algorithm, Some(KeyAlgorithm::UNKNOWN_ALGORITHM));
+        assert!(matches!(jwk.algorithm, AlgorithmParameters::AlgorithmKeyPair(_)));
         assert!(!jwk.is_supported());
-        assert!(matches!(jwk.algorithm, AlgorithmParameters::Other(_)));
     }
 
     #[test]
@@ -812,6 +992,49 @@ mod tests {
 
     #[test]
     #[wasm_bindgen_test]
+    fn check_thumbprint_akp() {
+        // RFC 9964 Section 6: the AKP thumbprint hashes the members
+        // "alg", "kty", "pub" in lexicographic order.
+        let jwk = Jwk {
+            common: CommonParameters {
+                key_algorithm: Some(KeyAlgorithm::MLDSA44),
+                ..Default::default()
+            },
+            algorithm: AlgorithmParameters::AlgorithmKeyPair(AKPKeyParameters {
+                key_type: AKPKeyType::AKP,
+                priv_: None,
+                pub_: "abc".to_string(),
+            }),
+        };
+
+        let tp = jwk.thumbprint(ThumbprintHash::SHA256).unwrap();
+
+        // Expected digest computed over the exact canonical JSON string,
+        // locking both the member ordering and the wire-format of `alg`.
+        let canonical = r#"{"alg":"ML-DSA-44","kty":"AKP","pub":"abc"}"#;
+        let expected = b64_encode(
+            (CryptoProvider::get_default().key_utils.compute_digest)(
+                canonical.as_bytes(),
+                ThumbprintHash::SHA256,
+            )
+            .unwrap(),
+        );
+
+        assert_eq!(tp, expected);
+    }
+
+    #[test]
+    fn deserialize_akp_jwk_missing_alg_fails() {
+        // RFC 9964 requires `alg` for AKP keys.
+        let result: Result<Jwk, _> = serde_json::from_value(json!({
+            "kty": "AKP",
+            "pub": "abc",
+        }));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
     fn check_alg_key_alg_conversion() {
         let pairs = [
             (Algorithm::HS256, KeyAlgorithm::HS256),
@@ -826,6 +1049,9 @@ mod tests {
             (Algorithm::PS384, KeyAlgorithm::PS384),
             (Algorithm::PS512, KeyAlgorithm::PS512),
             (Algorithm::EdDSA, KeyAlgorithm::EdDSA),
+            (Algorithm::MLDSA44, KeyAlgorithm::MLDSA44),
+            (Algorithm::MLDSA65, KeyAlgorithm::MLDSA65),
+            (Algorithm::MLDSA87, KeyAlgorithm::MLDSA87),
         ];
 
         for (alg, k_alg) in pairs {
@@ -887,6 +1113,21 @@ mod tests {
         let expected_jwk = Jwk::from_encoding_key(&enc_key, Algorithm::EdDSA).unwrap();
         let jwk = Jwk::from_decoding_key(&dec_key, Some(Algorithm::EdDSA)).unwrap();
         assert_eq!(jwk, expected_jwk);
+    }
+
+    #[test]
+    fn check_jwk_from_decoding_key_mldsa_validates_algorithm_and_size() {
+        let dec_key = DecodingKey::from_mldsa_der(&[0; ML_DSA_44_PUBLIC_KEY_LEN]);
+
+        assert!(Jwk::from_decoding_key(&dec_key, Some(Algorithm::MLDSA44)).is_ok());
+        assert_eq!(
+            Jwk::from_decoding_key(&dec_key, Some(Algorithm::HS256)).unwrap_err().into_kind(),
+            ErrorKind::InvalidAlgorithm
+        );
+        assert_eq!(
+            Jwk::from_decoding_key(&dec_key, Some(Algorithm::MLDSA65)).unwrap_err().into_kind(),
+            ErrorKind::InvalidKeyFormat
+        );
     }
 
     #[test]
