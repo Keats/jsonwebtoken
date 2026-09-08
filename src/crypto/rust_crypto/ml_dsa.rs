@@ -103,66 +103,86 @@ mod tests {
     use crate::crypto::{sign, verify};
     use crate::jwk::Jwk;
     use ml_dsa::signature::Keypair;
-    use ml_dsa::{Generate, pkcs8::EncodePrivateKey};
+    use ml_dsa::{Generate, MlDsaParams, pkcs8::EncodePrivateKey};
 
-    macro_rules! round_trip_test {
-        ($test_name:ident, $params:ty, $alg:expr) => {
-            #[test]
-            fn $test_name() {
-                // Generate a signing key via the getrandom-backed default RNG.
-                let signing_key = SigningKey::<$params>::generate();
+    fn round_trip<P>(alg: Algorithm)
+    where
+        P: MlDsaParams,
+        SigningKey<P>: EncodePrivateKey,
+    {
+        // Generate a signing key via the getrandom-backed default RNG.
+        let signing_key = SigningKey::<P>::generate();
 
-                // Private key -> PKCS#8 DER for the EncodingKey.
-                let pkcs8 = signing_key.to_pkcs8_der().unwrap();
-                let encoding_key = EncodingKey::from_mldsa_der(pkcs8.as_bytes());
+        // Private key -> PKCS#8 DER for the EncodingKey.
+        let pkcs8 = signing_key.to_pkcs8_der().unwrap();
+        let encoding_key = EncodingKey::from_mldsa_der(pkcs8.as_bytes());
 
-                // Public key -> raw fixed-size encoding for the DecodingKey (RFC 9964).
-                let raw_pub = signing_key.verifying_key().encode();
-                let decoding_key = DecodingKey::from_mldsa_der(&raw_pub);
+        // Public key -> raw fixed-size encoding for the DecodingKey (RFC 9964).
+        let raw_pub = signing_key.verifying_key().encode();
+        let decoding_key = DecodingKey::from_mldsa_der(&raw_pub);
 
-                let msg = b"hello ml-dsa world";
-                let sig = sign(msg, &encoding_key, $alg).unwrap();
+        let msg = b"hello ml-dsa world";
+        let sig = sign(msg, &encoding_key, alg).unwrap();
 
-                assert!(verify(&sig, msg, &decoding_key, $alg).unwrap());
-                // A tampered message must not verify.
-                assert!(!verify(&sig, b"tampered", &decoding_key, $alg).unwrap());
-            }
-        };
+        assert!(verify(&sig, msg, &decoding_key, alg).unwrap());
+        // A tampered message must not verify.
+        assert!(!verify(&sig, b"tampered", &decoding_key, alg).unwrap());
     }
 
-    round_trip_test!(round_trip_ml_dsa_44, MlDsa44, Algorithm::MLDSA44);
-    round_trip_test!(round_trip_ml_dsa_65, MlDsa65, Algorithm::MLDSA65);
-    round_trip_test!(round_trip_ml_dsa_87, MlDsa87, Algorithm::MLDSA87);
-
-    macro_rules! jwk_round_trip_test {
-        ($test_name:ident, $params:ty, $alg:expr) => {
-            #[test]
-            fn $test_name() {
-                let signing_key = SigningKey::<$params>::generate();
-                let pkcs8 = signing_key.to_pkcs8_der().unwrap();
-                let encoding_key = EncodingKey::from_mldsa_der(pkcs8.as_bytes());
-
-                // EncodingKey -> AKP JWK (derives `pub` via KeyUtils).
-                let jwk = Jwk::from_encoding_key(&encoding_key, $alg).unwrap();
-                assert!(jwk.is_supported());
-
-                // The AKP JWK derived from the public part of the decoding key
-                // must be identical.
-                let raw_pub = signing_key.verifying_key().encode();
-                let decoding_key = DecodingKey::from_mldsa_der(&raw_pub);
-                let jwk_from_dec = Jwk::from_decoding_key(&decoding_key, Some($alg)).unwrap();
-                assert_eq!(jwk.algorithm, jwk_from_dec.algorithm);
-
-                // JWK -> DecodingKey -> verify a signature made with the encoding key.
-                let decoding_key_from_jwk = DecodingKey::from_jwk(&jwk).unwrap();
-                let msg = b"hello ml-dsa jwk";
-                let sig = sign(msg, &encoding_key, $alg).unwrap();
-                assert!(verify(&sig, msg, &decoding_key_from_jwk, $alg).unwrap());
-            }
-        };
+    #[test]
+    fn round_trip_test_mldsa44() {
+        round_trip::<MlDsa44>(Algorithm::MLDSA44);
     }
 
-    jwk_round_trip_test!(jwk_round_trip_ml_dsa_44, MlDsa44, Algorithm::MLDSA44);
-    jwk_round_trip_test!(jwk_round_trip_ml_dsa_65, MlDsa65, Algorithm::MLDSA65);
-    jwk_round_trip_test!(jwk_round_trip_ml_dsa_87, MlDsa87, Algorithm::MLDSA87);
+    #[test]
+    fn round_trip_test_mldsa65() {
+        round_trip::<MlDsa65>(Algorithm::MLDSA65);
+    }
+
+    #[test]
+    fn round_trip_test_mldsa87() {
+        round_trip::<MlDsa87>(Algorithm::MLDSA87);
+    }
+
+    fn jwk_round_trip_test<P>(alg: Algorithm)
+    where
+        P: MlDsaParams,
+        SigningKey<P>: EncodePrivateKey,
+    {
+        let signing_key = SigningKey::<P>::generate();
+        let pkcs8 = signing_key.to_pkcs8_der().unwrap();
+        let encoding_key = EncodingKey::from_mldsa_der(pkcs8.as_bytes());
+
+        // EncodingKey -> AKP JWK (derives `pub` via KeyUtils).
+        let jwk = Jwk::from_encoding_key(&encoding_key, alg).unwrap();
+        assert!(jwk.is_supported());
+
+        // The AKP JWK derived from the public part of the decoding key
+        // must be identical.
+        let raw_pub = signing_key.verifying_key().encode();
+        let decoding_key = DecodingKey::from_mldsa_der(&raw_pub);
+        let jwk_from_dec = Jwk::from_decoding_key(&decoding_key, Some(alg)).unwrap();
+        assert_eq!(jwk.algorithm, jwk_from_dec.algorithm);
+
+        // JWK -> DecodingKey -> verify a signature made with the encoding key.
+        let decoding_key_from_jwk = DecodingKey::from_jwk(&jwk).unwrap();
+        let msg = b"hello ml-dsa jwk";
+        let sig = sign(msg, &encoding_key, alg).unwrap();
+        assert!(verify(&sig, msg, &decoding_key_from_jwk, alg).unwrap());
+    }
+
+    #[test]
+    fn jwk_round_trip_test_mldsa44() {
+        jwk_round_trip_test::<MlDsa44>(Algorithm::MLDSA44);
+    }
+
+    #[test]
+    fn jwk_round_trip_test_mldsa65() {
+        jwk_round_trip_test::<MlDsa65>(Algorithm::MLDSA65);
+    }
+
+    #[test]
+    fn jwk_round_trip_test_mldsa87() {
+        jwk_round_trip_test::<MlDsa87>(Algorithm::MLDSA87);
+    }
 }
