@@ -10,7 +10,7 @@ use sha2::{Digest, Sha256, Sha384, Sha512};
 
 use crate::{
     Algorithm, DecodingKey, EncodingKey,
-    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils},
+    crypto::{CryptoProvider, JwtSigner, JwtVerifier, KeyUtils, no_encryption::NoEncryption},
     errors::{self, Error, ErrorKind},
     jwk::{EllipticCurve, ThumbprintHash},
 };
@@ -102,6 +102,7 @@ fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSig
         Algorithm::PS384 => Box::new(rsa::RsaPss384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::PS512 => Box::new(rsa::RsaPss512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::EdDSA => Box::new(eddsa::EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::None => Box::new(NoEncryption::new()) as Box<dyn JwtSigner>,
     };
 
     Ok(jwt_signer)
@@ -124,6 +125,7 @@ fn new_verifier(
         Algorithm::PS384 => Box::new(rsa::RsaPss384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::PS512 => Box::new(rsa::RsaPss512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::EdDSA => Box::new(eddsa::EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::None => Box::new(NoEncryption::new()) as Box<dyn JwtVerifier>,
     };
 
     Ok(jwt_verifier)

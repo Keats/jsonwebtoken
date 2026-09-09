@@ -18,6 +18,7 @@ use crate::{DecodingKey, EncodingKey};
 #[cfg(feature = "aws_lc_rs")]
 pub mod aws_lc;
 
+mod no_encryption;
 /// `RustCrypto` based CryptoProvider.
 #[cfg(feature = "rust_crypto")]
 pub mod rust_crypto;

@@ -236,6 +236,7 @@ impl From<Algorithm> for KeyAlgorithm {
             Algorithm::PS384 => KeyAlgorithm::PS384,
             Algorithm::PS512 => KeyAlgorithm::PS512,
             Algorithm::EdDSA => KeyAlgorithm::EdDSA,
+            Algorithm::None => KeyAlgorithm::UNKNOWN_ALGORITHM,
         }
     }
 }
@@ -547,25 +548,21 @@ impl Jwk {
                         x: b64_encode(public_key_bytes),
                     })
                 }
+                AlgorithmFamily::None => todo!(),
             },
         })
     }
 
     /// Create a `JWK` from a `DecodingKey`.
-    pub fn from_decoding_key(
-        key: &DecodingKey,
-        alg: Option<Algorithm>,
-    ) -> crate::errors::Result<Self> {
+    pub fn from_decoding_key(key: &DecodingKey, alg: Option<Algorithm>) -> errors::Result<Self> {
         Ok(Self {
             common: CommonParameters { key_algorithm: alg.map(|a| a.into()), ..Default::default() },
             algorithm: match key.family() {
-                crate::algorithms::AlgorithmFamily::Hmac => {
-                    AlgorithmParameters::OctetKey(OctetKeyParameters {
-                        key_type: OctetKeyType::Octet,
-                        value: b64_encode(key.try_get_as_bytes()?),
-                    })
-                }
-                crate::algorithms::AlgorithmFamily::Rsa => {
+                AlgorithmFamily::Hmac => AlgorithmParameters::OctetKey(OctetKeyParameters {
+                    key_type: OctetKeyType::Octet,
+                    value: b64_encode(key.try_get_as_bytes()?),
+                }),
+                AlgorithmFamily::Rsa => {
                     let (n, e) = match &key.kind() {
                         DecodingKeyKind::RsaModulusExponent { n, e } => {
                             (b64_encode(n), b64_encode(e))
@@ -582,7 +579,7 @@ impl Jwk {
 
                     AlgorithmParameters::RSA(RSAKeyParameters { key_type: RSAKeyType::RSA, n, e })
                 }
-                crate::algorithms::AlgorithmFamily::Ec => {
+                AlgorithmFamily::Ec => {
                     let (curve, x, y) = ec_pub_components_from_public_key(key.try_get_as_bytes()?)?;
                     AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
                         key_type: EllipticCurveKeyType::EC,
@@ -591,7 +588,7 @@ impl Jwk {
                         y: b64_encode(y),
                     })
                 }
-                crate::algorithms::AlgorithmFamily::Ed => {
+                AlgorithmFamily::Ed => {
                     let pub_bytes = key.try_get_as_bytes()?;
                     let (curve_type, x) = match pub_bytes.len() {
                         // ED25519: https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.5
@@ -605,6 +602,7 @@ impl Jwk {
                         x: b64_encode(x),
                     })
                 }
+                AlgorithmFamily::None => AlgorithmParameters::Other(Default::default()),
             },
         })
     }
@@ -618,8 +616,8 @@ impl Jwk {
                 EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
                     format!(
                         r#"{{"crv":{},"kty":{},"x":"{}","y":"{}"}}"#,
-                        serde_json::to_string(&a.curve).unwrap(),
-                        serde_json::to_string(&a.key_type).unwrap(),
+                        serde_json::to_string(&a.curve)?,
+                        serde_json::to_string(&a.key_type)?,
                         a.x,
                         a.y,
                     )
@@ -632,16 +630,12 @@ impl Jwk {
                 format!(
                     r#"{{"e":"{}","kty":{},"n":"{}"}}"#,
                     a.e,
-                    serde_json::to_string(&a.key_type).unwrap(),
+                    serde_json::to_string(&a.key_type)?,
                     a.n,
                 )
             }
             AlgorithmParameters::OctetKey(a) => {
-                format!(
-                    r#"{{"k":"{}","kty":{}}}"#,
-                    a.value,
-                    serde_json::to_string(&a.key_type).unwrap()
-                )
+                format!(r#"{{"k":"{}","kty":{}}}"#, a.value, serde_json::to_string(&a.key_type)?)
             }
             AlgorithmParameters::OctetKeyPair(a) => match a.curve {
                 EllipticCurve::P256 | EllipticCurve::P384 | EllipticCurve::P521 => {
@@ -650,8 +644,8 @@ impl Jwk {
                 EllipticCurve::Ed25519 => {
                     format!(
                         r#"{{"crv":{},"kty":{},"x":"{}"}}"#,
-                        serde_json::to_string(&a.curve).unwrap(),
-                        serde_json::to_string(&a.key_type).unwrap(),
+                        serde_json::to_string(&a.curve)?,
+                        serde_json::to_string(&a.key_type)?,
                         a.x,
                     )
                 }
@@ -777,7 +771,7 @@ mod tests {
     #[wasm_bindgen_test]
     fn check_thumbprint() {
         let tp = Jwk {
-            common: crate::jwk::CommonParameters { key_id: Some("2011-04-29".to_string()), ..Default::default() },
+            common: CommonParameters { key_id: Some("2011-04-29".to_string()), ..Default::default() },
             algorithm: AlgorithmParameters::RSA(RSAKeyParameters {
                 key_type: crate::jwk::RSAKeyType::RSA,
                 n: "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw".to_string(),

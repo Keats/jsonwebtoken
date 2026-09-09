@@ -15,6 +15,8 @@ pub enum AlgorithmFamily {
     Ec,
     /// Edwards curve public key family.
     Ed,
+    /// For Insecured JWT with "alg" : "none"
+    None,
 }
 
 impl AlgorithmFamily {
@@ -32,6 +34,7 @@ impl AlgorithmFamily {
             ],
             Self::Ec => &[Algorithm::ES256, Algorithm::ES384],
             Self::Ed => &[Algorithm::EdDSA],
+            Self::None => &[Algorithm::None],
         }
     }
 }
@@ -70,6 +73,10 @@ pub enum Algorithm {
 
     /// Edwards-curve Digital Signature Algorithm (EdDSA)
     EdDSA,
+    /// An Unsecured JWT is a JWS using the "alg" Header Parameter value "none"
+    /// https://datatracker.ietf.org/doc/html/rfc7519
+    #[serde(rename = "none")]
+    None,
 }
 
 impl FromStr for Algorithm {
@@ -88,6 +95,7 @@ impl FromStr for Algorithm {
             "PS512" => Ok(Algorithm::PS512),
             "RS512" => Ok(Algorithm::RS512),
             "EdDSA" => Ok(Algorithm::EdDSA),
+            "none" => Ok(Algorithm::None),
             _ => Err(ErrorKind::InvalidAlgorithmName.into()),
         }
     }
@@ -106,6 +114,7 @@ impl Algorithm {
             | Algorithm::PS512 => AlgorithmFamily::Rsa,
             Algorithm::ES256 | Algorithm::ES384 => AlgorithmFamily::Ec,
             Algorithm::EdDSA => AlgorithmFamily::Ed,
+            Algorithm::None => AlgorithmFamily::None,
         }
     }
 }
@@ -128,6 +137,7 @@ mod tests {
         assert!(Algorithm::from_str("PS256").is_ok());
         assert!(Algorithm::from_str("PS384").is_ok());
         assert!(Algorithm::from_str("PS512").is_ok());
+        assert!(Algorithm::from_str("none").is_ok());
         assert!(Algorithm::from_str("").is_err());
     }
 }

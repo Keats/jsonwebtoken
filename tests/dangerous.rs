@@ -45,6 +45,22 @@ fn dangerous_insecure_decode_invalid_sig() {
 
 #[test]
 #[wasm_bindgen_test]
+fn dangerous_insecure_decode_no_sig_algorithm() {
+    let token = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJqb2huQGVtYWlsLmNvbSIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjoxNTE2MjM5MDQwLCJhdWQiOlsianNvbndlYnRva2VudGVzdCJdfQ.";
+
+    let TokenData { header, claims } = insecure_decode::<Claims>(token).unwrap();
+
+    assert_eq!(Algorithm::None, header.alg);
+    assert_eq!(Some("JWT".to_string()), header.typ);
+
+    assert_eq!(vec!["jsonwebtokentest"], claims.aud);
+    assert_eq!("john@email.com", claims.sub);
+    assert_eq!(1516239022, claims.iat);
+    assert_eq!(1516239040, claims.exp);
+}
+
+#[test]
+#[wasm_bindgen_test]
 fn dangerous_insecure_decode_invalid_header() {
     let token = "badz.eyJhdWQiOlsianNvbndlYnRva2VudGVzdCJdLCJleHAiOjE3NTk4MjYyMTcsImlhdCI6MTc1OTgyNTkxNywic3ViIjoic3BpZmZlOi8vZXhhbXBsZS5vcmcvdGVzdHNlcnZpY2UifQ.sig";
 
