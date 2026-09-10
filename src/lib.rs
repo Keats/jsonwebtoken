@@ -14,7 +14,7 @@ pub use validation::{Validation, get_current_timestamp};
 
 /// Dangerous decoding functions that should be audited and used with extreme care.
 pub mod dangerous {
-    pub use super::decoding::insecure_decode;
+    pub use super::decoding::{insecure_decode, insecure_decode_claims};
 }
 
 mod algorithms;

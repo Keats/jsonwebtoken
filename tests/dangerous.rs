@@ -1,4 +1,7 @@
-use jsonwebtoken::{Algorithm, TokenData, dangerous::insecure_decode};
+use jsonwebtoken::{
+    Algorithm, TokenData,
+    dangerous::{insecure_decode, insecure_decode_claims},
+};
 use wasm_bindgen_test::wasm_bindgen_test;
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
@@ -57,4 +60,16 @@ fn dangerous_insecure_decode_invalid_claims() {
     let token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IkRReWk2eEFmVVRPWmhJV2R5VWtKZTBFMUJmM1VXV05QIiwidHlwIjoiSldUIn0.badz.sig";
 
     insecure_decode::<Claims>(token).unwrap_err();
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn dangerous_insecure_decode_claims() {
+    let token = "eyJhbGciOiJub25lIn0.eyJzdWIiOiJ0ZXN0IiwiYXVkIjpbXSwiZXhwIjoxMzAwODE5MzgwLCJpYXQiOjEzMDA4MTkzNzl9.";
+
+    let claims = insecure_decode_claims::<Claims>(token).unwrap();
+    assert_eq!(claims.sub, "test");
+    assert!(claims.aud.is_empty());
+    assert_eq!(claims.iat, 1300819379);
+    assert_eq!(claims.exp, 1300819380);
 }
