@@ -1,5 +1,9 @@
 # Changelog
 
+## 11.0.1 (unreleased)
+
+- Add `dangerous::insecure_decode_claims`
+
 ## 11.0.0 (2026-07-24)
 
 - Add conversions between `Algorithm` and `KeyAlgorithm`

@@ -305,6 +305,20 @@ pub fn insecure_decode<T: DeserializeOwned>(token: impl AsRef<[u8]>) -> Result<T
     Ok(TokenData { header, claims })
 }
 
+/// Decode a JWTs claims with NO VALIDATION
+///
+/// DANGER: This performs zero validation on the JWT
+pub fn insecure_decode_claims<T: DeserializeOwned>(token: impl AsRef<[u8]>) -> Result<T> {
+    let token = token.as_ref();
+
+    let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (payload, _) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
+
+    let claims = DecodedJwtPartClaims::from_jwt_part_claims(payload)?.deserialize()?;
+
+    Ok(claims)
+}
+
 /// Decode a JWT without any signature verification/validations and return its [Header](struct.Header.html).
 ///
 /// If the token has an invalid format (ie 3 parts separated by a `.`), it will return an error.
