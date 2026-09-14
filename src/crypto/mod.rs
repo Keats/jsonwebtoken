@@ -10,7 +10,7 @@
 //! [`CryptoProvider`]: crate::crypto::CryptoProvider
 
 use crate::algorithms::Algorithm;
-use crate::errors::{ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::jwk::{EllipticCurve, ThumbprintHash};
 use crate::{DecodingKey, EncodingKey};
 
@@ -130,7 +130,7 @@ impl CryptoProvider {
 }
 
 /// Holds utility functions required for JWK processing.
-/// Use the [`KeyUtils::new_unimplemented`] function to initialize all values to dummies.
+/// Use the [`KeyUtils::new_unimplemented`] function if your provider does not support JWKs.
 #[derive(Clone, Debug)]
 pub struct KeyUtils {
     /// Given a DER encoded private key, extract the RSA public key components (n, e)
@@ -151,28 +151,30 @@ pub struct KeyUtils {
 }
 
 impl KeyUtils {
-    /// Initialises all values to dummies.
-    /// Will lead to a panic when JWKs are required, so only use it if you don't want to support JWKs.
+    /// Initialises all values to stubs that return
+    /// [`ErrorKind::Provider`](crate::errors::ErrorKind::Provider).
+    ///
+    /// Use this if your [`CryptoProvider`] does not support JWKs. Whether a caller
+    /// reaches one of these stubs depends on the key they pass at runtime, so this
+    /// is reported through the `Result` these functions already return rather than
+    /// by panicking.
     pub const fn new_unimplemented() -> Self {
-        const NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR: &str = r"
-Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features, or your CryptoProvider does not support JWKs.
-Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
-See the documentation of the CryptoProvider type for more information.
-";
+        const UNIMPLEMENTED: &str = "this CryptoProvider does not implement JWKs";
+
         Self {
             rsa_pub_components_from_private_key: |_| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string())))
             },
             rsa_pub_components_from_public_key: |_| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string())))
             },
             ec_pub_components_from_private_key: |_, _| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string())))
             },
             ed_pub_components_from_private_key: |_, _| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string())))
             },
-            compute_digest: |_, _| panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR),
+            compute_digest: |_, _| Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string()))),
         }
     }
 }

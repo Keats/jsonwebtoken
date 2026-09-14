@@ -5,6 +5,7 @@
 - Fix `CryptoProvider::install_default` failing forever after a caught panic from a missing provider. The placeholder provider is no longer stored in the process `OnceLock`
 - Add `CryptoProvider::get_default() -> Option<&'static CryptoProvider>` so applications can check for a usable backend at startup
 - The missing-provider panic message now distinguishes "both backends enabled" from "neither backend enabled"
+- `KeyUtils::new_unimplemented` now returns `ErrorKind::Provider` instead of panicking, for providers that opt out of JWK support
 
 ## 11.0.0 (2026-07-24)
 
