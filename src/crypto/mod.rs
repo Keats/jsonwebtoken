@@ -10,7 +10,7 @@
 //! [`CryptoProvider`]: crate::crypto::CryptoProvider
 
 use crate::algorithms::Algorithm;
-use crate::errors::{ErrorKind, Result};
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::jwk::{EllipticCurve, ThumbprintHash};
 use crate::{DecodingKey, EncodingKey};
 
@@ -97,42 +97,40 @@ impl CryptoProvider {
         static_default::install_default(self)
     }
 
+    /// Returns the process-level [`CryptoProvider`], if one is available, without panicking.
+    ///
+    /// This is `Some` if [`CryptoProvider::install_default`] has been called, or if
+    /// exactly one of the `aws_lc_rs` and `rust_crypto` features is enabled. It is
+    /// `None` if both features or neither are enabled and nothing has been installed.
+    ///
+    /// Call this at startup to fail on a misconfigured build at a point of your
+    /// choosing, rather than on the first `encode`/`decode`.
+    pub fn try_get_default() -> Option<&'static Self> {
+        static_default::try_get_default()
+    }
+
     pub(crate) fn get_default() -> &'static Self {
         static_default::get_default()
     }
 
-    fn from_crate_features() -> &'static Self {
+    fn from_crate_features() -> Option<&'static Self> {
         #[cfg(all(feature = "rust_crypto", not(feature = "aws_lc_rs")))]
         {
-            return &rust_crypto::DEFAULT_PROVIDER;
+            return Some(&rust_crypto::DEFAULT_PROVIDER);
         }
 
         #[cfg(all(feature = "aws_lc_rs", not(feature = "rust_crypto")))]
         {
-            return &aws_lc::DEFAULT_PROVIDER;
+            return Some(&aws_lc::DEFAULT_PROVIDER);
         }
 
         #[allow(unreachable_code)]
-        {
-            const NOT_INSTALLED_ERROR: &str = r"
-Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features.
-Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
-See the documentation of the CryptoProvider type for more information.
-";
-
-            static INSTANCE: CryptoProvider = CryptoProvider {
-                signer_factory: |_, _| panic!("{}", NOT_INSTALLED_ERROR),
-                verifier_factory: |_, _| panic!("{}", NOT_INSTALLED_ERROR),
-                key_utils: KeyUtils::new_unimplemented(),
-            };
-
-            &INSTANCE
-        }
+        None
     }
 }
 
 /// Holds utility functions required for JWK processing.
-/// Use the [`KeyUtils::new_unimplemented`] function to initialize all values to dummies.
+/// Use the [`KeyUtils::new_unimplemented`] function if your provider does not support JWKs.
 #[derive(Clone, Debug)]
 pub struct KeyUtils {
     /// Given a DER encoded private key, extract the RSA public key components (n, e)
@@ -153,28 +151,30 @@ pub struct KeyUtils {
 }
 
 impl KeyUtils {
-    /// Initialises all values to dummies.
-    /// Will lead to a panic when JWKs are required, so only use it if you don't want to support JWKs.
+    /// Initialises all values to stubs that return
+    /// [`ErrorKind::Provider`](crate::errors::ErrorKind::Provider).
+    ///
+    /// Use this if your [`CryptoProvider`] does not support JWKs. Whether a caller
+    /// reaches one of these stubs depends on the key they pass at runtime, so this
+    /// is reported through the `Result` these functions already return rather than
+    /// by panicking.
     pub const fn new_unimplemented() -> Self {
-        const NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR: &str = r"
-Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features, or your CryptoProvider does not support JWKs.
-Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
-See the documentation of the CryptoProvider type for more information.
-";
+        const UNIMPLEMENTED: &str = "this CryptoProvider does not implement JWKs";
+
         Self {
             rsa_pub_components_from_private_key: |_| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string())))
             },
             rsa_pub_components_from_public_key: |_| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string())))
             },
             ec_pub_components_from_private_key: |_, _| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string())))
             },
             ed_pub_components_from_private_key: |_, _| {
-                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+                Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string())))
             },
-            compute_digest: |_, _| panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR),
+            compute_digest: |_, _| Err(new_error(ErrorKind::Provider(UNIMPLEMENTED.to_string()))),
         }
     }
 }
@@ -211,7 +211,38 @@ mod static_default {
         PROCESS_DEFAULT_PROVIDER.set(default_provider)
     }
 
-    pub(crate) fn get_default() -> &'static CryptoProvider {
-        PROCESS_DEFAULT_PROVIDER.get_or_init(CryptoProvider::from_crate_features)
+    pub(crate) fn try_get_default() -> Option<&'static CryptoProvider> {
+        if let Some(provider) = PROCESS_DEFAULT_PROVIDER.get() {
+            return Some(provider);
+        }
+        // Only ever store a real provider. Storing a placeholder here would consume the
+        // `OnceLock` and make a later `install_default` fail forever, even if the caller
+        // recovers from the panic below.
+        CryptoProvider::from_crate_features()
+            .map(|provider| *PROCESS_DEFAULT_PROVIDER.get_or_init(|| provider))
     }
+
+    pub(crate) fn get_default() -> &'static CryptoProvider {
+        match try_get_default() {
+            Some(provider) => provider,
+            None => panic!("{}", NOT_INSTALLED_ERROR),
+        }
+    }
+
+    #[cfg(all(feature = "aws_lc_rs", feature = "rust_crypto"))]
+    const NOT_INSTALLED_ERROR: &str = r"
+Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features:
+both the 'aws_lc_rs' and 'rust_crypto' features are enabled, so the choice is ambiguous.
+Enable exactly one of them, or call CryptoProvider::install_default() before this point.
+Note that Cargo unifies features, so another dependency may have enabled the second backend.
+See the documentation of the CryptoProvider type for more information.
+";
+
+    #[cfg(not(all(feature = "aws_lc_rs", feature = "rust_crypto")))]
+    const NOT_INSTALLED_ERROR: &str = r"
+Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features:
+neither the 'aws_lc_rs' nor the 'rust_crypto' feature is enabled.
+Enable exactly one of them, or call CryptoProvider::install_default() before this point.
+See the documentation of the CryptoProvider type for more information.
+";
 }
