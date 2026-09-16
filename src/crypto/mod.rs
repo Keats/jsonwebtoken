@@ -148,6 +148,9 @@ pub struct KeyUtils {
         fn(&[u8], Algorithm) -> Result<(EllipticCurve, Vec<u8>, Vec<u8>)>,
     /// Given a DER encoded private key and the curve type, extract the ED public key component (x)
     pub ed_pub_components_from_private_key: fn(&[u8], &EllipticCurve) -> Result<Vec<u8>>,
+    /// Given a PKCS#8 DER encoded ML-DSA private key, extract the raw ML-DSA public key
+    /// (the fixed-size encoding used by RFC 9964).
+    pub mldsa_pub_components_from_private_key: fn(&[u8], Algorithm) -> Result<Vec<u8>>,
     /// Given some data and a name of a hash function, compute hash_function(data)
     pub compute_digest: fn(&[u8], ThumbprintHash) -> Result<Vec<u8>>,
 }
@@ -172,6 +175,9 @@ See the documentation of the CryptoProvider type for more information.
                 panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
             },
             ed_pub_components_from_private_key: |_, _| {
+                panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
+            },
+            mldsa_pub_components_from_private_key: |_, _| {
                 panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR)
             },
             compute_digest: |_, _| panic!("{}", NOT_INSTALLED_OR_UNIMPLEMENTED_ERROR),

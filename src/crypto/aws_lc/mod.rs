@@ -2,7 +2,8 @@ use aws_lc_rs::{
     digest,
     signature::{
         self as aws_sig, ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED_SIGNING,
-        EcdsaKeyPair, Ed25519KeyPair, KeyPair,
+        EcdsaKeyPair, Ed25519KeyPair, KeyPair, ML_DSA_44_SIGNING, ML_DSA_65_SIGNING,
+        ML_DSA_87_SIGNING, PqdsaKeyPair,
     },
 };
 
@@ -16,6 +17,7 @@ use crate::{
 mod ecdsa;
 mod eddsa;
 mod hmac;
+mod ml_dsa;
 mod rsa;
 
 fn rsa_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
@@ -70,6 +72,23 @@ fn ed_pub_components_from_private_key(
     }
 }
 
+fn mldsa_pub_components_from_private_key(
+    encoding_key: &[u8],
+    alg: Algorithm,
+) -> errors::Result<Vec<u8>> {
+    let signing_alg = match alg {
+        Algorithm::MLDSA44 => &ML_DSA_44_SIGNING,
+        Algorithm::MLDSA65 => &ML_DSA_65_SIGNING,
+        Algorithm::MLDSA87 => &ML_DSA_87_SIGNING,
+        _ => return Err(ErrorKind::InvalidAlgorithm.into()),
+    };
+
+    let key_pair = PqdsaKeyPair::from_pkcs8(signing_alg, encoding_key)
+        .map_err(|_| ErrorKind::InvalidKeyFormat)?;
+
+    Ok(key_pair.public_key().as_ref().to_vec())
+}
+
 fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> errors::Result<Vec<u8>> {
     let algorithm = match hash_function {
         ThumbprintHash::SHA256 => &digest::SHA256,
@@ -93,6 +112,9 @@ fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSig
         Algorithm::PS384 => Box::new(rsa::RsaPss384Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::PS512 => Box::new(rsa::RsaPss512Signer::new(key)?) as Box<dyn JwtSigner>,
         Algorithm::EdDSA => Box::new(eddsa::EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::MLDSA44 => Box::new(ml_dsa::MlDsa44Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::MLDSA65 => Box::new(ml_dsa::MlDsa65Signer::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::MLDSA87 => Box::new(ml_dsa::MlDsa87Signer::new(key)?) as Box<dyn JwtSigner>,
     };
 
     Ok(jwt_signer)
@@ -115,6 +137,9 @@ fn new_verifier(
         Algorithm::PS384 => Box::new(rsa::RsaPss384Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::PS512 => Box::new(rsa::RsaPss512Verifier::new(key)?) as Box<dyn JwtVerifier>,
         Algorithm::EdDSA => Box::new(eddsa::EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::MLDSA44 => Box::new(ml_dsa::MlDsa44Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::MLDSA65 => Box::new(ml_dsa::MlDsa65Verifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::MLDSA87 => Box::new(ml_dsa::MlDsa87Verifier::new(key)?) as Box<dyn JwtVerifier>,
     };
 
     Ok(jwt_verifier)
@@ -129,6 +154,7 @@ pub static DEFAULT_PROVIDER: CryptoProvider = CryptoProvider {
         rsa_pub_components_from_public_key: rsa_components_from_public_key,
         ec_pub_components_from_private_key: ec_components_from_private_key,
         ed_pub_components_from_private_key,
+        mldsa_pub_components_from_private_key,
         compute_digest,
     },
 };
