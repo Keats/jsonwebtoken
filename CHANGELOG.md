@@ -1,6 +1,6 @@
 # Changelog
 
-## 11.0.1 (unreleased)
+## 11.1.0 (2026-09-16)
 
 - Add `dangerous::insecure_decode_claims`
 
