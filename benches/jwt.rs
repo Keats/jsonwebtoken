@@ -9,42 +9,56 @@ use std::hint::black_box;
 struct Claims {
     sub: String,
     company: String,
+    exp: u64,
 }
 
 fn bench_encode(c: &mut Criterion) {
-    let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned() };
+    let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 2532524891 };
     let key = EncodingKey::from_secret("secret".as_ref());
 
     c.bench_function("bench_encode", |b| {
-        b.iter(|| encode(black_box(&Header::default()), black_box(&claim), black_box(&key)))
+        b.iter(|| {
+            encode(black_box(&Header::default()), black_box(&claim), black_box(&key)).unwrap()
+        })
     });
 }
 
 fn bench_encode_custom_extra_headers(c: &mut Criterion) {
-    let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned() };
+    let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 2532524891 };
     let key = EncodingKey::from_secret("secret".as_ref());
     let mut extras = Extras::default();
     extras.insert("custom".to_string(), "header".to_string());
     let header = &Header { extras, ..Default::default() };
 
-    c.bench_function("bench_encode", |b| {
-        b.iter(|| encode(black_box(header), black_box(&claim), black_box(&key)))
+    c.bench_function("bench_encode_custom_extra_headers", |b| {
+        b.iter(|| encode(black_box(header), black_box(&claim), black_box(&key)).unwrap());
     });
 }
 
 fn bench_decode(c: &mut Criterion) {
-    let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ";
-    let key = DecodingKey::from_secret("secret".as_ref());
+    let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 2532524891 };
+    let encoding_key = EncodingKey::from_secret(b"secret");
+    let key = DecodingKey::from_secret(b"secret");
+    let validation = Validation::new(Algorithm::HS256);
+    let mut extras = Extras::default();
+    extras.insert("custom", "header");
 
-    c.bench_function("bench_decode", |b| {
-        b.iter(|| {
-            decode::<Claims>(
-                black_box(token),
-                black_box(&key),
-                black_box(&Validation::new(Algorithm::HS256)),
-            )
-        })
-    });
+    for (name, header) in [
+        ("bench_decode", Header::default()),
+        ("bench_decode_custom_extra_headers", Header { extras, ..Default::default() }),
+    ] {
+        let token = encode(&header, &claim, &encoding_key).unwrap();
+        let decoded = decode::<Claims>(&token, &key, &validation).unwrap();
+        assert_eq!(decoded.header, header);
+        assert_eq!(decoded.claims, claim);
+
+        c.bench_function(name, |b| {
+            b.iter(|| {
+                decode::<Claims>(black_box(&token), black_box(&key), black_box(&validation))
+                    .unwrap()
+            })
+        });
+    }
 }
 
 criterion_group!(benches, bench_encode, bench_encode_custom_extra_headers, bench_decode);

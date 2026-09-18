@@ -273,7 +273,9 @@ pub fn decode<T: DeserializeOwned>(
     validation: &Validation,
 ) -> Result<TokenData<T>> {
     let token = token.as_ref();
-    let header = decode_header(token)?;
+    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
+    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
+    let header = Header::from_encoded(header)?;
 
     if !validation.algorithms.contains(&header.alg) {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
@@ -281,9 +283,9 @@ pub fn decode<T: DeserializeOwned>(
 
     let verifying_provider = (CryptoProvider::get_default().verifier_factory)(&header.alg, key)?;
 
-    let (header, claims) = verify_signature(token, validation, verifying_provider)?;
+    verify_signature_body(message, signature, &header, validation, verifying_provider)?;
 
-    let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(claims)?;
+    let decoded_claims = DecodedJwtPartClaims::from_jwt_part_claims(payload)?;
     let claims = decoded_claims.deserialize()?;
     validate(decoded_claims.deserialize()?, validation)?;
 
@@ -362,20 +364,4 @@ pub(crate) fn verify_signature_body(
     }
 
     Ok(())
-}
-
-/// Verify the signature of a JWT, and return a header object and raw payload.
-///
-/// If the token or its signature is invalid, it will return an error.
-fn verify_signature<'a>(
-    token: &'a [u8],
-    validation: &Validation,
-    verifying_provider: Box<dyn JwtVerifier>,
-) -> Result<(Header, &'a [u8])> {
-    let (signature, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
-    let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
-    let header = Header::from_encoded(header)?;
-    verify_signature_body(message, signature, &header, validation, verifying_provider)?;
-
-    Ok((header, payload))
 }
