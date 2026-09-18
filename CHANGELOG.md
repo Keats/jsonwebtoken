@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Avoid duplicate token splitting and header parsing when decoding JWTs.
+
 ## 11.1.0 (2026-09-16)
 
 - Add `dangerous::insecure_decode_claims`
