@@ -33,7 +33,7 @@ macro_rules! define_ecdsa_signer {
 
         impl Signer<Vec<u8>> for $name {
             fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
-                let signature = self.0.sign_recoverable(msg).map_err(Error::from_source)?.0;
+                let signature = self.0.sign_recoverable(msg).0;
                 Ok(signature.to_vec())
             }
         }

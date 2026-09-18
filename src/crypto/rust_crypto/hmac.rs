@@ -1,7 +1,7 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
 //! HMAC family of algorithms using `RustCrypto`'s [`hmac`].
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::{Sha256, Sha384, Sha512};
 use signature::{Signer, Verifier};
 
@@ -34,7 +34,6 @@ macro_rules! define_hmac_signer {
         impl Signer<Vec<u8>> for $name {
             fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, signature::Error> {
                 let mut signer = self.0.clone();
-                signer.reset();
                 signer.update(msg);
 
                 Ok(signer.finalize().into_bytes().to_vec())
@@ -74,7 +73,6 @@ macro_rules! define_hmac_verifier {
                 signature: &Vec<u8>,
             ) -> std::result::Result<(), signature::Error> {
                 let mut verifier = self.0.clone();
-                verifier.reset();
                 verifier.update(msg);
 
                 verifier.verify_slice(signature).map_err(signature::Error::from_source)
