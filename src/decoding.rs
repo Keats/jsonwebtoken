@@ -1,5 +1,4 @@
 use std::fmt::{Debug, Formatter};
-use std::unreachable;
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::de::DeserializeOwned;
@@ -222,20 +221,6 @@ impl DecodingKey {
         Ok(DecodingKey {
             family: AlgorithmFamily::Mldsa,
             kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
-        })
-    }
-
-    /// From the `pub` part (base64url encoded) of an RFC 9964 AKP JWK.
-    pub fn from_mldsa_components(pub_key: &str) -> Result<Self> {
-        let decoded = b64_decode(pub_key)?;
-        // The raw public key must be one of the fixed FIPS 204 sizes.
-        match decoded.len() {
-            ML_DSA_44_PUBLIC_KEY_LEN | ML_DSA_65_PUBLIC_KEY_LEN | ML_DSA_87_PUBLIC_KEY_LEN => {}
-            _ => return Err(new_error(ErrorKind::InvalidKeyFormat)),
-        }
-        Ok(DecodingKey {
-            family: AlgorithmFamily::Mldsa,
-            kind: DecodingKeyKind::SecretOrDer(decoded),
         })
     }
 
