@@ -65,7 +65,7 @@ jobs:
                 run: cargo test --no-default-features --features ${{ matrix.backend }}
 
             -   name: Run tests with no crypto backend
-                if: matrix.build == 'stable' && matrix.backend == 'aws_lc_rs'
+                if: matrix.backend == 'aws_lc_rs'
                 run: cargo test --no-default-features --features use_pem --test missing_provider
 
     wasm:

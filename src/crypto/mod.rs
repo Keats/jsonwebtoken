@@ -227,20 +227,9 @@ mod static_default {
         }
     }
 
-    #[cfg(all(feature = "aws_lc_rs", feature = "rust_crypto"))]
     const NOT_INSTALLED_ERROR: &str = r"
-Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features:
-both the 'aws_lc_rs' and 'rust_crypto' features are enabled, so the choice is ambiguous.
-Enable exactly one of them, or call CryptoProvider::install_default() before this point.
-Note that Cargo unifies features, so another dependency may have enabled the second backend.
-See the documentation of the CryptoProvider type for more information.
-";
-
-    #[cfg(not(all(feature = "aws_lc_rs", feature = "rust_crypto")))]
-    const NOT_INSTALLED_ERROR: &str = r"
-Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features:
-neither the 'aws_lc_rs' nor the 'rust_crypto' feature is enabled.
-Enable exactly one of them, or call CryptoProvider::install_default() before this point.
+Could not automatically determine the process-level CryptoProvider from jsonwebtoken crate features.
+Call CryptoProvider::install_default() before this point to select a provider manually, or make sure exactly one of the 'rust_crypto' and 'aws_lc_rs' features is enabled.
 See the documentation of the CryptoProvider type for more information.
 ";
 }
