@@ -189,6 +189,68 @@ fn ed_jwk_from_ed25519_der_key() {
 #[cfg(feature = "use_pem")]
 #[test]
 #[wasm_bindgen_test]
+fn ed_jwk_from_ed25519_pkcs8_v2_key() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
+    // Same key as `private_ed25519_key.pem`, encoded as PKCS#8 v2 (RFC 5958),
+    // which also contains the public key.
+    let privkey_pem = include_bytes!("private_ed25519_v2_key.pem");
+    let encoding_key = EncodingKey::from_ed_pem(privkey_pem).unwrap();
+
+    let jwk = Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap();
+
+    assert_eq!(
+        jwk,
+        serde_json::from_value(json!({
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "x": "2-Jj2UvNCvQiUPNYRgSi0cJSPiJI6Rs6D0UTeEpQVj8",
+            "alg": "EdDSA",
+        }))
+        .unwrap()
+    );
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn ed_jwk_from_ed25519_pkcs8_v2_der_key() {
+    use jsonwebtoken::jwk::Jwk;
+    use serde_json::json;
+
+    let privkey_der = include_bytes!("private_ed25519_v2_key.pk8");
+    let encoding_key = EncodingKey::from_ed_der(privkey_der);
+
+    let jwk = Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap();
+
+    assert_eq!(
+        jwk,
+        serde_json::from_value(json!({
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "x": "2-Jj2UvNCvQiUPNYRgSi0cJSPiJI6Rs6D0UTeEpQVj8",
+            "alg": "EdDSA",
+        }))
+        .unwrap()
+    );
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn ed_jwk_from_invalid_der_key() {
+    use jsonwebtoken::{errors::ErrorKind, jwk::Jwk};
+
+    let encoding_key = EncodingKey::from_ed_der(&[0u8; 48]);
+
+    assert_eq!(
+        Jwk::from_encoding_key(&encoding_key, Algorithm::EdDSA).unwrap_err().into_kind(),
+        ErrorKind::InvalidEddsaKey
+    );
+}
+
+#[cfg(feature = "use_pem")]
+#[test]
+#[wasm_bindgen_test]
 fn ed_jwk_from_ed448_key() {
     let privkey_pem = include_bytes!("private_ed448_key.pem");
     assert_eq!(

@@ -526,13 +526,11 @@ impl Jwk {
                     })
                 }
                 AlgorithmFamily::Ed => {
-                    // Get the curve type based off the encoding key length
-                    // Note: here we will receive a DER key which contains a 16 byte ANS.1 header
-                    let curve_type: EllipticCurve = match key.as_bytes().len() {
-                        // 16 byte header + 32 byte Ed25519 key
-                        48 => Ok(EllipticCurve::Ed25519),
-                        _ => Err(Error::from(ErrorKind::InvalidEddsaKey)),
-                    }?;
+                    // Ed25519 is the only supported Edwards curve. The key is a PKCS#8 DER
+                    // document, which can be either v1 or v2 (RFC 5958, also containing the
+                    // public key), so its length is not fixed. The crypto provider parses it
+                    // and rejects anything that is not a valid Ed25519 private key.
+                    let curve_type = EllipticCurve::Ed25519;
 
                     // Extract the public key from the encoding key
                     let public_key_bytes = (CryptoProvider::get_default()
