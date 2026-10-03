@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Avoid duplicate token splitting and header parsing when decoding JWTs
+- `Jwk::from_encoding_key` now accepts Ed25519 private keys in PKCS#8 v2 (RFC 5958) format
 
 ## 11.1.0 (2026-09-16)
 
