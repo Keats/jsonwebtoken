@@ -37,6 +37,9 @@ This library currently supports the following:
 - ES256
 - ES384
 - EdDSA
+- ML-DSA-44
+- ML-DSA-65
+- ML-DSA-87
 
 
 ## How to use
