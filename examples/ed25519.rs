@@ -1,6 +1,5 @@
 use ed25519_dalek::SigningKey;
 use ed25519_dalek::pkcs8::EncodePrivateKey;
-use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 
 use jsonwebtoken::{
@@ -14,7 +13,7 @@ pub struct Claims {
 }
 
 fn main() {
-    let signing_key = SigningKey::generate(&mut OsRng);
+    let signing_key = SigningKey::generate(&mut rand::rng());
     let pkcs8 = signing_key.to_pkcs8_der().unwrap();
     let pkcs8 = pkcs8.as_bytes();
     // The `to_pkcs8_der` includes the public key, the first 48 bits are the private key.
@@ -45,7 +44,7 @@ mod tests {
 
     impl Jot {
         fn new() -> Jot {
-            let signing_key = SigningKey::generate(&mut OsRng);
+            let signing_key = SigningKey::generate(&mut rand::rng());
             let pkcs8 = signing_key.to_pkcs8_der().unwrap();
             let pkcs8 = pkcs8.as_bytes();
             // The `to_pkcs8_der` includes the public key, the first 48 bits are the private key.

@@ -24,13 +24,19 @@ fn rsa_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8
     let private_key = RsaPrivateKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let public_key = private_key.to_public_key();
-    Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
+    Ok((
+        public_key.n().as_ref().to_be_bytes_trimmed_vartime().into_vec(),
+        public_key.e().to_be_bytes_trimmed_vartime().into_vec(),
+    ))
 }
 
 fn rsa_components_from_public_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let public_key = RsaPublicKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
-    Ok((public_key.n().to_bytes_be(), public_key.e().to_bytes_be()))
+    Ok((
+        public_key.n().as_ref().to_be_bytes_trimmed_vartime().into_vec(),
+        public_key.e().to_be_bytes_trimmed_vartime().into_vec(),
+    ))
 }
 
 fn ec_components_from_private_key(
@@ -42,7 +48,7 @@ fn ec_components_from_private_key(
             let signing_key = P256SigningKey::from_pkcs8_der(key_content)
                 .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
             let public_key = signing_key.verifying_key();
-            let encoded = public_key.to_encoded_point(false);
+            let encoded = public_key.to_sec1_point(false);
             match encoded.coordinates() {
                 p256::elliptic_curve::sec1::Coordinates::Uncompressed { x, y } => {
                     Ok((EllipticCurve::P256, x.to_vec(), y.to_vec()))
@@ -54,7 +60,7 @@ fn ec_components_from_private_key(
             let signing_key = P384SigningKey::from_pkcs8_der(key_content)
                 .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
             let public_key = signing_key.verifying_key();
-            let encoded = public_key.to_encoded_point(false);
+            let encoded = public_key.to_sec1_point(false);
             match encoded.coordinates() {
                 p384::elliptic_curve::sec1::Coordinates::Uncompressed { x, y } => {
                     Ok((EllipticCurve::P384, x.to_vec(), y.to_vec()))
