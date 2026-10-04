@@ -151,6 +151,9 @@ pub struct KeyUtils {
 }
 
 impl KeyUtils {
+    /// Initialises all values to stubs that return
+    /// [`ErrorKind::Provider`](crate::errors::ErrorKind::Provider).
+    ///
     /// Use this if your [`CryptoProvider`] does not support JWKs.
     pub const fn new_unimplemented() -> Self {
         const UNIMPLEMENTED_ERROR: &str = "This CryptoProvider does not support JWKs";
