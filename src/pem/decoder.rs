@@ -139,7 +139,7 @@ impl PemEncodedKey {
         match self.standard {
             Standard::Pkcs1 => Err(ErrorKind::InvalidKeyFormat.into()),
             Standard::Pkcs8 => match self.pem_type {
-                PemType::EcPublic => extract_first_bitstring(&self.asn1),
+                PemType::EcPublic => Ok(self.content.as_slice()),
                 _ => Err(ErrorKind::InvalidKeyFormat.into()),
             },
         }

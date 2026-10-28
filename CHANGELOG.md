@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Accept SubjectPublicKeyInfo DER in `DecodingKey::from_ec_der` when using the `rust_crypto` backend (PEM and JWK EC keys are stored as SPKI)
 - Avoid duplicate token splitting and header parsing when decoding JWTs
 - Fix trying to encode without a `CryptoProvider` installing a dummy `CryptoProvider` that always panics and can never be replaced, panic before installing instead
 - Add `CryptoProvider::try_get_default() -> Option<_>` to allow checking for a missing `CryptoProvider` without panicking

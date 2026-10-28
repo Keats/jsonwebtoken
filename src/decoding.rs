@@ -152,14 +152,9 @@ impl DecodingKey {
         let x_cmp = b64_decode(x)?;
         let y_cmp = b64_decode(y)?;
 
-        let mut public_key = Vec::with_capacity(1 + x.len() + y.len());
-        public_key.push(0x04);
-        public_key.extend_from_slice(&x_cmp);
-        public_key.extend_from_slice(&y_cmp);
-
         Ok(DecodingKey {
             family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(public_key),
+            kind: DecodingKeyKind::SecretOrDer(ec_spki_from_coordinates(&x_cmp, &y_cmp)?),
         })
     }
 
@@ -364,4 +359,29 @@ pub(crate) fn verify_signature_body(
     }
 
     Ok(())
+}
+
+/// SubjectPublicKeyInfo wrapping an uncompressed EC point (SEC1 `04 || x || y`).
+fn ec_spki_from_coordinates(x: &[u8], y: &[u8]) -> Result<Vec<u8>> {
+    let mut point = Vec::with_capacity(1 + x.len() + y.len());
+    point.push(0x04);
+    point.extend_from_slice(x);
+    point.extend_from_slice(y);
+
+    let prefix: &[u8] = match point.len() {
+        65 => &[
+            0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06,
+            0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x03, 0x42, 0x00,
+        ],
+        97 => &[
+            0x30, 0x76, 0x30, 0x10, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06,
+            0x05, 0x2b, 0x81, 0x04, 0x00, 0x22, 0x03, 0x62, 0x00,
+        ],
+        _ => return Err(new_error(ErrorKind::InvalidEcdsaKey)),
+    };
+
+    let mut spki = Vec::with_capacity(prefix.len() + point.len());
+    spki.extend_from_slice(prefix);
+    spki.extend_from_slice(&point);
+    Ok(spki)
 }
