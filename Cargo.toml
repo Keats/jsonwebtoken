@@ -44,7 +44,7 @@ rand = { version = "0.10", optional = true, features = [
     "std",
     "thread_rng",
 ], default-features = false }
-rsa = { version = "0.10.0-rc.18", optional = true }
+rsa = { version = "0.10", optional = true, features = ["pkcs1v15"] }
 sha2 = { version = "0.11", optional = true, features = ["oid"] }
 zeroize = { version = "1.8.2", features = ["derive"] }
 

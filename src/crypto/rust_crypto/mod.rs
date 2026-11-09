@@ -1,5 +1,5 @@
 use ::rsa::{
-    RsaPrivateKey, RsaPublicKey,
+    PrivateKey, PublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
     traits::PublicKeyParts,
 };
@@ -21,7 +21,7 @@ mod hmac;
 mod rsa;
 
 fn rsa_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
-    let private_key = RsaPrivateKey::from_pkcs1_der(key_content)
+    let private_key = PrivateKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let public_key = private_key.to_public_key();
     Ok((
@@ -31,7 +31,7 @@ fn rsa_components_from_private_key(key_content: &[u8]) -> errors::Result<(Vec<u8
 }
 
 fn rsa_components_from_public_key(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
-    let public_key = RsaPublicKey::from_pkcs1_der(key_content)
+    let public_key = PublicKey::from_pkcs1_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     Ok((
         public_key.n().as_ref().to_be_bytes_trimmed_vartime().into_vec(),

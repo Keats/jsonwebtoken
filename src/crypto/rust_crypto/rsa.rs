@@ -2,11 +2,11 @@
 //! RSA family of algorithms using RustCrypto.
 
 use rsa::{
-    BoxedUint, Pkcs1v15Sign, Pss, RsaPublicKey,
+    BoxedUint, Pkcs1v15Sign, PrivateKey, Pss, PublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
-    pkcs1v15::SigningKey,
+    pkcs1v15,
     pkcs8::AssociatedOid,
-    pss::BlindedSigningKey,
+    pss,
     traits::SignatureScheme,
 };
 use sha2::{
@@ -30,13 +30,13 @@ where
     H: Digest + AssociatedOid + FixedOutputReset,
 {
     let mut rng = rand::rng();
-    let private_key = rsa::RsaPrivateKey::from_pkcs1_der(encoding_key.as_bytes())
+    let private_key = PrivateKey::from_pkcs1_der(encoding_key.as_bytes())
         .map_err(signature::Error::from_source)?;
     if pss {
-        let signing_key = BlindedSigningKey::<H>::new(private_key);
+        let signing_key = pss::SigningKey::<H>::new(private_key);
         Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
     } else {
-        let signing_key = SigningKey::<H>::new(private_key);
+        let signing_key = pkcs1v15::SigningKey::<H>::new(private_key);
         Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
     }
 }
@@ -51,13 +51,13 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
 
     match decoding_key.kind() {
         DecodingKeyKind::SecretOrDer(bytes) => {
-            RsaPublicKey::from_pkcs1_der(bytes)
+            PublicKey::from_pkcs1_der(bytes)
                 .map_err(signature::Error::from_source)?
                 .verify(scheme, &digest, signature)
                 .map_err(signature::Error::from_source)?;
         }
         DecodingKeyKind::RsaModulusExponent { n, e } => {
-            RsaPublicKey::new(
+            PublicKey::new(
                 BoxedUint::from_be_slice_vartime(n),
                 BoxedUint::from_be_slice_vartime(e),
             )?
