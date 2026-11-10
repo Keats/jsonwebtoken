@@ -185,6 +185,7 @@ pub(crate) fn ec_pub_components_from_public_key(
     let (curve, pub_elem_bytes) = match pub_bytes.len() {
         65 => (EllipticCurve::P256, 32),
         97 => (EllipticCurve::P384, 48),
+        133 => (EllipticCurve::P521, 66),
         _ => return Err(ErrorKind::InvalidEcdsaKey.into()),
     };
 

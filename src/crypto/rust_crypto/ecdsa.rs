@@ -12,10 +12,13 @@ use p256::pkcs8::DecodePrivateKey;
 use p384::ecdsa::{
     Signature as Signature384, SigningKey as SigningKey384, VerifyingKey as VerifyingKey384,
 };
+use p521::ecdsa::{
+    Signature as Signature521, SigningKey as SigningKey521, VerifyingKey as VerifyingKey521,
+};
 use signature::{Error, Signer, Verifier};
 
 macro_rules! define_ecdsa_signer {
-    ($name:ident, $alg:expr, $signing_key:ty) => {
+    ($name:ident, $alg:expr, $secret_key:ty, $signing_key:ty, $signature:ty, $from_secret:expr) => {
         pub struct $name($signing_key);
 
         impl $name {
@@ -24,16 +27,15 @@ macro_rules! define_ecdsa_signer {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                Ok(Self(
-                    <$signing_key>::from_pkcs8_der(encoding_key.as_bytes())
-                        .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
-                ))
+                let secret = <$secret_key>::from_pkcs8_der(encoding_key.as_bytes())
+                    .map_err(|_| ErrorKind::InvalidEcdsaKey)?;
+                Ok(Self($from_secret(&secret)))
             }
         }
 
         impl Signer<Vec<u8>> for $name {
             fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, Error> {
-                let signature = self.0.sign_recoverable(msg).map_err(Error::from_source)?.0;
+                let signature: $signature = self.0.try_sign(msg)?;
                 Ok(signature.to_vec())
             }
         }
@@ -80,8 +82,32 @@ macro_rules! define_ecdsa_verifier {
     };
 }
 
-define_ecdsa_signer!(Es256Signer, Algorithm::ES256, SigningKey256);
-define_ecdsa_signer!(Es384Signer, Algorithm::ES384, SigningKey384);
+define_ecdsa_signer!(
+    Es256Signer,
+    Algorithm::ES256,
+    p256::SecretKey,
+    SigningKey256,
+    Signature256,
+    SigningKey256::from
+);
+define_ecdsa_signer!(
+    Es384Signer,
+    Algorithm::ES384,
+    p384::SecretKey,
+    SigningKey384,
+    Signature384,
+    SigningKey384::from
+);
+// The `p521` signing key only converts from the generic `ecdsa` signing key.
+define_ecdsa_signer!(
+    Es512Signer,
+    Algorithm::ES512,
+    p521::SecretKey,
+    SigningKey521,
+    Signature521,
+    |secret: &p521::SecretKey| SigningKey521::from(ecdsa::SigningKey::from(secret))
+);
 
 define_ecdsa_verifier!(Es256Verifier, Algorithm::ES256, VerifyingKey256, Signature256);
 define_ecdsa_verifier!(Es384Verifier, Algorithm::ES384, VerifyingKey384, Signature384);
+define_ecdsa_verifier!(Es512Verifier, Algorithm::ES512, VerifyingKey521, Signature521);

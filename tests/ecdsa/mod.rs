@@ -191,3 +191,83 @@ fn ec_jwk_from_key() {
         .unwrap()
     );
 }
+
+mod rfc7520 {
+    use jsonwebtoken::{Algorithm, DecodingKey, crypto::verify};
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    // RFC 7520 section 3.2: EC P-521 key (x, y); section 4.3: ES512 JWS.
+    const X: &str =
+        "AHKZLLOsCOzz5cY97ewNUajB957y-C-U88c3v13nmGZx6sYl_oJXu9A5RkTKqjqvjyekWF-7ytDyRXYgCF5cj0Kt";
+    const Y: &str =
+        "AdymlHvOiLxXkEhayXQnNCvDX4h9htZaCJN34kfmC6pV5OhQHiraVySsUdaQkAgDPrwQrJmbnX9cwlGfP-HqHZR1";
+    const SIGNING_INPUT: &str = concat!(
+        "eyJhbGciOiJFUzUxMiIsImtpZCI6ImJpbGJvLmJhZ2dpbnNAaG9iYml0b24uZXhhbXBsZSJ9",
+        ".",
+        "SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywgZ29pbmcgb3V0IHlvdXIgZG9vci4g",
+        "WW91IHN0ZXAgb250byB0aGUgcm9hZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwg",
+        "dGhlcmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4"
+    );
+    const SIGNATURE: &str = concat!(
+        "AE_R_YZCChjn4791jSQCrdPZCNYqHXCTZH0-JZGYNlaAjP2kqaluUIIUnC9qvbu9Plon7KRTzoNEuT4Va2cmL1eJAQy3mtPBu_u_sDDyYjnAMDxXPn7XrT0lw-kv",
+        "AD890jl8e2puQens_IEKBpHABlsbEPX6sFY8OcGDqoRuBomu9xQ2"
+    );
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn verify_rfc7520_es512_signature() {
+        let key = DecodingKey::from_ec_components(X, Y).unwrap();
+        assert!(verify(SIGNATURE, SIGNING_INPUT.as_bytes(), &key, Algorithm::ES512).unwrap());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn reject_modified_rfc7520_es512_input() {
+        let key = DecodingKey::from_ec_components(X, Y).unwrap();
+        let tampered = SIGNING_INPUT.replace("SXTi", "SXTj");
+        assert!(!verify(SIGNATURE, tampered.as_bytes(), &key, Algorithm::ES512).unwrap());
+    }
+
+    #[cfg(feature = "use_pem")]
+    mod pem {
+        use base64::Engine;
+        use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        use jsonwebtoken::jwk::{AlgorithmParameters, Jwk};
+        use jsonwebtoken::{
+            Algorithm, DecodingKey, EncodingKey,
+            crypto::{sign, verify},
+        };
+        use wasm_bindgen_test::wasm_bindgen_test;
+
+        use super::{SIGNING_INPUT, X, Y};
+
+        // The private key `d` from the RFC, converted to PKCS#8.
+        const PRIVATE_PK8_PEM: &[u8] = include_bytes!("private_rfc7520_p521.pem");
+
+        #[test]
+        #[wasm_bindgen_test]
+        fn sign_with_rfc7520_key_and_verify() {
+            // ECDSA signing may be randomized, so the RFC signature can't be reproduced;
+            // check the round trip with the RFC key pair and the r || s length (66 bytes each).
+            let enc = EncodingKey::from_ec_pem(PRIVATE_PK8_PEM).unwrap();
+            let dec = DecodingKey::from_ec_components(X, Y).unwrap();
+            let sig = sign(SIGNING_INPUT.as_bytes(), &enc, Algorithm::ES512).unwrap();
+            assert_eq!(URL_SAFE_NO_PAD.decode(&sig).unwrap().len(), 132);
+            assert!(verify(&sig, SIGNING_INPUT.as_bytes(), &dec, Algorithm::ES512).unwrap());
+        }
+
+        #[test]
+        #[wasm_bindgen_test]
+        fn jwk_from_rfc7520_private_key_matches_vector() {
+            let enc = EncodingKey::from_ec_pem(PRIVATE_PK8_PEM).unwrap();
+            let jwk = Jwk::from_encoding_key(&enc, Algorithm::ES512).unwrap();
+            match jwk.algorithm {
+                AlgorithmParameters::EllipticCurve(p) => {
+                    assert_eq!(p.x, X);
+                    assert_eq!(p.y, Y);
+                }
+                _ => panic!("expected EC key"),
+            }
+        }
+    }
+}
