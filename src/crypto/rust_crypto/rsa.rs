@@ -2,7 +2,7 @@
 //! RSA family of algorithms using RustCrypto.
 
 use rsa::{
-    BoxedUint, Pkcs1v15Sign, PrivateKey, Pss, PublicKey,
+    BoxedUint, Pkcs1v15Sign, PrivateKey as RsaPrivateKey, Pss, PublicKey as RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
     pkcs1v15,
     pkcs8::AssociatedOid,
@@ -30,7 +30,7 @@ where
     H: Digest + AssociatedOid + FixedOutputReset,
 {
     let mut rng = rand::rng();
-    let private_key = PrivateKey::from_pkcs1_der(encoding_key.as_bytes())
+    let private_key = RsaPrivateKey::from_pkcs1_der(encoding_key.as_bytes())
         .map_err(signature::Error::from_source)?;
     if pss {
         let signing_key = pss::SigningKey::<H>::new(private_key);
@@ -51,13 +51,13 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
 
     match decoding_key.kind() {
         DecodingKeyKind::SecretOrDer(bytes) => {
-            PublicKey::from_pkcs1_der(bytes)
+            RsaPublicKey::from_pkcs1_der(bytes)
                 .map_err(signature::Error::from_source)?
                 .verify(scheme, &digest, signature)
                 .map_err(signature::Error::from_source)?;
         }
         DecodingKeyKind::RsaModulusExponent { n, e } => {
-            PublicKey::new(
+            RsaPublicKey::new(
                 BoxedUint::from_be_slice_vartime(n),
                 BoxedUint::from_be_slice_vartime(e),
             )?
