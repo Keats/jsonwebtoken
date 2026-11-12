@@ -13,7 +13,7 @@ use sha2::{
     Sha256, Sha384, Sha512,
     digest::{Digest, FixedOutputReset},
 };
-use signature::{RandomizedSigner, SignatureEncoding, Signer, Verifier};
+use signature::{SignatureEncoding, Signer, Verifier};
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
@@ -29,15 +29,14 @@ fn try_sign_rsa<H>(
 where
     H: Digest + AssociatedOid + FixedOutputReset,
 {
-    let mut rng = rand::rng();
     let private_key = RsaPrivateKey::from_pkcs1_der(encoding_key.as_bytes())
         .map_err(signature::Error::from_source)?;
     if pss {
         let signing_key = pss::SigningKey::<H>::new(private_key);
-        Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
+        Ok(signing_key.sign(msg).to_vec())
     } else {
         let signing_key = pkcs1v15::SigningKey::<H>::new(private_key);
-        Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
+        Ok(signing_key.sign(msg).to_vec())
     }
 }
 
