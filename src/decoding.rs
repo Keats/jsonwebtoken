@@ -310,7 +310,7 @@ pub fn insecure_decode<T: DeserializeOwned>(token: impl AsRef<[u8]>) -> Result<T
     let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
     let (payload, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
 
-    let header = Header::from_encoded(header)?;
+    let header = Header::from_encoded_unchecked(header)?;
     let claims = DecodedJwtPartClaims::from_jwt_part_claims(payload)?.deserialize()?;
 
     Ok(TokenData { header, claims })
@@ -344,7 +344,7 @@ pub fn decode_header(token: impl AsRef<[u8]>) -> Result<Header> {
     let token = token.as_ref();
     let (_, message) = expect_two!(token.rsplitn(2, |b| *b == b'.'));
     let (_, header) = expect_two!(message.rsplitn(2, |b| *b == b'.'));
-    Header::from_encoded(header)
+    Header::from_encoded_unchecked(header)
 }
 
 pub(crate) fn verify_signature_body(

@@ -284,6 +284,12 @@ impl Header {
         Ok(header)
     }
 
+    /// Converts an encoded part into the Header struct if possible, without any validation
+    pub(crate) fn from_encoded_unchecked<T: AsRef<[u8]>>(encoded_part: T) -> Result<Self> {
+        let decoded = b64_decode(encoded_part)?;
+        Ok(serde_json::from_slice(&decoded)?)
+    }
+
     /// Decodes the X.509 certificate chain into ASN.1 DER format.
     pub fn x5c_der(&self) -> Result<Option<Vec<Vec<u8>>>> {
         Ok(self
