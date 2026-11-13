@@ -7,6 +7,7 @@
 - Add `CryptoProvider::try_get_default() -> Option<_>` to allow checking for a missing `CryptoProvider` without panicking
 - `EncodingKey` and `DecodingKey` reject empty HMAC keys
 - Fix remaining type confusion with sub, iss, aud
+- Reject unknown critical extensions
 
 ## 11.1.0 (2026-09-16)
 

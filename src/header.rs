@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::algorithms::Algorithm;
-use crate::errors::Result;
+use crate::errors::{ErrorKind, Result, new_error};
 use crate::jwk::Jwk;
 use crate::serialization::b64_decode;
 
@@ -255,7 +255,33 @@ impl Header {
     /// Converts an encoded part into the Header struct if possible
     pub(crate) fn from_encoded<T: AsRef<[u8]>>(encoded_part: T) -> Result<Self> {
         let decoded = b64_decode(encoded_part)?;
-        Ok(serde_json::from_slice(&decoded)?)
+        let header = serde_json::from_slice::<Header>(&decoded)?;
+
+        // if `b64` doesn't parse, reject
+        let b64 =
+            header.extras.get::<bool>("b64").map_err(|_| new_error(ErrorKind::InvalidToken))?;
+        // if `b64` is present and false, reject
+        if b64.is_some_and(|b64| !b64) {
+            return Err(new_error(ErrorKind::InvalidToken));
+        }
+        if let Some(crit) = &header.crit {
+            // `crit` must not be empty (RFC 7515 Section 4.1.11)
+            if crit.is_empty() {
+                return Err(new_error(ErrorKind::InvalidToken));
+            }
+
+            // we don't support any crit header but `b64`
+            if crit.iter().any(|param| param != "b64") || b64.is_none() {
+                return Err(new_error(ErrorKind::InvalidToken));
+            }
+
+            // reject `crit` with duplicated entries
+            if crit.len() != 1 {
+                return Err(new_error(ErrorKind::InvalidToken));
+            }
+        }
+
+        Ok(header)
     }
 
     /// Decodes the X.509 certificate chain into ASN.1 DER format.
@@ -281,7 +307,14 @@ impl Default for Header {
 mod tests {
     use std::hash::{DefaultHasher, Hash, Hasher};
 
-    use crate::{Algorithm, Extras, Header};
+    use serde_json::json;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    use crate::{
+        Algorithm, Extras, Header,
+        errors::{ErrorKind, Result},
+        serialization::b64_encode,
+    };
 
     fn hash<T>(value: &T) -> u64
     where
@@ -293,6 +326,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_header_extras_hash() {
         assert_eq!(hash(&Extras::default()), hash(&Extras::default()));
 
@@ -314,6 +348,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn test_header_hash() {
         assert_eq!(hash(&Header::default()), hash(&Header::default()));
 
@@ -344,5 +379,81 @@ mod tests {
             hash(&Header { alg: Algorithm::EdDSA, ..Default::default() }),
             hash(&Header { alg: Algorithm::ES256, ..Default::default() })
         )
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn test_header_crit() {
+        fn make_header(value: serde_json::Value) -> Result<Header> {
+            Header::from_encoded(b64_encode(value.to_string()))
+        }
+
+        // the default value is true, so this is the same as just omitting it
+        assert!(
+            make_header(json!({
+                "alg": "HS256",
+                "b64": true
+            }))
+            .is_ok()
+        );
+
+        // the only way we accept `crit` in the header
+        assert!(
+            make_header(json!({
+                    "alg": "HS256",
+                    "b64": true,
+                    "crit": vec!["b64"]
+                }
+            ))
+            .is_ok()
+        );
+
+        assert!(
+            make_header(json!({
+                    "alg": "HS256",
+                    "b64": false
+                }
+            ))
+            .is_err_and(|e| e.into_kind() == ErrorKind::InvalidToken)
+        );
+
+        assert!(
+            make_header(json!({
+                    "alg": "HS256",
+                    "b64": false,
+                    "crit": vec!["b64"]
+                }
+            ))
+            .is_err_and(|e| e.into_kind() == ErrorKind::InvalidToken)
+        );
+
+        assert!(
+            make_header(json!({
+                    "alg": "HS256",
+                    "crit": vec!["b64"]
+                }
+            ))
+            .is_err_and(|e| e.into_kind() == ErrorKind::InvalidToken)
+        );
+
+        assert!(
+            make_header(json!({
+                    "alg": "HS256",
+                    "someWeirdExtensionWeDoNotUnderstand": true,
+                    "crit": vec!["someWeirdExtensionWeDoNotUnderstand"]
+                }
+            ))
+            .is_err_and(|e| e.into_kind() == ErrorKind::InvalidToken)
+        );
+
+        // a `b64` with invalid type should be rejected too
+        assert!(
+            make_header(json!({
+                    "alg": "HS256",
+                    "b64": 1,
+                }
+            ))
+            .is_err_and(|e| e.into_kind() == ErrorKind::InvalidToken)
+        );
     }
 }

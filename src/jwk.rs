@@ -745,6 +745,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn deserialize_unknown_key_algorithm() {
         let key_alg_json = json!("");
         let key_alg_result: KeyAlgorithm =
@@ -753,6 +754,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn deserialize_unknown_kty() {
         let parameters_json = json!({
             "kty": "AKP",
@@ -806,6 +808,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn check_thumbprint_bad_key() {
         let jwk = Jwk {
             common: CommonParameters {
@@ -863,6 +866,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     #[cfg(feature = "use_pem")]
     fn check_jwk_from_decoding_key_rsa() {
         let enc_key =
@@ -877,6 +881,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     #[cfg(feature = "use_pem")]
     fn check_jwk_from_decoding_key_ec() {
         let enc_key =
@@ -891,6 +896,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     #[cfg(feature = "use_pem")]
     fn check_jwk_from_decoding_key_ed() {
         let enc_key =
@@ -905,6 +911,7 @@ mod tests {
     }
 
     #[test]
+    #[wasm_bindgen_test]
     fn check_jwkset_default() {
         #[derive(Default)]
         struct Derived(JwkSet);
