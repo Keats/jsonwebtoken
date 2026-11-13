@@ -23,7 +23,8 @@ pub struct Claims {
 #[wasm_bindgen_test]
 fn sign_hs256() {
     let result =
-        sign(b"hello world", &EncodingKey::from_secret(b"secret"), Algorithm::HS256).unwrap();
+        sign(b"hello world", &EncodingKey::from_secret(b"secret").unwrap(), Algorithm::HS256)
+            .unwrap();
     let expected = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
     assert_eq!(result, expected);
 }
@@ -32,8 +33,13 @@ fn sign_hs256() {
 #[wasm_bindgen_test]
 fn verify_hs256() {
     let sig = "c0zGLzKEFWj0VxWuufTXiRMk5tlI5MbGDAYhzaxIYjo";
-    let valid = verify(sig, b"hello world", &DecodingKey::from_secret(b"secret"), Algorithm::HS256)
-        .unwrap();
+    let valid = verify(
+        sig,
+        b"hello world",
+        &DecodingKey::from_secret(b"secret").unwrap(),
+        Algorithm::HS256,
+    )
+    .unwrap();
     assert!(valid);
 }
 
@@ -46,11 +52,11 @@ fn encode_with_custom_header() {
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
     let header = Header { kid: Some("kid".to_string()), ..Default::default() };
-    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret").unwrap()).unwrap();
 
     let token_data = decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     )
     .unwrap();
@@ -70,10 +76,10 @@ fn encode_with_extra_custom_header() {
     let mut extras = Extras::default();
     extras.insert("custom", "header");
     let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
-    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret").unwrap()).unwrap();
     let token_data = decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     )
     .unwrap();
@@ -94,10 +100,10 @@ fn encode_with_multiple_extra_custom_headers() {
     extras.insert("custom1".to_string(), "header1".to_string());
     extras.insert("custom2".to_string(), "header2".to_string());
     let header = Header { kid: Some("kid".to_string()), extras, ..Default::default() };
-    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret").unwrap()).unwrap();
     let token_data = decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     )
     .unwrap();
@@ -122,10 +128,10 @@ fn encode_with_extra_non_string_header() {
     extras.insert("foo", foo);
     extras.insert("bar", bar);
     let header = Header { extras, ..Default::default() };
-    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token = encode(&header, &my_claims, &EncodingKey::from_secret(b"secret").unwrap()).unwrap();
     let token_data = decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     )
     .unwrap();
@@ -151,10 +157,11 @@ fn round_trip_claim() {
         exp: OffsetDateTime::now_utc().unix_timestamp() + 10000,
     };
     let token =
-        encode(&Header::default(), &my_claims, &EncodingKey::from_secret(b"secret")).unwrap();
+        encode(&Header::default(), &my_claims, &EncodingKey::from_secret(b"secret").unwrap())
+            .unwrap();
     let token_data = decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     )
     .unwrap();
@@ -168,7 +175,7 @@ fn decode_token() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.9r56oF7ZliOBlOAyiOFperTGxBtPykRQiWNFxhDCW98";
     let claims = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     );
     println!("{:?}", claims);
@@ -181,7 +188,7 @@ fn decode_token_custom_headers() {
     let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6ImtpZCIsImN1c3RvbTEiOiJoZWFkZXIxIiwiY3VzdG9tMiI6ImhlYWRlcjIifQ.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.FtOHsoKcNH3SriK3tnR-uWJg4UV4FkOzvq_JCfLngfU";
     let claims = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     )
     .unwrap();
@@ -201,7 +208,7 @@ fn decode_token_missing_parts() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
     let claims = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     );
     claims.unwrap();
@@ -213,7 +220,7 @@ fn decode_token_invalid_signature() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
     let claims = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::HS256),
     );
     assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidSignature);
@@ -225,7 +232,7 @@ fn decode_token_wrong_algorithm() {
     let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUifQ.I1BvFoHe94AFf09O6tDbcSB8-jp8w6xZqmyHIwPeSdY";
     let claims = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(b"secret"),
+        &DecodingKey::from_secret(b"secret").unwrap(),
         &Validation::new(Algorithm::RS512),
     );
     assert_eq!(claims.unwrap_err().into_kind(), ErrorKind::InvalidAlgorithm);
@@ -261,7 +268,7 @@ fn decode_token_with_bytes_secret() {
     let token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiQGIuY29tIiwiY29tcGFueSI6IkFDTUUiLCJleHAiOjI1MzI1MjQ4OTF9.Hm0yvKH25TavFPz7J_coST9lZFYH1hQo0tvhvImmaks";
     let claims = decode::<Claims>(
         token,
-        &DecodingKey::from_secret(b"\x01\x02\x03"),
+        &DecodingKey::from_secret(b"\x01\x02\x03").unwrap(),
         &Validation::new(Algorithm::HS256),
     );
     assert!(claims.is_ok());
@@ -332,14 +339,18 @@ fn test_string_nbf_rejected_when_validate_nbf_enabled() {
         sub: "test".to_string(),
         nbf: "99999999999".to_string(), // Far future as string
     };
-    let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token =
+        encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret").unwrap()).unwrap();
 
     let mut validation = Validation::new(Algorithm::HS256);
     validation.validate_nbf = true;
     validation.required_spec_claims = std::collections::HashSet::new();
 
-    let result =
-        decode::<serde_json::Value>(&token, &DecodingKey::from_secret(b"secret"), &validation);
+    let result = decode::<serde_json::Value>(
+        &token,
+        &DecodingKey::from_secret(b"secret").unwrap(),
+        &validation,
+    );
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().into_kind(), ErrorKind::InvalidClaimFormat("nbf".to_string()));
@@ -353,15 +364,42 @@ fn test_string_exp_rejected_when_validate_exp_enabled() {
         sub: "test".to_string(),
         exp: "99999999999".to_string(), // Far future as string
     };
-    let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret")).unwrap();
+    let token =
+        encode(&Header::default(), &claims, &EncodingKey::from_secret(b"secret").unwrap()).unwrap();
 
     let mut validation = Validation::new(Algorithm::HS256);
     validation.validate_exp = true;
     validation.required_spec_claims = std::collections::HashSet::new();
 
-    let result =
-        decode::<serde_json::Value>(&token, &DecodingKey::from_secret(b"secret"), &validation);
+    let result = decode::<serde_json::Value>(
+        &token,
+        &DecodingKey::from_secret(b"secret").unwrap(),
+        &validation,
+    );
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().into_kind(), ErrorKind::InvalidClaimFormat("exp".to_string()));
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn reject_empty_keys() {
+    assert!(
+        DecodingKey::from_base64_secret("")
+            .is_err_and(|e| e.into_kind() == ErrorKind::InvalidKeyFormat)
+    );
+    assert!(
+        DecodingKey::from_secret(&[]).is_err_and(|e| e.into_kind() == ErrorKind::InvalidKeyFormat)
+    );
+    assert!(
+        EncodingKey::from_base64_secret("")
+            .is_err_and(|e| e.into_kind() == ErrorKind::InvalidKeyFormat)
+    );
+    assert!(
+        EncodingKey::from_urlsafe_base64_secret("")
+            .is_err_and(|e| e.into_kind() == ErrorKind::InvalidKeyFormat)
+    );
+    assert!(
+        EncodingKey::from_secret(&[]).is_err_and(|e| e.into_kind() == ErrorKind::InvalidKeyFormat)
+    );
 }

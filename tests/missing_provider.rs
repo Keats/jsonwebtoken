@@ -30,7 +30,7 @@ fn caught_panic_leaves_the_install_slot_free() {
         let _ = encode(
             &Header::default(),
             &Claims { sub: "b@b.com" },
-            &EncodingKey::from_secret(b"secret"),
+            &EncodingKey::from_secret(b"secret").unwrap(),
         );
     });
     let _ = std::panic::take_hook();
@@ -43,7 +43,7 @@ fn caught_panic_leaves_the_install_slot_free() {
     let err = encode(
         &Header::default(),
         &Claims { sub: "b@b.com" },
-        &EncodingKey::from_secret(b"secret"),
+        &EncodingKey::from_secret(b"secret").unwrap(),
     )
     .expect_err("the test provider is installed but does not sign");
     match err.kind() {

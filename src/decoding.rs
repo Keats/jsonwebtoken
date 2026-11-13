@@ -92,16 +92,22 @@ impl DecodingKey {
     }
 
     /// If you're using HMAC, use this.
-    pub fn from_secret(secret: &[u8]) -> Self {
-        DecodingKey {
+    pub fn from_secret(secret: &[u8]) -> Result<Self> {
+        if secret.is_empty() {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+        Ok(DecodingKey {
             family: AlgorithmFamily::Hmac,
             kind: DecodingKeyKind::SecretOrDer(secret.to_vec()),
-        }
+        })
     }
 
     /// If you're using HMAC with a base64 encoded secret, use this.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
         let out = STANDARD.decode(secret)?;
+        if out.is_empty() {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
         Ok(DecodingKey { family: AlgorithmFamily::Hmac, kind: DecodingKeyKind::SecretOrDer(out) })
     }
 
@@ -221,6 +227,9 @@ impl DecodingKey {
             AlgorithmParameters::OctetKeyPair(params) => DecodingKey::from_ed_components(&params.x),
             AlgorithmParameters::OctetKey(params) => {
                 let out = b64_decode(&params.value)?;
+                if out.is_empty() {
+                    return Err(new_error(ErrorKind::InvalidKeyFormat));
+                }
                 Ok(DecodingKey {
                     family: AlgorithmFamily::Hmac,
                     kind: DecodingKeyKind::SecretOrDer(out),
@@ -265,7 +274,7 @@ impl TryFrom<&Jwk> for DecodingKey {
 ///
 /// let token = "a.jwt.token".to_string();
 /// // Claims is a struct that implements Deserialize
-/// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::new(Algorithm::HS256));
+/// let token_message = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()).unwrap(), &Validation::new(Algorithm::HS256));
 /// ```
 pub fn decode<T: DeserializeOwned>(
     token: impl AsRef<[u8]>,

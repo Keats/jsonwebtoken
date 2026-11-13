@@ -701,14 +701,14 @@ mod tests {
     #[test]
     #[wasm_bindgen_test]
     fn check_hs256() {
-        let key = b64_encode("abcdefghijklmnopqrstuvwxyz012345");
+        let raw_key = b64_encode("abcdefghijklmnopqrstuvwxyz012345");
         let jwks_json = json!({
             "keys": [
                 {
                     "kty": "oct",
                     "alg": "HS256",
                     "kid": "abc123",
-                    "k": key
+                    "k": raw_key
                 }
             ]
         });
@@ -723,10 +723,25 @@ mod tests {
         match &key.algorithm {
             AlgorithmParameters::OctetKey(key) => {
                 assert_eq!(key.key_type, OctetKeyType::Octet);
-                assert_eq!(key.value, key.value)
+                assert_eq!(key.value, raw_key)
             }
             _ => panic!("Unexpected key algorithm"),
         }
+
+        let jwks_json = json!({
+            "keys": [
+                {
+                    "kty": "oct",
+                    "alg": "HS256",
+                    "kid": "abc123",
+                    "k": ""
+                }
+            ]
+        });
+        let jwk = &serde_json::from_value::<JwkSet>(jwks_json).unwrap().keys[0];
+        assert!(
+            DecodingKey::from_jwk(jwk).is_err_and(|e| e.into_kind() == ErrorKind::InvalidKeyFormat)
+        );
     }
 
     #[test]

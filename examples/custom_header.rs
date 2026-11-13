@@ -27,7 +27,7 @@ fn main() {
         ..Default::default()
     };
 
-    let token = match encode(&header, &my_claims, &EncodingKey::from_secret(key)) {
+    let token = match encode(&header, &my_claims, &EncodingKey::from_secret(key).unwrap()) {
         Ok(t) => t,
         Err(_) => panic!(), // in practice you would return the error
     };
@@ -35,7 +35,7 @@ fn main() {
 
     let token_data = match decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(key),
+        &DecodingKey::from_secret(key).unwrap(),
         &Validation::new(Algorithm::HS512),
     ) {
         Ok(c) => c,
