@@ -292,13 +292,20 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
     }
 
-    if let (TryParse::Parsed(sub), Some(correct_sub)) = (claims.sub, options.sub.as_deref())
-        && sub != correct_sub
-    {
-        return Err(new_error(ErrorKind::InvalidSubject));
+    match (claims.sub, options.sub.as_deref()) {
+        (TryParse::FailedToParse, Some(_)) => {
+            return Err(new_error(ErrorKind::InvalidClaimFormat("sub".to_string())));
+        }
+        (TryParse::Parsed(sub), Some(correct_sub)) if sub != correct_sub => {
+            return Err(new_error(ErrorKind::InvalidSubject));
+        }
+        _ => {}
     }
 
     match (claims.iss, options.iss.as_ref()) {
+        (TryParse::FailedToParse, Some(_)) => {
+            return Err(new_error(ErrorKind::InvalidClaimFormat("iss".to_string())));
+        }
         (TryParse::Parsed(Issuer::Single(iss)), Some(correct_iss))
             if !correct_iss.contains(&*iss) =>
         {
@@ -321,6 +328,9 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         // processing the claim does not identify itself with a value in the
         // "aud" claim when this claim is present, then the JWT MUST be
         //  rejected.
+        (TryParse::FailedToParse, _) => {
+            return Err(new_error(ErrorKind::InvalidClaimFormat("aud".to_string())));
+        }
         (TryParse::Parsed(Audience::Multiple(aud)), None) if !aud.is_empty() => {
             return Err(new_error(ErrorKind::InvalidAudience));
         }
@@ -385,11 +395,11 @@ where
 mod tests {
     use std::collections::HashSet;
 
-    use serde_json::json;
+    use serde_json::{Value, json};
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    use crate::Algorithm;
-    use crate::errors::ErrorKind;
+    use crate::errors::{Error, ErrorKind};
+    use crate::{Algorithm, DecodingKey, EncodingKey, Header, decode, encode};
 
     use super::{ClaimsForValidation, Validation, get_current_timestamp, validate};
 
@@ -842,5 +852,49 @@ mod tests {
 
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn invalid_parse_doesnt_skip_validation() {
+        let exp = 9_999_999_999u64;
+
+        fn sign(claims: &Value) -> String {
+            encode(
+                &Header::new(Algorithm::HS256),
+                claims,
+                &EncodingKey::from_secret(b"12345").unwrap(),
+            )
+            .unwrap()
+        }
+
+        fn validate(token: &str, v: &Validation) -> Result<(), Error> {
+            decode::<Value>(token, &DecodingKey::from_secret(b"12345").unwrap(), v).map(|_| ())
+        }
+
+        let mut v = Validation::new(Algorithm::HS256);
+        v.set_audience(&["my-service"]);
+
+        let wrong_aud = sign(&json!({"exp": exp, "aud": 1234}));
+        assert!(
+            validate(&wrong_aud, &v)
+                .is_err_and(|e| e.into_kind() == ErrorKind::InvalidClaimFormat("aud".to_string()))
+        );
+
+        let mut v = Validation::new(Algorithm::HS256);
+        v.set_issuer(&["jsonwebtoken-crate"]);
+        let wrong_iss = sign(&json!({"exp": exp, "iss": 1234}));
+        assert!(
+            validate(&wrong_iss, &v)
+                .is_err_and(|e| e.into_kind() == ErrorKind::InvalidClaimFormat("iss".to_string()))
+        );
+
+        let mut v = Validation::new(Algorithm::HS256);
+        v.sub = Some("foobar".to_string());
+        let wrong_sub = sign(&json!({"exp": exp, "sub": 42.0 }));
+        assert!(validate(&wrong_sub, &v).is_err_and(|e| {
+            println!("{:#?}", e);
+            e.into_kind() == ErrorKind::InvalidClaimFormat("sub".to_string())
+        }));
     }
 }
