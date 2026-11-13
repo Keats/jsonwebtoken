@@ -79,15 +79,18 @@ mod jwt_numeric_date {
 
             let claims = Claims::new(sub.clone(), iat, exp);
 
-            let token =
-                encode(&Header::default(), &claims, &EncodingKey::from_secret(SECRET.as_ref()))
-                    .expect("Failed to encode claims");
+            let token = encode(
+                &Header::default(),
+                &claims,
+                &EncodingKey::from_secret(SECRET.as_ref()).unwrap(),
+            )
+            .expect("Failed to encode claims");
 
             assert_eq!(&token, EXPECTED_TOKEN);
 
             let decoded = decode::<Claims>(
                 &token,
-                &DecodingKey::from_secret(SECRET.as_ref()),
+                &DecodingKey::from_secret(SECRET.as_ref()).unwrap(),
                 &Validation::new(Algorithm::HS256),
             )
             .expect("Failed to decode token");
@@ -102,7 +105,7 @@ mod jwt_numeric_date {
 
             let decode_result = decode::<Claims>(
                 &overflow_token,
-                &DecodingKey::from_secret(SECRET.as_ref()),
+                &DecodingKey::from_secret(SECRET.as_ref()).unwrap(),
                 &Validation::new(Algorithm::HS256),
             );
 
@@ -117,13 +120,16 @@ mod jwt_numeric_date {
 
             let claims = Claims::new(sub.clone(), iat, exp);
 
-            let token =
-                encode(&Header::default(), &claims, &EncodingKey::from_secret(SECRET.as_ref()))
-                    .expect("Failed to encode claims");
+            let token = encode(
+                &Header::default(),
+                &claims,
+                &EncodingKey::from_secret(SECRET.as_ref()).unwrap(),
+            )
+            .expect("Failed to encode claims");
 
             let decoded = decode::<Claims>(
                 &token,
-                &DecodingKey::from_secret(SECRET.as_ref()),
+                &DecodingKey::from_secret(SECRET.as_ref()).unwrap(),
                 &Validation::new(Algorithm::HS256),
             )
             .expect("Failed to decode token")
@@ -144,14 +150,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token = jsonwebtoken::encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(SECRET.as_ref()),
+        &EncodingKey::from_secret(SECRET.as_ref()).unwrap(),
     )?;
 
     println!("serialized token: {}", token);
 
     let token_data = jsonwebtoken::decode::<Claims>(
         &token,
-        &DecodingKey::from_secret(SECRET.as_ref()),
+        &DecodingKey::from_secret(SECRET.as_ref()).unwrap(),
         &Validation::new(Algorithm::HS256),
     )?;
 

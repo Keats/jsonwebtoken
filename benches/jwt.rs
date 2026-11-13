@@ -14,7 +14,7 @@ struct Claims {
 
 fn bench_encode(c: &mut Criterion) {
     let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 2532524891 };
-    let key = EncodingKey::from_secret("secret".as_ref());
+    let key = EncodingKey::from_secret("secret".as_ref()).unwrap();
 
     c.bench_function("bench_encode", |b| {
         b.iter(|| {
@@ -25,7 +25,7 @@ fn bench_encode(c: &mut Criterion) {
 
 fn bench_encode_custom_extra_headers(c: &mut Criterion) {
     let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 2532524891 };
-    let key = EncodingKey::from_secret("secret".as_ref());
+    let key = EncodingKey::from_secret("secret".as_ref()).unwrap();
     let mut extras = Extras::default();
     extras.insert("custom".to_string(), "header".to_string());
     let header = &Header { extras, ..Default::default() };
@@ -37,8 +37,8 @@ fn bench_encode_custom_extra_headers(c: &mut Criterion) {
 
 fn bench_decode(c: &mut Criterion) {
     let claim = Claims { sub: "b@b.com".to_owned(), company: "ACME".to_owned(), exp: 2532524891 };
-    let encoding_key = EncodingKey::from_secret(b"secret");
-    let key = DecodingKey::from_secret(b"secret");
+    let encoding_key = EncodingKey::from_secret(b"secret").unwrap();
+    let key = DecodingKey::from_secret(b"secret").unwrap();
     let validation = Validation::new(Algorithm::HS256);
     let mut extras = Extras::default();
     extras.insert("custom", "header");

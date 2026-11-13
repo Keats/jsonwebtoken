@@ -5,6 +5,9 @@
 - Avoid duplicate token splitting and header parsing when decoding JWTs
 - Fix trying to encode without a `CryptoProvider` installing a dummy `CryptoProvider` that always panics and can never be replaced, panic before installing instead
 - Add `CryptoProvider::try_get_default() -> Option<_>` to allow checking for a missing `CryptoProvider` without panicking
+- `EncodingKey` and `DecodingKey` reject empty HMAC keys
+- Fix remaining type confusion with sub, iss, aud
+- Reject unknown critical extensions
 
 ## 11.1.0 (2026-09-16)
 

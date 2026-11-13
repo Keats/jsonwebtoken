@@ -31,19 +31,28 @@ impl EncodingKey {
     }
 
     /// If you're using a HMAC secret that is not base64, use that.
-    pub fn from_secret(secret: &[u8]) -> Self {
-        EncodingKey { family: AlgorithmFamily::Hmac, content: secret.to_vec() }
+    pub fn from_secret(secret: &[u8]) -> Result<Self> {
+        if secret.is_empty() {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
+        Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: secret.to_vec() })
     }
 
     /// If you have a base64 HMAC secret, use that.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
         let out = STANDARD.decode(secret)?;
+        if out.is_empty() {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
         Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
     }
 
     /// For loading websafe base64 HMAC secrets, ex: ACME EAB credentials.
     pub fn from_urlsafe_base64_secret(secret: &str) -> Result<Self> {
         let out = URL_SAFE.decode(secret)?;
+        if out.is_empty() {
+            return Err(new_error(ErrorKind::InvalidKeyFormat));
+        }
         Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
     }
 
@@ -146,7 +155,7 @@ impl Debug for EncodingKey {
 ///
 /// // my_claims is a struct that implements Serialize
 /// // This will create a JWT using HS256 as algorithm
-/// let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())).unwrap();
+/// let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()).unwrap()).unwrap();
 /// ```
 pub fn encode<T: Serialize>(header: &Header, claims: &T, key: &EncodingKey) -> Result<String> {
     if key.family != header.alg.family() {
