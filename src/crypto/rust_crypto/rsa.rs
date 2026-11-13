@@ -2,18 +2,18 @@
 //! RSA family of algorithms using RustCrypto.
 
 use rsa::{
-    BigUint, Pkcs1v15Sign, Pss, RsaPublicKey,
+    BoxedUint, Pkcs1v15Sign, PrivateKey as RsaPrivateKey, Pss, PublicKey as RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
-    pkcs1v15::SigningKey,
+    pkcs1v15,
     pkcs8::AssociatedOid,
-    pss::BlindedSigningKey,
+    pss,
     traits::SignatureScheme,
 };
 use sha2::{
     Sha256, Sha384, Sha512,
     digest::{Digest, FixedOutputReset},
 };
-use signature::{RandomizedSigner, SignatureEncoding, Signer, Verifier};
+use signature::{SignatureEncoding, Signer, Verifier};
 
 use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
@@ -29,15 +29,14 @@ fn try_sign_rsa<H>(
 where
     H: Digest + AssociatedOid + FixedOutputReset,
 {
-    let mut rng = rand::thread_rng();
-    let private_key = rsa::RsaPrivateKey::from_pkcs1_der(encoding_key.as_bytes())
+    let private_key = RsaPrivateKey::from_pkcs1_der(encoding_key.as_bytes())
         .map_err(signature::Error::from_source)?;
     if pss {
-        let signing_key = BlindedSigningKey::<H>::new(private_key);
-        Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
+        let signing_key = pss::SigningKey::<H>::new(private_key);
+        Ok(signing_key.sign(msg).to_vec())
     } else {
-        let signing_key = SigningKey::<H>::new(private_key);
-        Ok(signing_key.sign_with_rng(&mut rng, msg).to_vec())
+        let signing_key = pkcs1v15::SigningKey::<H>::new(private_key);
+        Ok(signing_key.sign(msg).to_vec())
     }
 }
 
@@ -57,9 +56,12 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
                 .map_err(signature::Error::from_source)?;
         }
         DecodingKeyKind::RsaModulusExponent { n, e } => {
-            RsaPublicKey::new(BigUint::from_bytes_be(n), BigUint::from_bytes_be(e))?
-                .verify(scheme, &digest, signature)
-                .map_err(signature::Error::from_source)?;
+            RsaPublicKey::new(
+                BoxedUint::from_be_slice_vartime(n),
+                BoxedUint::from_be_slice_vartime(e),
+            )?
+            .verify(scheme, &digest, signature)
+            .map_err(signature::Error::from_source)?;
         }
     };
 
@@ -115,7 +117,7 @@ macro_rules! define_rsa_verifier {
                 signature: &Vec<u8>,
             ) -> std::result::Result<(), signature::Error> {
                 if $pss {
-                    verify_rsa::<Pss, $hash>(Pss::new::<$hash>(), &self.0, msg, signature)
+                    verify_rsa::<Pss<$hash>, $hash>(Pss::<$hash>::new(), &self.0, msg, signature)
                 } else {
                     verify_rsa::<_, $hash>(Pkcs1v15Sign::new::<$hash>(), &self.0, msg, signature)
                 }
