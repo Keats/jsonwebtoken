@@ -9,10 +9,10 @@ Add the following to Cargo.toml:
 
 ```toml
 # You will have to select either `aws_lc_rs` or `rust_crypto` as backend if you're not using your own
-jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
+jsonwebtoken = { version = "12", features = ["aws_lc_rs"] }
 # If you do not need pem decoding, you can disable the default feature `use_pem` that way:
-# jsonwebtoken = {version = "11", default-features = false, features = ["aws_lc_rs"] }
-serde = {version = "1.0", features = ["derive"] }
+# jsonwebtoken = {version = "12", default-features = false, features = ["aws_lc_rs"] }
+serde = { version = "1.0", features = ["derive"] }
 ```
 
 Two crypto backends are available via features, `aws_lc_rs` and `rust_crypto`, at most one of which must be enabled. If you select neither feature, you need to provide your own `CryptoProvider`.
@@ -75,7 +75,7 @@ struct Claims {
 The default algorithm is HS256, which uses a shared secret.
 
 ```rust
-let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
+let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())?)?;
 ```
 
 #### Custom headers & changing algorithm
@@ -90,7 +90,7 @@ let mut extras = Extras::default();
 extras.insert("custom".to_string(), "header".to_string());
 header.extras = Some(extras);
 
-let token = encode(&header, &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
+let token = encode(&header, &my_claims, &EncodingKey::from_secret("secret".as_ref())?)?;
 ```
 Look at `examples/custom_header.rs` for a full working example.
 
@@ -98,7 +98,7 @@ Look at `examples/custom_header.rs` for a full working example.
 
 ```rust
 // HS256
-let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
+let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())?)?;
 // RSA
 let token = encode(&Header::new(Algorithm::RS256), &my_claims, &EncodingKey::from_rsa_pem(include_bytes!("privkey.pem"))?)?;
 ```
@@ -121,8 +121,8 @@ JWS is handled the same way as JWT, but using `jsonwebtoken::jws::encode` and `j
 ```rust
 use jsonwebtoken::jws::{encode, decode};
 
-let encoded = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref()))?;
-my_claims = decode(&encoded, &DecodingKey::from_secret("secret".as_ref()), &Validation::default())?.claims;
+let encoded = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())?)?;
+my_claims = decode(&encoded, &DecodingKey::from_secret("secret".as_ref())?, &Validation::default())?.claims;
 ```
 
 `jsonwebtoken::jws::encode` returns a `Jws<C>` struct which can be placed in other structs or serialized/deserialized from JSON directly.
@@ -142,7 +142,7 @@ let tp = my_jwk.thumbprint(&jsonwebtoken::DIGEST_SHA256)?;
 
 ```rust
 // `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
-let token = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref()), &Validation::default())?;
+let token = decode::<Claims>(&token, &DecodingKey::from_secret("secret".as_ref())?, &Validation::default())?;
 ```
 `decode` can result in errors for a variety of reasons:
 
@@ -175,7 +175,7 @@ The main use-case is for JWK where your public key is in a JSON format like so:
 
 ```rust
 // `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
-let token = decode::<Claims>(&token, &DecodingKey::from_rsa_components(jwk["n"], jwk["e"]), &Validation::new(Algorithm::RS256))?;
+let token = decode::<Claims>(&token, &DecodingKey::from_rsa_components(jwk["n"], jwk["e"])?, &Validation::new(Algorithm::RS256))?;
 ```
 
 If your key is in PEM format, it is better performance wise to generate the `DecodingKey` once in a `lazy_static` or
