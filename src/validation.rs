@@ -185,7 +185,7 @@ pub(crate) struct ClaimsForValidation<'a> {
     exp: TryParse<u64>,
     #[serde(deserialize_with = "numeric_type", default)]
     nbf: TryParse<u64>,
-    #[serde(borrow)]
+    #[serde(borrow, deserialize_with = "subject_type", default)]
     sub: TryParse<Cow<'a, str>>,
     #[serde(borrow)]
     iss: TryParse<Issuer<'a>>,
@@ -211,6 +211,57 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for TryParse<T> {
             Err(_) => TryParse::FailedToParse,
         })
     }
+}
+
+// Do not swallow a type error before a sequence or map has been consumed:
+// serde_json would otherwise report a misleading comma/brace error afterward.
+// Keep the existing treatment of null and invalid scalar subjects unchanged.
+fn subject_type<'de, D>(deserializer: D) -> std::result::Result<TryParse<Cow<'de, str>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct SubjectVisitor;
+
+    impl<'de> Visitor<'de> for SubjectVisitor {
+        type Value = TryParse<Cow<'de, str>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a string or null for the JWT sub claim")
+        }
+
+        fn visit_unit<E: de::Error>(self) -> std::result::Result<Self::Value, E> {
+            Ok(TryParse::NotPresent)
+        }
+
+        fn visit_borrowed_str<E: de::Error>(
+            self,
+            value: &'de str,
+        ) -> std::result::Result<Self::Value, E> {
+            Ok(TryParse::Parsed(Cow::Borrowed(value)))
+        }
+
+        fn visit_str<E: de::Error>(self, value: &str) -> std::result::Result<Self::Value, E> {
+            Ok(TryParse::Parsed(Cow::Owned(value.to_owned())))
+        }
+
+        fn visit_bool<E: de::Error>(self, _: bool) -> std::result::Result<Self::Value, E> {
+            Ok(TryParse::FailedToParse)
+        }
+
+        fn visit_i64<E: de::Error>(self, _: i64) -> std::result::Result<Self::Value, E> {
+            Ok(TryParse::FailedToParse)
+        }
+
+        fn visit_u64<E: de::Error>(self, _: u64) -> std::result::Result<Self::Value, E> {
+            Ok(TryParse::FailedToParse)
+        }
+
+        fn visit_f64<E: de::Error>(self, _: f64) -> std::result::Result<Self::Value, E> {
+            Ok(TryParse::FailedToParse)
+        }
+    }
+
+    deserializer.deserialize_any(SubjectVisitor)
 }
 
 #[derive(Deserialize)]
@@ -405,6 +456,81 @@ mod tests {
 
     fn deserialize_claims(claims: &serde_json::Value) -> ClaimsForValidation<'_> {
         serde::Deserialize::deserialize(claims).unwrap()
+    }
+
+    #[test]
+    fn structured_subject_errors_name_the_claim() {
+        for subject in [json!({"userId": 105}), json!(["user"]), json!({}), json!([])] {
+            let claims = json!({"sub": subject, "exp": get_current_timestamp() + 10000});
+            let key = b"diagnostic-regression-test-key";
+            let token = encode(
+                &Header::new(Algorithm::HS256),
+                &claims,
+                &EncodingKey::from_secret(key).unwrap(),
+            )
+            .unwrap();
+            for expected_sub in [None, Some("user".to_owned())] {
+                let mut options = Validation::new(Algorithm::HS256);
+                options.sub = expected_sub;
+                let error =
+                    decode::<Value>(&token, &DecodingKey::from_secret(key).unwrap(), &options)
+                        .unwrap_err();
+                assert!(matches!(error.kind(), ErrorKind::Json(_)));
+                assert!(error.to_string().contains("JWT sub claim"), "{error}");
+            }
+        }
+    }
+
+    #[test]
+    fn scalar_subject_validation_is_unchanged() {
+        for subject in [
+            json!(null),
+            json!(true),
+            json!(false),
+            json!(-1),
+            json!(0),
+            json!(1.25),
+            json!(u64::MAX),
+        ] {
+            let claims = json!({"sub": subject, "exp": get_current_timestamp() + 10000});
+            let key = b"diagnostic-regression-test-key";
+            let token = encode(
+                &Header::new(Algorithm::HS256),
+                &claims,
+                &EncodingKey::from_secret(key).unwrap(),
+            )
+            .unwrap();
+            for expected_sub in [None, Some("user".to_owned())] {
+                let mut options = Validation::new(Algorithm::HS256);
+                options.sub = expected_sub;
+                let result =
+                    decode::<Value>(&token, &DecodingKey::from_secret(key).unwrap(), &options);
+                if options.sub.is_some() && !subject.is_null() {
+                    assert_eq!(
+                        result.unwrap_err().kind(),
+                        &ErrorKind::InvalidClaimFormat("sub".to_owned())
+                    );
+                } else {
+                    assert!(result.is_ok());
+                }
+                options.set_required_spec_claims(&["exp", "sub"]);
+                let result =
+                    decode::<Value>(&token, &DecodingKey::from_secret(key).unwrap(), &options);
+                assert_eq!(
+                    result.unwrap_err().kind(),
+                    &ErrorKind::MissingRequiredClaim("sub".to_owned())
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn subject_strings_keep_borrowing_and_escapes() {
+        let plain: ClaimsForValidation<'_> = serde_json::from_str(r#"{"sub":"user"}"#).unwrap();
+        assert!(matches!(plain.sub, super::TryParse::Parsed(std::borrow::Cow::Borrowed("user"))));
+        let escaped: ClaimsForValidation<'_> =
+            serde_json::from_str(r#"{"sub":"us\u0065r"}"#).unwrap();
+        assert!(matches!(escaped.sub, super::TryParse::Parsed(ref value) if value == "user"));
     }
 
     #[test]
