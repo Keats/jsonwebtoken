@@ -182,17 +182,24 @@ See the documentation of the CryptoProvider type for more information.
 pub(crate) fn ec_pub_components_from_public_key(
     pub_bytes: &[u8],
 ) -> Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
-    let (curve, pub_elem_bytes) = match pub_bytes.len() {
+    let point = match pub_bytes.len() {
+        65 | 97 if pub_bytes[0] == 4 => pub_bytes,
+        91 if pub_bytes[26] == 4 => &pub_bytes[26..],
+        120 if pub_bytes[23] == 4 => &pub_bytes[23..],
+        _ => return Err(ErrorKind::InvalidEcdsaKey.into()),
+    };
+
+    let (curve, pub_elem_bytes) = match point.len() {
         65 => (EllipticCurve::P256, 32),
         97 => (EllipticCurve::P384, 48),
         _ => return Err(ErrorKind::InvalidEcdsaKey.into()),
     };
 
-    if pub_bytes[0] != 4 {
+    if point[0] != 4 {
         return Err(ErrorKind::InvalidEcdsaKey.into());
     }
 
-    let (x, y) = pub_bytes[1..].split_at(pub_elem_bytes);
+    let (x, y) = point[1..].split_at(pub_elem_bytes);
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 

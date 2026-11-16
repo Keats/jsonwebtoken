@@ -21,7 +21,7 @@ pub struct Claims {
 #[wasm_bindgen_test]
 fn round_trip_sign_verification_pk8() {
     let privkey = include_bytes!("private_ecdsa_key.pk8");
-    let pubkey = include_bytes!("public_ecdsa_key.pk8");
+    let pubkey = include_bytes!("public_ecdsa_key.spki");
 
     let encrypted =
         sign(b"hello world", &EncodingKey::from_ec_der(privkey), Algorithm::ES256).unwrap();
