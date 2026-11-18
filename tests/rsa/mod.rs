@@ -105,6 +105,22 @@ fn round_trip_sign_verification_der() {
     }
 }
 
+#[test]
+#[wasm_bindgen_test]
+fn reused_decoding_key_verifies_every_algorithm() {
+    let encoding_key = EncodingKey::from_rsa_der(include_bytes!("private_rsa_key.der"));
+    let decoding_key = DecodingKey::from_rsa_der(include_bytes!("public_rsa_key.der"));
+
+    for _ in 0..2 {
+        for &alg in RSA_ALGORITHMS {
+            let signature = sign(b"hello world", &encoding_key, alg).unwrap();
+            assert!(verify(&signature, b"hello world", &decoding_key, alg).unwrap());
+            assert!(verify(&signature, b"hello world", &decoding_key.clone(), alg).unwrap());
+            assert!(!verify(&signature, b"hello there", &decoding_key, alg).unwrap_or(false));
+        }
+    }
+}
+
 #[cfg(feature = "use_pem")]
 #[test]
 #[wasm_bindgen_test]

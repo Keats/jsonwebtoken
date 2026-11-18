@@ -42,30 +42,24 @@ where
 
 fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
     scheme: S,
+    alg: Algorithm,
     decoding_key: &DecodingKey,
     msg: &[u8],
     signature: &[u8],
 ) -> std::result::Result<(), signature::Error> {
-    let digest = H::digest(msg);
-
-    match decoding_key.kind() {
-        DecodingKeyKind::SecretOrDer(bytes) => {
-            RsaPublicKey::from_pkcs1_der(bytes)
-                .map_err(signature::Error::from_source)?
-                .verify(scheme, &digest, signature)
-                .map_err(signature::Error::from_source)?;
-        }
-        DecodingKeyKind::RsaModulusExponent { n, e } => {
-            RsaPublicKey::new(
+    let public_key = decoding_key
+        .parsed(alg, |kind| match kind {
+            DecodingKeyKind::SecretOrDer(bytes) => RsaPublicKey::from_pkcs1_der(bytes)
+                .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()).into()),
+            DecodingKeyKind::RsaModulusExponent { n, e } => RsaPublicKey::new(
                 BoxedUint::from_be_slice_vartime(n),
                 BoxedUint::from_be_slice_vartime(e),
-            )?
-            .verify(scheme, &digest, signature)
-            .map_err(signature::Error::from_source)?;
-        }
-    };
+            )
+            .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()).into()),
+        })
+        .map_err(signature::Error::from_source)?;
 
-    Ok(())
+    public_key.verify(scheme, &H::digest(msg), signature).map_err(signature::Error::from_source)
 }
 
 macro_rules! define_rsa_signer {
@@ -117,9 +111,21 @@ macro_rules! define_rsa_verifier {
                 signature: &Vec<u8>,
             ) -> std::result::Result<(), signature::Error> {
                 if $pss {
-                    verify_rsa::<Pss<$hash>, $hash>(Pss::<$hash>::new(), &self.0, msg, signature)
+                    verify_rsa::<Pss<$hash>, $hash>(
+                        Pss::<$hash>::new(),
+                        $alg,
+                        &self.0,
+                        msg,
+                        signature,
+                    )
                 } else {
-                    verify_rsa::<_, $hash>(Pkcs1v15Sign::new::<$hash>(), &self.0, msg, signature)
+                    verify_rsa::<_, $hash>(
+                        Pkcs1v15Sign::new::<$hash>(),
+                        $alg,
+                        &self.0,
+                        msg,
+                        signature,
+                    )
                 }
             }
         }
