@@ -33,14 +33,20 @@ fn try_sign_rsa(
 /// - If `decoding_key` is not from the RSA family.
 fn verify_rsa(
     algorithm: &'static crypto_sig::RsaParameters,
+    alg: Algorithm,
     decoding_key: &DecodingKey,
     msg: &[u8],
     signature: &[u8],
 ) -> std::result::Result<(), signature::Error> {
     match decoding_key.kind() {
         DecodingKeyKind::SecretOrDer(bytes) => {
-            let public_key = crypto_sig::UnparsedPublicKey::new(algorithm, bytes);
-            public_key.verify(msg, signature).map_err(signature::Error::from_source)?;
+            let public_key = decoding_key
+                .parsed(alg, |_| {
+                    crypto_sig::ParsedPublicKey::new(algorithm, bytes)
+                        .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()).into())
+                })
+                .map_err(signature::Error::from_source)?;
+            public_key.verify_sig(msg, signature).map_err(signature::Error::from_source)?;
         }
         DecodingKeyKind::RsaModulusExponent { n, e } => {
             let public_key = crypto_sig::RsaPublicKeyComponents { n, e };
@@ -99,7 +105,7 @@ macro_rules! define_rsa_verifier {
                 msg: &[u8],
                 signature: &Vec<u8>,
             ) -> std::result::Result<(), signature::Error> {
-                verify_rsa($verification_alg, &self.0, msg, signature)
+                verify_rsa($verification_alg, $alg, &self.0, msg, signature)
             }
         }
 

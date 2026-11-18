@@ -1,10 +1,12 @@
+use std::any::Any;
 use std::fmt::{Debug, Formatter};
+use std::sync::{Arc, OnceLock};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::de::DeserializeOwned;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::algorithms::AlgorithmFamily;
+use crate::algorithms::{Algorithm, AlgorithmFamily};
 use crate::crypto::{CryptoProvider, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::header::Header;
@@ -78,9 +80,33 @@ pub struct DecodingKey {
     #[zeroize(skip)]
     family: AlgorithmFamily,
     kind: DecodingKeyKind,
+    /// The key as parsed by the crypto backend, shared with clones so verifiers fill it once.
+    #[zeroize(skip)]
+    parsed: Arc<OnceLock<(Algorithm, Arc<dyn Any + Send + Sync>)>>,
 }
 
 impl DecodingKey {
+    fn new(family: AlgorithmFamily, kind: DecodingKeyKind) -> Self {
+        DecodingKey { family, kind, parsed: Arc::default() }
+    }
+
+    /// Returns the key parsed by `parse`, reusing the result of the first call made with `alg`.
+    pub(crate) fn parsed<T: Any + Send + Sync>(
+        &self,
+        alg: Algorithm,
+        parse: impl FnOnce(&DecodingKeyKind) -> Result<T>,
+    ) -> Result<Arc<T>> {
+        if let Some((cached_alg, key)) = self.parsed.get()
+            && *cached_alg == alg
+            && let Ok(key) = key.clone().downcast::<T>()
+        {
+            return Ok(key);
+        }
+        let key = Arc::new(parse(&self.kind)?);
+        let _ = self.parsed.set((alg, key.clone()));
+        Ok(key)
+    }
+
     /// The algorithm family this key is for.
     pub fn family(&self) -> AlgorithmFamily {
         self.family
@@ -96,10 +122,7 @@ impl DecodingKey {
         if secret.is_empty() {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
-        Ok(DecodingKey {
-            family: AlgorithmFamily::Hmac,
-            kind: DecodingKeyKind::SecretOrDer(secret.to_vec()),
-        })
+        Ok(DecodingKey::new(AlgorithmFamily::Hmac, DecodingKeyKind::SecretOrDer(secret.to_vec())))
     }
 
     /// If you're using HMAC with a base64 encoded secret, use this.
@@ -108,7 +131,7 @@ impl DecodingKey {
         if out.is_empty() {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
-        Ok(DecodingKey { family: AlgorithmFamily::Hmac, kind: DecodingKeyKind::SecretOrDer(out) })
+        Ok(DecodingKey::new(AlgorithmFamily::Hmac, DecodingKeyKind::SecretOrDer(out)))
     }
 
     /// If you are loading a public RSA key in a PEM format, use this.
@@ -117,28 +140,22 @@ impl DecodingKey {
     pub fn from_rsa_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_rsa_key()?;
-        Ok(DecodingKey {
-            family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
-        })
+        Ok(DecodingKey::new(AlgorithmFamily::Rsa, DecodingKeyKind::SecretOrDer(content.to_vec())))
     }
 
     /// If you have (n, e) RSA public key components as strings, use this.
     pub fn from_rsa_components(modulus: &str, exponent: &str) -> Result<Self> {
         let n = b64_decode(modulus)?;
         let e = b64_decode(exponent)?;
-        Ok(DecodingKey {
-            family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::RsaModulusExponent { n, e },
-        })
+        Ok(DecodingKey::new(AlgorithmFamily::Rsa, DecodingKeyKind::RsaModulusExponent { n, e }))
     }
 
     /// If you have (n, e) RSA public key components already decoded, use this.
     pub fn from_rsa_raw_components(modulus: &[u8], exponent: &[u8]) -> Self {
-        DecodingKey {
-            family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::RsaModulusExponent { n: modulus.to_vec(), e: exponent.to_vec() },
-        }
+        DecodingKey::new(
+            AlgorithmFamily::Rsa,
+            DecodingKeyKind::RsaModulusExponent { n: modulus.to_vec(), e: exponent.to_vec() },
+        )
     }
 
     /// If you have a ECDSA public key in PEM format, use this.
@@ -147,10 +164,7 @@ impl DecodingKey {
     pub fn from_ec_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ec_public_key()?;
-        Ok(DecodingKey {
-            family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
-        })
+        Ok(DecodingKey::new(AlgorithmFamily::Ec, DecodingKeyKind::SecretOrDer(content.to_vec())))
     }
 
     /// If you have (x,y) ECDSA key components
@@ -163,10 +177,7 @@ impl DecodingKey {
         public_key.extend_from_slice(&x_cmp);
         public_key.extend_from_slice(&y_cmp);
 
-        Ok(DecodingKey {
-            family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(public_key),
-        })
+        Ok(DecodingKey::new(AlgorithmFamily::Ec, DecodingKeyKind::SecretOrDer(public_key)))
     }
 
     /// If you have a EdDSA public key in PEM format, use this.
@@ -176,43 +187,28 @@ impl DecodingKey {
     pub fn from_ed_pem(key: &[u8]) -> Result<Self> {
         let pem_key = PemEncodedKey::new(key)?;
         let content = pem_key.as_ed_public_key()?;
-        Ok(DecodingKey {
-            family: AlgorithmFamily::Ed,
-            kind: DecodingKeyKind::SecretOrDer(content.to_vec()),
-        })
+        Ok(DecodingKey::new(AlgorithmFamily::Ed, DecodingKeyKind::SecretOrDer(content.to_vec())))
     }
 
     /// If you know what you're doing and have a RSA DER encoded public key, use this.
     pub fn from_rsa_der(der: &[u8]) -> Self {
-        DecodingKey {
-            family: AlgorithmFamily::Rsa,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
-        }
+        DecodingKey::new(AlgorithmFamily::Rsa, DecodingKeyKind::SecretOrDer(der.to_vec()))
     }
 
     /// If you know what you're doing and have a EC DER encoded public key, use this.
     pub fn from_ec_der(der: &[u8]) -> Self {
-        DecodingKey {
-            family: AlgorithmFamily::Ec,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
-        }
+        DecodingKey::new(AlgorithmFamily::Ec, DecodingKeyKind::SecretOrDer(der.to_vec()))
     }
 
     /// If you know what you're doing and have a Ed DER encoded public key, use this.
     pub fn from_ed_der(der: &[u8]) -> Self {
-        DecodingKey {
-            family: AlgorithmFamily::Ed,
-            kind: DecodingKeyKind::SecretOrDer(der.to_vec()),
-        }
+        DecodingKey::new(AlgorithmFamily::Ed, DecodingKeyKind::SecretOrDer(der.to_vec()))
     }
 
     /// From x part (base64 encoded) of the JWK encoding
     pub fn from_ed_components(x: &str) -> Result<Self> {
         let x_decoded = b64_decode(x)?;
-        Ok(DecodingKey {
-            family: AlgorithmFamily::Ed,
-            kind: DecodingKeyKind::SecretOrDer(x_decoded),
-        })
+        Ok(DecodingKey::new(AlgorithmFamily::Ed, DecodingKeyKind::SecretOrDer(x_decoded)))
     }
 
     /// If you have a key in Jwk format
@@ -230,10 +226,7 @@ impl DecodingKey {
                 if out.is_empty() {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
-                Ok(DecodingKey {
-                    family: AlgorithmFamily::Hmac,
-                    kind: DecodingKeyKind::SecretOrDer(out),
-                })
+                Ok(DecodingKey::new(AlgorithmFamily::Hmac, DecodingKeyKind::SecretOrDer(out)))
             }
             AlgorithmParameters::Other(_) => Err(ErrorKind::UnsupportedAlgorithm.into()),
         }
