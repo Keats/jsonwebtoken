@@ -1,6 +1,8 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
 //! RSA family of algorithms using RustCrypto.
 
+use std::sync::Arc;
+
 use rsa::{
     BoxedUint, Pkcs1v15Sign, PrivateKey as RsaPrivateKey, Pss, PublicKey as RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
@@ -22,20 +24,18 @@ use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
 
 fn try_sign_rsa<H>(
-    encoding_key: &EncodingKey,
+    private_key: &RsaPrivateKey,
     msg: &[u8],
     pss: bool,
 ) -> std::result::Result<Vec<u8>, signature::Error>
 where
     H: Digest + AssociatedOid + FixedOutputReset,
 {
-    let private_key = RsaPrivateKey::from_pkcs1_der(encoding_key.as_bytes())
-        .map_err(signature::Error::from_source)?;
     if pss {
-        let signing_key = pss::SigningKey::<H>::new(private_key);
+        let signing_key = pss::SigningKey::<H>::new(private_key.clone());
         Ok(signing_key.sign(msg).to_vec())
     } else {
-        let signing_key = pkcs1v15::SigningKey::<H>::new(private_key);
+        let signing_key = pkcs1v15::SigningKey::<H>::new(private_key.clone());
         Ok(signing_key.sign(msg).to_vec())
     }
 }
@@ -70,7 +70,7 @@ fn verify_rsa<S: SignatureScheme, H: Digest + AssociatedOid>(
 
 macro_rules! define_rsa_signer {
     ($name:ident, $alg:expr, $hash:ty, pss = $pss:expr) => {
-        pub struct $name(EncodingKey);
+        pub struct $name(Arc<RsaPrivateKey>);
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
@@ -78,7 +78,10 @@ macro_rules! define_rsa_signer {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                Ok(Self(encoding_key.clone()))
+                Ok(Self(encoding_key.parsed($alg, |der| {
+                    RsaPrivateKey::from_pkcs1_der(der)
+                        .map_err(|e| signature::Error::from_source(e).into())
+                })?))
             }
         }
 

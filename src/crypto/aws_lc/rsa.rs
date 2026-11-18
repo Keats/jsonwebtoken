@@ -1,6 +1,8 @@
 //! Implementations of the [`JwtSigner`] and [`JwtVerifier`] traits for the
 //! RSA family of algorithms using [`aws_lc_rs`]
 
+use std::sync::Arc;
+
 use aws_lc_rs::{rand, signature as crypto_sig};
 use signature::{Signer, Verifier};
 
@@ -13,12 +15,9 @@ use crate::{Algorithm, DecodingKey, EncodingKey};
 /// Try to sign the `message` using an `RSA` `algorithm`.
 fn try_sign_rsa(
     algorithm: &'static dyn crypto_sig::RsaEncoding,
-    encoding_key: &EncodingKey,
+    key_pair: &crypto_sig::RsaKeyPair,
     msg: &[u8],
 ) -> std::result::Result<Vec<u8>, signature::Error> {
-    let key_pair = crypto_sig::RsaKeyPair::from_der(encoding_key.as_bytes())
-        .map_err(signature::Error::from_source)?;
-
     let mut signature = vec![0; key_pair.public_modulus_len()];
     let rng = rand::SystemRandom::new();
     key_pair.sign(algorithm, &rng, msg, &mut signature).map_err(signature::Error::from_source)?;
@@ -53,7 +52,7 @@ fn verify_rsa(
 
 macro_rules! define_rsa_signer {
     ($name:ident, $alg:expr, $signing_alg:expr) => {
-        pub struct $name(EncodingKey);
+        pub struct $name(Arc<crypto_sig::RsaKeyPair>);
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
@@ -61,7 +60,10 @@ macro_rules! define_rsa_signer {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                Ok(Self(encoding_key.clone()))
+                Ok(Self(encoding_key.parsed($alg, |der| {
+                    crypto_sig::RsaKeyPair::from_der(der)
+                        .map_err(|e| signature::Error::from_source(e).into())
+                })?))
             }
         }
 

@@ -4,11 +4,13 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
+use std::sync::Arc;
+
 use ed25519_dalek::pkcs8::DecodePrivateKey;
 use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
 use signature::{Error, Signer, Verifier};
 
-pub struct EdDSASigner(SigningKey);
+pub struct EdDSASigner(Arc<SigningKey>);
 
 impl EdDSASigner {
     pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
@@ -16,10 +18,9 @@ impl EdDSASigner {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
 
-        Ok(Self(
-            SigningKey::from_pkcs8_der(encoding_key.as_bytes())
-                .map_err(|_| ErrorKind::InvalidEddsaKey)?,
-        ))
+        Ok(Self(encoding_key.parsed(Algorithm::EdDSA, |der| {
+            SigningKey::from_pkcs8_der(der).map_err(|_| ErrorKind::InvalidEddsaKey.into())
+        })?))
     }
 }
 

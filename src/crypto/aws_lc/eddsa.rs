@@ -4,10 +4,12 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
+use std::sync::Arc;
+
 use aws_lc_rs::signature::{ED25519, Ed25519KeyPair, VerificationAlgorithm};
 use signature::{Error, Signer, Verifier};
 
-pub struct EdDSASigner(Ed25519KeyPair);
+pub struct EdDSASigner(Arc<Ed25519KeyPair>);
 
 impl EdDSASigner {
     pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
@@ -15,10 +17,9 @@ impl EdDSASigner {
             return Err(new_error(ErrorKind::InvalidKeyFormat));
         }
 
-        Ok(Self(
-            Ed25519KeyPair::from_pkcs8(encoding_key.as_bytes())
-                .map_err(|_| ErrorKind::InvalidEddsaKey)?,
-        ))
+        Ok(Self(encoding_key.parsed(Algorithm::EdDSA, |der| {
+            Ed25519KeyPair::from_pkcs8(der).map_err(|_| ErrorKind::InvalidEddsaKey.into())
+        })?))
     }
 }
 

@@ -5,6 +5,8 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
+use std::sync::Arc;
+
 use p256::ecdsa::{
     Signature as Signature256, SigningKey as SigningKey256, VerifyingKey as VerifyingKey256,
 };
@@ -16,7 +18,7 @@ use signature::{Error, Signer, Verifier};
 
 macro_rules! define_ecdsa_signer {
     ($name:ident, $alg:expr, $signing_key:ty) => {
-        pub struct $name($signing_key);
+        pub struct $name(Arc<$signing_key>);
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
@@ -24,10 +26,10 @@ macro_rules! define_ecdsa_signer {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                Ok(Self(
-                    <$signing_key>::from_pkcs8_der(encoding_key.as_bytes())
-                        .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
-                ))
+                Ok(Self(encoding_key.parsed($alg, |der| {
+                    <$signing_key>::from_pkcs8_der(der)
+                        .map_err(|_| ErrorKind::InvalidEcdsaKey.into())
+                })?))
             }
         }
 
