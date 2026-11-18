@@ -281,12 +281,12 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
 
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp
-            && exp - options.reject_tokens_expiring_in_less_than < now - options.leeway)
+            && exp - options.reject_tokens_expiring_in_less_than < now.saturating_sub(options.leeway))
         {
             return Err(new_error(ErrorKind::ExpiredSignature));
         }
 
-        if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now + options.leeway)
+        if matches!(claims.nbf, TryParse::Parsed(nbf) if options.validate_nbf && nbf > now.saturating_add(options.leeway))
         {
             return Err(new_error(ErrorKind::ImmatureSignature));
         }
@@ -852,6 +852,20 @@ mod tests {
 
         let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
+    }
+
+    #[test]
+    #[wasm_bindgen_test]
+    fn doesnt_panic_with_huge_leeway() {
+        let claims =
+            json!({ "exp": get_current_timestamp() + 10, "nbf": get_current_timestamp() + 10 });
+
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_nbf = true;
+        validation.leeway = u64::MAX;
+
+        let res = validate(deserialize_claims(&claims), &validation);
+        assert!(res.is_ok());
     }
 
     #[test]
