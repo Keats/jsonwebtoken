@@ -281,7 +281,7 @@ pub(crate) fn validate(claims: ClaimsForValidation, options: &Validation) -> Res
         }
 
         if matches!(claims.exp, TryParse::Parsed(exp) if options.validate_exp
-            && exp - options.reject_tokens_expiring_in_less_than < now - options.leeway)
+            && exp - options.reject_tokens_expiring_in_less_than <= now - options.leeway)
         {
             return Err(new_error(ErrorKind::ExpiredSignature));
         }
@@ -463,6 +463,22 @@ mod tests {
     fn exp_float_in_past_fails() {
         let claims = json!({ "exp": (get_current_timestamp() as f64) - 100000.1234 });
         let res = validate(deserialize_claims(&claims), &Validation::new(Algorithm::HS256));
+        assert!(res.is_err());
+
+        match res.unwrap_err().kind() {
+            ErrorKind::ExpiredSignature => (),
+            _ => unreachable!(),
+        };
+    }
+
+    // https://www.rfc-editor.org/rfc/rfc7519#section-4.1.4
+    #[test]
+    #[wasm_bindgen_test]
+    fn exp_equal_to_now_fails() {
+        let claims = json!({ "exp": get_current_timestamp() });
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.leeway = 0;
+        let res = validate(deserialize_claims(&claims), &validation);
         assert!(res.is_err());
 
         match res.unwrap_err().kind() {
