@@ -31,6 +31,33 @@ fn round_trip_sign_verification_pk8() {
     assert!(is_valid);
 }
 
+#[test]
+#[wasm_bindgen_test]
+fn reused_key_keeps_working_and_rejects_wrong_curve() {
+    let key = EncodingKey::from_ec_der(include_bytes!("private_ecdsa_key.pk8"));
+    let pubkey = DecodingKey::from_ec_der(include_bytes!("public_ecdsa_key.pk8"));
+
+    for _ in 0..2 {
+        let signature = sign(b"hello world", &key, Algorithm::ES256).unwrap();
+        assert!(verify(&signature, b"hello world", &pubkey, Algorithm::ES256).unwrap());
+        // P-256 key, so ES384 must fail even after the key was parsed once
+        assert!(sign(b"hello world", &key, Algorithm::ES384).is_err());
+    }
+    let signature = sign(b"hello world", &key.clone(), Algorithm::ES256).unwrap();
+    assert!(verify(&signature, b"hello world", &pubkey, Algorithm::ES256).unwrap());
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn zeroized_key_cannot_sign() {
+    use zeroize::Zeroize;
+
+    let mut key = EncodingKey::from_ec_der(include_bytes!("private_ecdsa_key.pk8"));
+    sign(b"hello world", &key, Algorithm::ES256).unwrap();
+    key.zeroize();
+    assert!(sign(b"hello world", &key, Algorithm::ES256).is_err());
+}
+
 #[cfg(feature = "use_pem")]
 #[test]
 #[wasm_bindgen_test]

@@ -5,6 +5,8 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
+use std::sync::Arc;
+
 use aws_lc_rs::rand::SystemRandom;
 use aws_lc_rs::signature::{
     ECDSA_P256_SHA256_FIXED, ECDSA_P256_SHA256_FIXED_SIGNING, ECDSA_P384_SHA384_FIXED,
@@ -14,7 +16,7 @@ use signature::{Error, Signer, Verifier};
 
 macro_rules! define_ecdsa_signer {
     ($name:ident, $alg:expr, $signing_alg:expr) => {
-        pub struct $name(EcdsaKeyPair);
+        pub struct $name(Arc<EcdsaKeyPair>);
 
         impl $name {
             pub(crate) fn new(encoding_key: &EncodingKey) -> Result<Self> {
@@ -22,10 +24,10 @@ macro_rules! define_ecdsa_signer {
                     return Err(new_error(ErrorKind::InvalidKeyFormat));
                 }
 
-                Ok(Self(
-                    EcdsaKeyPair::from_pkcs8($signing_alg, encoding_key.as_bytes())
-                        .map_err(|_| ErrorKind::InvalidEcdsaKey)?,
-                ))
+                Ok(Self(encoding_key.parsed($alg, |der| {
+                    EcdsaKeyPair::from_pkcs8($signing_alg, der)
+                        .map_err(|_| ErrorKind::InvalidEcdsaKey.into())
+                })?))
             }
         }
 
