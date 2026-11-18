@@ -19,7 +19,7 @@ use crate::serialization::{b64_encode, b64_encode_part};
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, ZeroizeOnDrop)]
 pub struct EncodingKey {
     #[zeroize(skip)]
     family: AlgorithmFamily,
@@ -27,6 +27,14 @@ pub struct EncodingKey {
     /// The key as parsed by the crypto backend, so it isn't parsed again on every sign.
     #[zeroize(skip)]
     parsed: OnceLock<(Algorithm, Arc<dyn Any + Send + Sync>)>,
+}
+
+impl Zeroize for EncodingKey {
+    fn zeroize(&mut self) {
+        self.content.zeroize();
+        // Drop the parsed key too, otherwise a zeroized key could still sign.
+        self.parsed = OnceLock::new();
+    }
 }
 
 impl EncodingKey {

@@ -47,6 +47,17 @@ fn reused_key_keeps_working_and_rejects_wrong_curve() {
     assert!(verify(&signature, b"hello world", &pubkey, Algorithm::ES256).unwrap());
 }
 
+#[test]
+#[wasm_bindgen_test]
+fn zeroized_key_cannot_sign() {
+    use zeroize::Zeroize;
+
+    let mut key = EncodingKey::from_ec_der(include_bytes!("private_ecdsa_key.pk8"));
+    sign(b"hello world", &key, Algorithm::ES256).unwrap();
+    key.zeroize();
+    assert!(sign(b"hello world", &key, Algorithm::ES256).is_err());
+}
+
 #[cfg(feature = "use_pem")]
 #[test]
 #[wasm_bindgen_test]
