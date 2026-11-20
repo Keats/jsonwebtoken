@@ -11,7 +11,6 @@ use crate::algorithms::AlgorithmFamily;
 use crate::crypto::{JwtSigner, JwtVerifier};
 use crate::errors::{ErrorKind, Result, new_error};
 use crate::{Algorithm, DecodingKey, EncodingKey};
-use ml_dsa::signature::{Signer as MlDsaSigner, Verifier as MlDsaVerifier};
 use ml_dsa::{
     EncodedSignature, EncodedVerifyingKey, MlDsa44, MlDsa65, MlDsa87, Signature, SigningKey,
     VerifyingKey, pkcs8::DecodePrivateKey,

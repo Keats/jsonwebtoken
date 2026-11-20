@@ -1,8 +1,5 @@
 use ::ml_dsa::signature::Keypair as MlDsaKeypair;
-use ::ml_dsa::{
-    MlDsa44, MlDsa65, MlDsa87, SigningKey as MlDsaSigningKey,
-    pkcs8::DecodePrivateKey as MlDsaDecodePrivateKey,
-};
+use ::ml_dsa::{MlDsa44, MlDsa65, MlDsa87, SigningKey as MlDsaSigningKey};
 use ::rsa::{
     PrivateKey as RsaPrivateKey, PublicKey as RsaPublicKey,
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey},
