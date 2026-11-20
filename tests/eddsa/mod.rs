@@ -6,9 +6,10 @@ use wasm_bindgen_test::wasm_bindgen_test;
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey,
     crypto::{sign, verify},
+    errors::ErrorKind,
 };
 #[cfg(feature = "use_pem")]
-use jsonwebtoken::{Header, Validation, decode, encode, errors::ErrorKind};
+use jsonwebtoken::{Header, Validation, decode, encode};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -195,4 +196,50 @@ fn ed_jwk_from_ed448_key() {
         EncodingKey::from_ed_pem(privkey_pem).unwrap_err().into_kind(),
         ErrorKind::InvalidKeyFormat
     );
+}
+
+// aws_lc_rs only reports a failed verification for a wrongly sized public key, while
+// other providers reject it when the verifier is created.
+fn assert_invalid_public_key(res: jsonwebtoken::errors::Result<bool>) {
+    if cfg!(feature = "aws_lc_rs") {
+        assert!(!res.unwrap());
+    } else {
+        assert_eq!(res.unwrap_err().kind(), &ErrorKind::InvalidEddsaKey);
+    }
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn ed_verify_rejects_short_public_key() {
+    let privkey = include_bytes!("private_ed25519_key.pk8");
+    let pubkey = include_bytes!("public_ed25519_key.pk8");
+
+    let signature =
+        sign(b"hello world", &EncodingKey::from_ed_der(privkey), Algorithm::EdDSA).unwrap();
+    let res = verify(
+        &signature,
+        b"hello world",
+        &DecodingKey::from_ed_der(&pubkey[..16]),
+        Algorithm::EdDSA,
+    );
+    assert_invalid_public_key(res);
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn ed_verify_rejects_long_public_key() {
+    let privkey = include_bytes!("private_ed25519_key.pk8");
+    let pubkey = include_bytes!("public_ed25519_key.pk8");
+
+    let signature =
+        sign(b"hello world", &EncodingKey::from_ed_der(privkey), Algorithm::EdDSA).unwrap();
+    let mut long_pubkey = pubkey.to_vec();
+    long_pubkey.push(0);
+    let res = verify(
+        &signature,
+        b"hello world",
+        &DecodingKey::from_ed_der(&long_pubkey),
+        Algorithm::EdDSA,
+    );
+    assert_invalid_public_key(res);
 }
